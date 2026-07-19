@@ -3151,6 +3151,8 @@ void VT220ProcessCharVT52(VT220* vt, unsigned char c)
 
 void VT220ProcessChar(VT220* vt, unsigned char c)
 {
+	vt->cursor_time = 0;
+
 	/* strip MSB in VT52 mode */
 	if(!(vt->mode & DECANM)) {
 		c &= 0x7F;
@@ -4098,7 +4100,6 @@ void VT220ProcessKey(VT220* vt, u16 key)
 		return;
 	}
 
-	vt->cursor_time = 0;
 	VT220Keyclick(vt);
 
 	switch(key) {
