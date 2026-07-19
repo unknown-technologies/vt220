@@ -902,16 +902,15 @@ void VT220SetupShowTab(VT220* vt)
 				vt->setup.cursor_x = 3;
 			}
 		}
-	} else if(vt->setup.move == VT220_SETUP_MOVE_LEFT_MARGIN) {
-		vt->setup.cursor_x = 3;
-		vt->setup.cursor_y = 0;
-	} else {
-		if(vt->setup.move == VT220_SETUP_MOVE_DOWN) {
+	} else if(vt->setup.move != VT220_SETUP_MOVE_LEFT_MARGIN) {
+		if(vt->setup.move == VT220_SETUP_MOVE_UP) {
 			vt->setup.cursor_x = 0;
-		}
-		vt->setup.cursor_y = 1;
-		if(vt->setup.cursor_x >= vt->columns) {
-			vt->setup.cursor_x = vt->columns - 1;
+			vt->setup.cursor_y = 0;
+		} else {
+			vt->setup.cursor_y = 1;
+			if(vt->setup.cursor_x >= vt->columns) {
+				vt->setup.cursor_x = vt->columns - 1;
+			}
 		}
 	}
 
