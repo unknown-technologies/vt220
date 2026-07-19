@@ -314,8 +314,8 @@ void display_func(void)
 
 static void resize(unsigned int width, unsigned int height)
 {
+	window_width = width == 132 ? (9 * 132) : (10 * 80);
 	if(!is_fullscreen) {
-		window_width = width == 132 ? (9 * 132) : (10 * 80);
 		glutReshapeWindow(window_width, SCREEN_HEIGHT);
 	}
 }
