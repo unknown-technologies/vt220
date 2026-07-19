@@ -1213,12 +1213,12 @@ void VT220SendAnswerback(VT220* vt)
 
 void VT220SendPrimaryDA(VT220* vt)
 {
-	VT220SendText(vt, "\x9b?62;1;2;3;4;6;7;8;9c");
+	VT220SendText(vt, "\x9b?62;1;2;6;7;8c");
 }
 
 void VT220SendSecondaryDA(VT220* vt)
 {
-	VT220SendText(vt, "\x9b>2;22;1c");
+	VT220SendText(vt, "\x9b>1;20;0c");
 }
 
 void VT220IdentifyVT52(VT220* vt)
