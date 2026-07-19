@@ -339,6 +339,16 @@ static void vt_rx(unsigned char c)
 	VT220Receive(&vt, c);
 }
 
+static int vt_rxe(void)
+{
+	return VT220CanReceive(&vt);
+}
+
+static void vt_flowcontrol_nop(int start)
+{
+	(void) start;
+}
+
 static void telnet_tx(unsigned char c)
 {
 	TELNETSend(&telnet, c);
@@ -599,8 +609,10 @@ int main(int argc, char** argv, char** envp)
 
 		TELNETInit(&telnet);
 		telnet.rx = vt_rx;
+		telnet.rxe = vt_rxe;
 		vt.rx = telnet_tx;
 		vt.brk = telnet_brk;
+		vt.flowcontrol = vt_flowcontrol_nop;
 
 		TELNETConnect(&telnet, hostname, port);
 	} else if(shell) {
@@ -612,6 +624,7 @@ int main(int argc, char** argv, char** envp)
 		PTYOpen(&pty, shell, envp);
 
 		pty.rx = vt_rx;
+		pty.rxe = vt_rxe;
 		vt.rx = pty_tx;
 		vt.brk = pty_brk;
 		vt.resize = pty_resize;

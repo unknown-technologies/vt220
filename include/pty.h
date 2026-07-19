@@ -3,11 +3,17 @@
 
 #include <sys/types.h>
 
-typedef struct {
-	int	master;
-	pid_t	pid;
+#define	PTY_BUFFER_SIZE		32768
 
-	void	(*rx)(unsigned char c);
+typedef struct {
+	int		master;
+	pid_t		pid;
+	unsigned char	buf[PTY_BUFFER_SIZE];
+	unsigned int	bufsz;
+	unsigned int	bufrd;
+
+	void		(*rx)(unsigned char c);
+	int		(*rxe)(void);
 } PTY;
 
 void	PTYInit(PTY* pty);

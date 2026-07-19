@@ -70,15 +70,19 @@ void VT220Init(VT220* vt)
 	vt->line_attributes = (char*) malloc(TEXT_HEIGHT);
 	vt->tabstops = (char*) malloc(TEXT_WIDTH_MAX);
 
-	vt->buf = (unsigned char*) malloc(2048); /* input buffer */
+	vt->buf = (unsigned char*) malloc(256); /* input buffer */
 	vt->buf_r = 0;
 	vt->buf_w = 0;
 	vt->buf_used = 0;
 	vt->buf_lost = 0;
 
+	vt->hold_screen = 0;
+
 	vt->bell = NULL;
 	vt->keyclick = NULL;
 	vt->rx = NULL;
+	vt->brk = NULL;
+	vt->flowcontrol = NULL;
 
 	vt->drcs = (unsigned char*) malloc(940);
 	vt->drcs_dirty = 1;
@@ -1048,6 +1052,9 @@ void VT220ClearComm(VT220* vt)
 
 	vt->xoff = 0;
 	vt->sent_xoff = 0;
+	vt->hold_screen = 0;
+
+	VT220FlowControl(vt, 1);
 
 	vt->buf_r = 0;
 	vt->buf_w = 0;
@@ -3199,22 +3206,19 @@ void VT220Receive(VT220* vt, unsigned char c)
 #ifdef VT220_NO_BUFFER
 	VT220ProcessChar(vt, c);
 #else
-	if(vt->buf_used < 2048) {
+	if(vt->buf_used < 256) {
 		vt->buf[vt->buf_w++] = c;
-		vt->buf_w %= 2048;
+		vt->buf_w %= 256;
 		vt->buf_used++;
 
 		/* XOFF handling */
 		if(vt->use_xoff) {
 			if(vt->buf_used == vt->xoff_point) {
-				VT220Send(vt, DC3);
-				vt->sent_xoff = 1;
-			} else if(vt->buf_used == 1920) {
-				VT220Send(vt, DC3);
-				vt->sent_xoff = 1;
-			} else if(vt->buf_used == 2048) {
-				VT220Send(vt, DC3);
-				vt->sent_xoff = 1;
+				VT220FlowControl(vt, 0);
+			} else if(vt->buf_used == 220) {
+				VT220FlowControl(vt, 0);
+			} else if(vt->buf_used == 254) {
+				VT220FlowControl(vt, 0);
 			}
 		}
 	} else {
@@ -3240,13 +3244,12 @@ void VT220Process(VT220* vt, unsigned long dt)
 	while(vt->buf_used > 0) {
 		unsigned char c = vt->buf[vt->buf_r++];
 		vt->buf_used--;
-		vt->buf_r %= 2048;
+		vt->buf_r %= 256;
 
 		VT220ProcessChar(vt, c);
 
 		if(vt->use_xoff && vt->sent_xoff && vt->buf_used == vt->xon_point - 1) {
-			VT220Send(vt, DC1);
-			vt->sent_xoff = 0;
+			VT220FlowControl(vt, 1);
 		}
 	}
 
@@ -4103,23 +4106,46 @@ void VT220ProcessKey(VT220* vt, u16 key)
 
 	VT220Keyclick(vt);
 
-	switch(key) {
-		/* local function keys */
-		case VT220_KEY_HOLD_SCREEN:
-		case VT220_KEY_PRINT_SCREEN:
-		case VT220_KEY_DATA_TALK:
-			/* TODO: implement */
-			return;
-		case VT220_KEY_BREAK:
-			if(vt->brk) {
-				vt->brk();
-			}
-			return;
-	}
-
 	if(vt->in_setup) {
 		VT220SetupProcessKey(vt, key);
 	} else if(vt->mode & DECANM) {
+		switch(key) {
+			/* local function keys */
+			case VT220_KEY_HOLD_SCREEN:
+				if(vt->use_xoff) {
+					vt->hold_screen = !vt->hold_screen;
+					VT220FlowControl(vt, !vt->hold_screen);
+				}
+				break;
+			case VT220_KEY_PRINT_SCREEN:
+			case VT220_KEY_DATA_TALK:
+				/* TODO: implement */
+				return;
+			case VT220_KEY_BREAK:
+				if(vt->brk) {
+					vt->brk();
+				}
+				return;
+			case VT220_KEY_ANSWERBACK:
+				VT220SendAnswerback(vt);
+				return;
+			case VT220_KEY_DISCONNECT:
+				/* TODO: implement */
+				return;
+			case DC1:
+				if(vt->use_xoff) {
+					VT220FlowControl(vt, 1);
+					return;
+				}
+				break;
+			case DC3:
+				if(vt->use_xoff) {
+					VT220FlowControl(vt, 0);
+					return;
+				}
+				break;
+		}
+
 		if(vt->vt100_mode) {
 			VT220ProcessKeyVT100(vt, key);
 		} else {
@@ -4128,6 +4154,35 @@ void VT220ProcessKey(VT220* vt, u16 key)
 	} else {
 		VT220ProcessKeyVT52(vt, key);
 	}
+}
+
+void VT220FlowControl(VT220* vt, int start)
+{
+	if(!vt->use_xoff) {
+		vt->sent_xoff = !start;
+		return;
+	}
+
+	if(start) {
+		if(vt->flowcontrol) {
+			vt->flowcontrol(1);
+		} else {
+			VT220Send(vt, DC1);
+		}
+		vt->sent_xoff = 0;
+	} else {
+		if(vt->flowcontrol) {
+			vt->flowcontrol(0);
+		} else {
+			VT220Send(vt, DC3);
+		}
+		vt->sent_xoff = 1;
+	}
+}
+
+int VT220CanReceive(VT220* vt)
+{
+	return !vt->sent_xoff;
 }
 
 void VT220SetScreenColor(VT220* vt, unsigned int color)

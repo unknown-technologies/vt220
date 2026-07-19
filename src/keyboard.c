@@ -24,6 +24,9 @@ u16 VT220TranslateKey(VT220* vt, int key)
 	bool alt = (vt->modifiers & VT220_MODIFIER_ALT_L) || (vt->modifiers & VT220_MODIFIER_ALT_R);
 
 	switch(key) {
+		case GLFW_KEY_PAUSE:
+			/* The PAUSE key is also mapped to F1 = HOLD SCREEN for convenience */
+			return VT220_KEY_HOLD_SCREEN;
 		case GLFW_KEY_F1:
 			if(ctrl || alt) {
 				return shift ? VT220_KEY_F11_UDK : VT220_KEY_F11;
@@ -49,8 +52,12 @@ u16 VT220TranslateKey(VT220* vt, int key)
 				return VT220_KEY_DATA_TALK;
 			}
 		case GLFW_KEY_F5:
-			if(ctrl || alt) {
+			if(alt) {
 				return shift ? VT220_KEY_F15_UDK : VT220_KEY_F15;
+			} else if(shift) {
+				return VT220_KEY_DISCONNECT;
+			} else if(ctrl) {
+				return VT220_KEY_ANSWERBACK;
 			} else {
 				return VT220_KEY_BREAK;
 			}
@@ -294,6 +301,21 @@ void VT220KeyboardKeyDownHost(VT220* vt, int key)
 					vt->repeat_char = CAN;
 
 					VT220ProcessKey(vt, CAN);
+				} else {
+					u16 code = VT220TranslateKey(vt, key);
+					if(code == VT220_KEY_SET_UP) {
+						VT220ProcessKey(vt, code);
+					} else if(code != 0xFFFF) {
+						vt->repeat_time = 0;
+						vt->repeat_state = 0;
+
+						vt->repeat_scancode = key;
+						vt->repeat_char = 0xFFFF;
+
+						VT220ProcessKey(vt, code);
+					} else {
+						vt->last_scancode = key;
+					}
 				}
 			} else {
 				u16 code = VT220TranslateKey(vt, key);

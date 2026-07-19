@@ -1035,7 +1035,7 @@ void VT220EnterSetup(VT220* vt)
 	vt->setup.cursor_x = 0;
 	vt->setup.cursor_y = 0;
 	vt->setup.screen = SETUP_SCREEN_DIRECTORY;
-	VT220Send(vt, DC3);
+	VT220FlowControl(vt, 0);
 
 	VT220SetupShow(vt);
 }
@@ -1043,7 +1043,9 @@ void VT220EnterSetup(VT220* vt)
 void VT220LeaveSetup(VT220* vt)
 {
 	vt->in_setup = 0;
-	VT220Send(vt, DC1);
+	if(!vt->hold_screen) {
+		VT220FlowControl(vt, 1);
+	}
 }
 
 void VT220SetupDirectoryEnter(VT220* vt)

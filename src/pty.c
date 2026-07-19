@@ -263,20 +263,28 @@ void PTYBreak(PTY* pty)
 	}
 }
 
-#ifdef VT220_NO_BUFFER
-#define	BUFLEN	16384
-#else
-#define	BUFLEN	64
-#endif
-
 void PTYPoll(PTY* pty)
 {
+	if(pty->rxe && pty->rx) {
+		while(pty->bufrd < pty->bufsz) {
+			if(pty->rxe()) {
+				pty->rx(pty->buf[pty->bufrd++]);
+			} else {
+				break;
+			}
+		}
+		if(pty->bufrd >= pty->bufsz) {
+			pty->bufrd = 0;
+			pty->bufsz = 0;
+		} else {
+			return;
+		}
+	}
+
 	struct pollfd fds = {
 		.fd = pty->master,
 		.events = POLLIN | POLLHUP
 	};
-
-	unsigned char buf[BUFLEN];
 
 	if(pty->master == -1) {
 		return;
@@ -288,14 +296,26 @@ void PTYPoll(PTY* pty)
 		close(pty->master);
 		pty->master = -1;
 	} else if(fds.revents & POLLIN) {
-		ssize_t n = read(pty->master, buf, BUFLEN);
+		ssize_t n = read(pty->master, pty->buf, PTY_BUFFER_SIZE);
 		if(n == -1) {
 			PTYError(pty, "read");
 			close(pty->master);
 			pty->master = -1;
 		} else if(n > 0 && pty->rx) {
-			for(ssize_t i = 0; i < n; i++) {
-				pty->rx(buf[i]);
+			if(pty->rxe) {
+				pty->bufsz = n;
+				pty->bufrd = 0;
+				while(pty->bufrd < pty->bufsz) {
+					if(pty->rxe()) {
+						pty->rx(pty->buf[pty->bufrd++]);
+					} else {
+						break;
+					}
+				}
+			} else {
+				for(ssize_t i = 0; i < n; i++) {
+					pty->rx(pty->buf[i]);
+				}
 			}
 		}
 	} else if(fds.revents & POLLHUP) {
@@ -310,7 +330,7 @@ void PTYPoll(PTY* pty)
 			/* process didn't exit so far */
 			return;
 		} else {
-			char* p = (char*) buf;
+			char* p = (char*) pty->buf;
 			sprintf(p, "process exited with status %d\r\n", status);
 			PTYRxString(pty, p);
 			close(pty->master);

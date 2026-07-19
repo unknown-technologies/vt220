@@ -35,6 +35,7 @@
 #define	ECHO		1
 #define	SUPPRESS_GA	3
 #define	TERMINAL_TYPE	24
+#define	LINEMODE	34
 #define	ENVIRON		36
 #define	NEW_ENVIRON	39
 
@@ -168,6 +169,10 @@ void TELNETInit(TELNET* telnet)
 	telnet->sb_buf = (unsigned char*) malloc(BUFFER_SIZE);
 	telnet->sb_write_ptr = 0;
 
+	telnet->rxbuf = (unsigned char*) malloc(TELNET_BUFFER_SIZE);
+	telnet->bufsz = 0;
+	telnet->bufrd = 0;
+
 #ifdef _WIN32
 	if(!wsa_initialized) {
 		wsa_initialized = true;
@@ -199,6 +204,15 @@ void TELNETConnected(TELNET* telnet)
 {
 	telnet->connected = 1;
 	TELNETRxString(telnet, "Connected.\r\n");
+	TELNETSendRaw(telnet, IAC);
+	TELNETSendRaw(telnet, WILL);
+	TELNETSendRaw(telnet, SUPPRESS_GA);
+	TELNETSendRaw(telnet, IAC);
+	TELNETSendRaw(telnet, WONT);
+	TELNETSendRaw(telnet, ECHO);
+	TELNETSendRaw(telnet, IAC);
+	TELNETSendRaw(telnet, WONT);
+	TELNETSendRaw(telnet, LINEMODE);
 }
 
 void TELNETConnect(TELNET* telnet, const char* hostname, int port)
@@ -569,15 +583,24 @@ void TELNETProcess(TELNET* telnet, unsigned char c)
 	}
 }
 
-#ifdef VT220_NO_BUFFER
-#define	BUFLEN	16384
-#else
-#define	BUFLEN	64
-#endif
-
 void TELNETPoll(TELNET* telnet)
 {
-	unsigned char buf[BUFLEN];
+	if(telnet->rxe && telnet->rx) {
+		while(telnet->bufrd < telnet->bufsz) {
+			if(telnet->rxe()) {
+				TELNETProcess(telnet, telnet->rxbuf[telnet->bufrd++]);
+			} else {
+				break;
+			}
+		}
+		if(telnet->bufrd >= telnet->bufsz) {
+			telnet->bufrd = 0;
+			telnet->bufsz = 0;
+		} else {
+			return;
+		}
+	}
+
 	if(telnet->socket == -1) {
 		return;
 	}
@@ -589,7 +612,7 @@ void TELNETPoll(TELNET* telnet)
 		}
 	}
 
-	int n = recv(telnet->socket, WINCAST buf, BUFLEN, 0);
+	int n = recv(telnet->socket, WINCAST telnet->rxbuf, TELNET_BUFFER_SIZE, 0);
 	if(n == -1) {
 #ifdef _WIN32
 		if(WSAGetLastError() == WSAEWOULDBLOCK) {
@@ -606,10 +629,19 @@ void TELNETPoll(TELNET* telnet)
 	} else if(n == 0) {
 		telnet->socket = -1;
 		TELNETRxError(telnet, "recv", "Disconnected");
+	} else if(telnet->rxe && telnet->rx) {
+		telnet->bufsz = n;
+		telnet->bufrd = 0;
+		while(telnet->bufrd < telnet->bufsz) {
+			if(telnet->rxe()) {
+				TELNETProcess(telnet, telnet->rxbuf[telnet->bufrd++]);
+			} else {
+				break;
+			}
+		}
 	} else {
-		int i;
-		for(i = 0; i < n; i++) {
-			TELNETProcess(telnet, buf[i]);
+		for(int i = 0; i < n; i++) {
+			TELNETProcess(telnet, telnet->rxbuf[i]);
 		}
 	}
 }

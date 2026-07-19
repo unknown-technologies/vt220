@@ -73,6 +73,9 @@
 #define	VT220_KEY_LEFT				362
 #define	VT220_KEY_RIGHT				363
 
+#define	VT220_KEY_DISCONNECT			364
+#define	VT220_KEY_ANSWERBACK			365
+
 /* TODO: make RETURN a separate key from CR */
 
 #define	VT220_KEY_CTRL				364
@@ -352,6 +355,9 @@ typedef struct {
 	unsigned int	decdld_col;
 	int		drcs_dirty;
 
+	/* flow control */
+	int		hold_screen;
+
 	/* configuration */
 	VT220NVR	config;
 	unsigned int	screen_color;
@@ -365,12 +371,9 @@ typedef struct {
 	void		(*keyclick)(void);
 	void		(*rx)(unsigned char);
 	void		(*brk)(void);
+	void		(*flowcontrol)(int);
 	void		(*resize)(unsigned int width, unsigned int height);
 } VT220;
-
-#define	CHARSET_DMCS	0 /* Multilangual */
-#define	CHARSET_DEC	1 /* DEC Special Characters */
-#define	CHARSET_CNTL	2 /* Display Controls Font */
 
 #define	CHARSET_ASCII			0
 #define	CHARSET_DEC_SUPPLEMENTAL	1
@@ -549,6 +552,8 @@ int  VT220GetCharset(VT220* vt, unsigned char c);
 void VT220ProcessChar(VT220* vt, unsigned char c);
 void VT220ProcessKey(VT220* vt, u16 key);
 void VT220ProcessKeys(VT220* vt, unsigned long dt);
+void VT220FlowControl(VT220* vt, int start);
+int  VT220CanReceive(VT220* vt);
 
 /* keyboard */
 void VT220InitKeyboard(VT220* vt);
