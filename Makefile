@@ -19,24 +19,31 @@ SOURCES		:=	src
 GLSLSOURCES	:=	glsl
 BUILD		:=	build
 
-ASAN		:=	#-fsanitize=address
 OPT		:=	-O3 -g
 
 ifdef NDEBUG
 DEBUG		:=	-DNDEBUG
+ASAN		:=	0
 else
-DEBUG		:=
+DEBUG		:=	-DDEBUG
+ASAN		:=	1
 endif
 
-CFLAGS		:=	$(OPT) -Wall -std=gnu99 \
+ifeq ($(ASAN),1)
+ASANFLG		:=	-fsanitize=address
+else
+ASANFLG		:=
+endif
+
+CFLAGS		+=	$(OPT) -Wall -std=gnu99 \
 			-ffunction-sections -fdata-sections \
 			$(INCLUDE) -DUNIX \
 			-D_XOPEN_SOURCE=600 -D_DEFAULT_SOURCE \
 			-DGL_GLEXT_PROTOTYPES -DVT220_NO_BUFFER \
-			$(DEBUG) $(ASAN)
+			$(DEBUG) $(ASANFLG)
 
 LIBS		:=	-lGL -lglfw
-LDFLAGS		:=	-Wl,-x -Wl,--gc-sections $(LIBS) $(OPT) $(ASAN)
+LDFLAGS		+=	-Wl,-x -Wl,--gc-sections $(OPT) $(ASANFLG)
 
 CFILES		:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.c)))
 GLSLFILES	:=	$(foreach dir,$(GLSLSOURCES),$(notdir $(wildcard $(dir)/*.glsl)))
@@ -60,7 +67,7 @@ $(BUILD):
 
 clean:
 	@echo "[CLEAN]"
-	@rm -rf $(BUILD) $(TFILES) $(OFILES) demo
+	@rm -rf $(BUILD) $(TFILES) $(OFILES) $(TARGET)
 
 $(TARGET): $(TFILES)
 
@@ -88,7 +95,7 @@ $(OUTPUT): $(TARGET).elf
 
 $(TARGET).elf: $(OFILES)
 	@echo "[LD]    $(notdir $@)"
-	@$(LD) $(LDFLAGS) $(OFILES) -o $@ -Wl,-Map=$(@:.elf=.map)
+	@$(LD) $(LDFLAGS) $(OFILES) $(LIBS) -o $@ -Wl,-Map=$(@:.elf=.map)
 
 -include $(DEPSDIR)/*.d
 
