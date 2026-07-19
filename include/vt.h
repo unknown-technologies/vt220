@@ -155,8 +155,31 @@
 #define	VT220_XOFF_128				1
 #define	VT220_XOFF_OFF				2
 
+#define	VT220_COMM_8BIT_NO_PARITY		0
+#define	VT220_COMM_8BIT_EVEN_PARITY		1
+#define	VT220_COMM_8BIT_ODD_PARITY		2
+#define	VT220_COMM_7BIT_NO_PARITY		3
+#define	VT220_COMM_7BIT_EVEN_PARITY		4
+#define	VT220_COMM_7BIT_ODD_PARITY		5
+#define	VT220_COMM_7BIT_MARK_PARITY		6
+#define	VT220_COMM_7BIT_SPACE_PARITY		7
+#define	VT220_COMM_7BIT_EVEN_PARITY_NO_CHECK	8
+#define	VT220_COMM_7BIT_ODD_PARITY_NO_CHECK	9
+#define	VT220_COMM_8BIT_EVEN_PARITY_NO_CHECK	10
+#define	VT220_COMM_8BIT_ODD_PARITY_NO_CHECK	11
+
+#define	VT220_COMM_1_STOP_BIT			0
+#define	VT220_COMM_2_STOP_BITS			1
+
 #define	VT220_NO_LOCAL_ECHO			0
 #define	VT220_LOCAL_ECHO			1
+
+#define	VT220_COMM_EIA_PORT_DATA_LEADS_ONLY	0
+#define	VT220_COMM_EIA_PORT_MODEM_CONTROL	1
+#define	VT220_COMM_20MA_PORT			2
+
+#define	VT220_COMM_2S_DELAY			0
+#define	VT220_COMM_60MS_DELAY			1
 
 #define	VT220_TRANSMIT_LIMITED			0
 #define	VT220_TRANSMIT_UNLIMITED		1
@@ -179,7 +202,17 @@
 #define	VT220_BELL				0
 #define	VT220_NO_BELL				1
 
+#define	VT220_BREAK				0
+#define	VT220_NO_BREAK				1
+
 typedef struct {
+	unsigned int	rx_baud_rate;
+	unsigned int	tx_baud_rate;
+	char		stop_bits;
+	char		format;
+	char		port;
+	char		delay;
+
 	char		local;
 	char		language;
 	char		keyboard;
@@ -207,6 +240,7 @@ typedef struct {
 	char		keyclick;
 	char		margin_bell;
 	char		bell;
+	char		brk;
 } VT220NVR;
 
 typedef struct {

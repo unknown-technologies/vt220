@@ -41,6 +41,50 @@ static const char* vt220_keyboard_languages[16] = {
 	"Spanish Keyboard"
 };
 
+static const unsigned int VT220GetNextBaudRate(unsigned int baud, int allow_zero)
+{
+	switch(baud) {
+		case 0:
+			return 75;
+		case 75:
+			return 110;
+		case 110:
+			return 150;
+		case 150:
+			return 300;
+		case 300:
+			return 600;
+		case 600:
+			return 1200;
+		case 1200:
+			return 2400;
+		case 2400:
+		default:
+			return 4800;
+		case 4800:
+			return 9600;
+		case 9600:
+			return 19200;
+		/* the following rates are for modern use, a real VT220
+		 * only supports up to 19200 */
+		case 19200:
+			return 38400;
+		case 38400:
+			return 57600;
+		case 57600:
+			return 115200;
+		case 115200:
+			if(allow_zero) {
+				return 0;
+			} else {
+				return 75;
+			}
+		/* Technically various UARTs support higher rates, like 230400
+		 * baud, but others do not. It would therefore be more work to
+		 * figure out what is/isn't supported on the local hardware. */
+	}
+}
+
 const char* VT220SetupGetTitle(VT220* vt)
 {
 	if(vt->setup.screen < 0 || vt->setup.screen > 9) {
@@ -129,7 +173,7 @@ void VT220SetupFill(VT220* vt, const u16 c, unsigned int count, const int sgr)
 	}
 }
 
-void VT220SetupWriteNumber(VT220* vt, int val, const int width, const int sgr)
+void VT220SetupWriteNumber(VT220* vt, int val, const int width, const int align, const int sgr)
 {
 	char buf[8];
 	int i, j;
@@ -139,9 +183,17 @@ void VT220SetupWriteNumber(VT220* vt, int val, const int width, const int sgr)
 	}
 	i++;
 	j = (7 - i);
+
+	if(align) {
+		for(; j < width - 1; j++) {
+			VT220SetupWrite(vt, ' ', sgr);
+		}
+	}
+
 	for(; i < 8; i++) {
 		VT220SetupWrite(vt, buf[i] + '0', sgr);
 	}
+
 	for(; j < width; j++) {
 		VT220SetupWrite(vt, ' ', sgr);
 	}
@@ -471,23 +523,70 @@ void VT220SetupShowComm(VT220* vt)
 	VT220SetupWriteString(vt, " To Directory ", GET_SGR(0, 1));
 	VT220SetupCursorRight(vt);
 	VT220SetupWriteString(vt, " Transmit=", GET_SGR(0, 2));
-	VT220SetupWriteNumber(vt, 9600, 5, GET_SGR(0, 2));
+	VT220SetupWriteNumber(vt, vt->config.tx_baud_rate, 6, 1, GET_SGR(0, 2));
 	VT220SetupCursorRight(vt);
-	VT220SetupWriteString(vt, " Receive=Transmit ", GET_SGR(0, 3));
+	VT220SetupWriteString(vt, " Receive=", GET_SGR(0, 3));
+	if(vt->config.rx_baud_rate == 0) {
+		VT220SetupWriteString(vt, "Transmit ", GET_SGR(0, 3));
+	} else {
+		VT220SetupWriteNumber(vt, vt->config.rx_baud_rate, 8, 1, GET_SGR(0, 3));
+	}
 
 	/* line 2 */
 	VT220SetupGoto(vt, 4, 1);
 	VT220SetupEraseLine(vt);
 	if(vt->use_xoff) {
 		VT220SetupWriteString(vt, " XOFF at ", GET_SGR(1, 0));
-		VT220SetupWriteNumber(vt, vt->xoff_point, 4, GET_SGR(1, 0));
+		VT220SetupWriteNumber(vt, vt->xoff_point, 4, 0, GET_SGR(1, 0));
 	} else {
 		VT220SetupWriteString(vt, " No XOFF      ", GET_SGR(1, 0));
 	}
 	VT220SetupCursorRight(vt);
-	VT220SetupWriteString(vt, " 8 Bits, No Parity             ", GET_SGR(1, 1));
+	switch(vt->config.format) {
+		default:
+		case VT220_COMM_8BIT_NO_PARITY:
+			VT220SetupWriteString(vt, " 8 Bits, No Parity             ", GET_SGR(1, 1));
+			break;
+		case VT220_COMM_8BIT_EVEN_PARITY:
+			VT220SetupWriteString(vt, " 8 Bits, Even Parity           ", GET_SGR(1, 1));
+			break;
+		case VT220_COMM_8BIT_ODD_PARITY:
+			VT220SetupWriteString(vt, " 8 Bits, Odd Parity            ", GET_SGR(1, 1));
+			break;
+		case VT220_COMM_7BIT_NO_PARITY:
+			VT220SetupWriteString(vt, " 7 Bits, No Parity             ", GET_SGR(1, 1));
+			break;
+		case VT220_COMM_7BIT_EVEN_PARITY:
+			VT220SetupWriteString(vt, " 7 Bits, Even Parity           ", GET_SGR(1, 1));
+			break;
+		case VT220_COMM_7BIT_ODD_PARITY:
+			VT220SetupWriteString(vt, " 7 Bits, Odd Parity            ", GET_SGR(1, 1));
+			break;
+		case VT220_COMM_7BIT_MARK_PARITY:
+			VT220SetupWriteString(vt, " 7 Bits, Mark Parity           ", GET_SGR(1, 1));
+			break;
+		case VT220_COMM_7BIT_SPACE_PARITY:
+			VT220SetupWriteString(vt, " 7 Bits, Space Parity          ", GET_SGR(1, 1));
+			break;
+		case VT220_COMM_7BIT_EVEN_PARITY_NO_CHECK:
+			VT220SetupWriteString(vt, " 7 Bits, Even Parity, No Check ", GET_SGR(1, 1));
+			break;
+		case VT220_COMM_7BIT_ODD_PARITY_NO_CHECK:
+			VT220SetupWriteString(vt, " 7 Bits, Odd Parity, No Check  ", GET_SGR(1, 1));
+			break;
+		case VT220_COMM_8BIT_EVEN_PARITY_NO_CHECK:
+			VT220SetupWriteString(vt, " 8 Bits, Even Parity, No Check ", GET_SGR(1, 1));
+			break;
+		case VT220_COMM_8BIT_ODD_PARITY_NO_CHECK:
+			VT220SetupWriteString(vt, " 8 Bits, Odd Parity, No Check  ", GET_SGR(1, 1));
+			break;
+	}
 	VT220SetupCursorRight(vt);
-	VT220SetupWriteString(vt, " 1 Stop Bit  ", GET_SGR(1, 2));
+	if(vt->config.stop_bits == VT220_COMM_1_STOP_BIT) {
+		VT220SetupWriteString(vt, " 1 Stop Bit  ", GET_SGR(1, 2));
+	} else {
+		VT220SetupWriteString(vt, " 2 Stop Bits ", GET_SGR(1, 2));
+	}
 	VT220SetupCursorRight(vt);
 	if(vt->mode & SRM) {
 		VT220SetupWriteString(vt, " No Local Echo ", GET_SGR(1, 3));
@@ -498,9 +597,24 @@ void VT220SetupShowComm(VT220* vt)
 	/* line 3 */
 	VT220SetupGoto(vt, 6, 1);
 	VT220SetupEraseLine(vt);
-	VT220SetupWriteString(vt, " EIA Port, Data Leads Only ", GET_SGR(2, 0));
+	switch(vt->config.port) {
+		default:
+		case VT220_COMM_EIA_PORT_DATA_LEADS_ONLY:
+			VT220SetupWriteString(vt, " EIA Port, Data Leads Only ", GET_SGR(2, 0));
+			break;
+		case VT220_COMM_EIA_PORT_MODEM_CONTROL:
+			VT220SetupWriteString(vt, " EIA Port, Modem Control   ", GET_SGR(2, 0));
+			break;
+		case VT220_COMM_20MA_PORT:
+			VT220SetupWriteString(vt, " 20 mA Port                ", GET_SGR(2, 0));
+			break;
+	}
 	VT220SetupCursorRight(vt);
-	VT220SetupWriteString(vt, " Disconnect, 2 s Delay   ", GET_SGR(2, 1));
+	if(vt->config.delay == VT220_COMM_2S_DELAY) {
+		VT220SetupWriteString(vt, " Disconnect, 2 s Delay   ", GET_SGR(2, 1));
+	} else {
+		VT220SetupWriteString(vt, " Disconnect, 60 ms Delay ", GET_SGR(2, 1));
+	}
 	VT220SetupCursorRight(vt);
 	if(vt->config.transmit == VT220_TRANSMIT_LIMITED) {
 		VT220SetupWriteString(vt, " Limited Transmit   ", GET_SGR(2, 2));
@@ -614,7 +728,11 @@ void VT220SetupShowKeyboard(VT220* vt)
 		VT220SetupWriteString(vt, " No Warning Bell ", GET_SGR(1, 3));
 	}
 	VT220SetupCursorRight(vt);
-	VT220SetupWriteString(vt, " Break    ", GET_SGR(1, 4));
+	if(vt->config.brk == VT220_BREAK) {
+		VT220SetupWriteString(vt, " Break    ", GET_SGR(1, 4));
+	} else {
+		VT220SetupWriteString(vt, " No Break ", GET_SGR(1, 4));
+	}
 
 	/* line 3 */
 	VT220SetupGoto(vt, 6, 1);
@@ -981,6 +1099,12 @@ void VT220SetupCommEnter(VT220* vt)
 				case 1:
 					VT220SetupSetScreen(vt, SETUP_SCREEN_DIRECTORY);
 					break;
+				case 2:
+					vt->config.tx_baud_rate = VT220GetNextBaudRate(vt->config.tx_baud_rate, 0);
+					break;
+				case 3:
+					vt->config.rx_baud_rate = VT220GetNextBaudRate(vt->config.rx_baud_rate, 1);
+					break;
 			}
 			break;
 		case 1:
@@ -1001,9 +1125,51 @@ void VT220SetupCommEnter(VT220* vt)
 					}
 					VT220SetupShowScreen(vt);
 					break;
+				case 1:
+					vt->config.format = (vt->config.format + 1) % 12;
+					break;
+				case 2:
+					if(vt->config.stop_bits == VT220_COMM_1_STOP_BIT) {
+						vt->config.stop_bits = VT220_COMM_2_STOP_BITS;
+					} else {
+						vt->config.stop_bits = VT220_COMM_1_STOP_BIT;
+					}
+					break;
 				case 3:
 					vt->mode ^= SRM;
 					VT220SetupShowScreen(vt);
+					break;
+			}
+			break;
+		case 2:
+			switch(vt->setup.cursor_x) {
+				case 0:
+					switch(vt->config.port) {
+						case VT220_COMM_EIA_PORT_DATA_LEADS_ONLY:
+							vt->config.port = VT220_COMM_EIA_PORT_MODEM_CONTROL;
+							break;
+						case VT220_COMM_EIA_PORT_MODEM_CONTROL:
+							vt->config.port = VT220_COMM_20MA_PORT;
+							break;
+						default:
+						case VT220_COMM_20MA_PORT:
+							vt->config.port = VT220_COMM_EIA_PORT_DATA_LEADS_ONLY;
+							break;
+					}
+					break;
+				case 1:
+					if(vt->config.delay == VT220_COMM_2S_DELAY) {
+						vt->config.delay = VT220_COMM_60MS_DELAY;
+					} else {
+						vt->config.delay = VT220_COMM_2S_DELAY;
+					}
+					break;
+				case 2:
+					if(vt->config.transmit == VT220_TRANSMIT_LIMITED) {
+						vt->config.transmit = VT220_TRANSMIT_UNLIMITED;
+					} else {
+						vt->config.transmit = VT220_TRANSMIT_LIMITED;
+					}
 					break;
 			}
 			break;
@@ -1037,6 +1203,20 @@ void VT220SetupKeyboardEnter(VT220* vt)
 				case 1:
 					VT220SetupSetScreen(vt, SETUP_SCREEN_DIRECTORY);
 					break;
+				case 2:
+					if(vt->config.keys == VT220_KEYS_TYPEWRITER) {
+						vt->config.keys = VT220_KEYS_DATA_PROCESSING;
+					} else {
+						vt->config.keys = VT220_KEYS_TYPEWRITER;
+					}
+					break;
+				case 3:
+					if(vt->config.lock == VT220_LOCK_CAPS_LOCK) {
+						vt->config.lock = VT220_LOCK_SHIFT_LOCK;
+					} else {
+						vt->config.lock = VT220_LOCK_CAPS_LOCK;
+					}
+					break;
 			}
 			break;
 		case 1:
@@ -1052,6 +1232,13 @@ void VT220SetupKeyboardEnter(VT220* vt)
 						vt->config.keyclick = VT220_KEYCLICK;
 					}
 					break;
+				case 2:
+					if(vt->config.margin_bell == VT220_MARGIN_BELL) {
+						vt->config.margin_bell = VT220_NO_MARGIN_BELL;
+					} else {
+						vt->config.margin_bell = VT220_MARGIN_BELL;
+					}
+					break;
 				case 3:
 					if(vt->config.bell == VT220_BELL) {
 						vt->config.bell = VT220_NO_BELL;
@@ -1059,6 +1246,13 @@ void VT220SetupKeyboardEnter(VT220* vt)
 						vt->config.bell = VT220_BELL;
 					}
 					VT220Bell(vt);
+					break;
+				case 4:
+					if(vt->config.brk == VT220_BREAK) {
+						vt->config.brk = VT220_NO_BREAK;
+					} else {
+						vt->config.brk = VT220_BREAK;
+					}
 					break;
 			}
 			break;

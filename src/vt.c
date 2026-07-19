@@ -55,7 +55,7 @@
 #define	STATE_DECDLD_ERR	25
 #define	STATE_DECDLD_ERR_ESC	26
 
-static const VT220NVR default_config = { 0 };
+static const VT220NVR default_config = { .tx_baud_rate = 4800, 0 };
 
 void VT220Init(VT220* vt)
 {
