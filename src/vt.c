@@ -999,6 +999,8 @@ void VT220SetColumnMode(VT220* vt)
 	vt->columns = TEXT_WIDTH_MAX;
 	VT220EraseInDisplay(vt, ED_ALL);
 	VT220SetCursor(vt, 1, 1);
+	vt->mode &= ~DECOM;
+	VT220SetTopBottomMargins(vt, 1, 24);
 
 	if(vt->resize) {
 		vt->resize(132, 24);
@@ -1011,6 +1013,8 @@ void VT220ClearColumnMode(VT220* vt)
 	vt->columns = TEXT_WIDTH;
 	VT220EraseInDisplay(vt, ED_ALL);
 	VT220SetCursor(vt, 1, 1);
+	vt->mode &= ~DECOM;
+	VT220SetTopBottomMargins(vt, 1, 24);
 
 	if(vt->resize) {
 		vt->resize(80, 24);
