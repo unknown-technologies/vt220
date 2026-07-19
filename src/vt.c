@@ -77,6 +77,7 @@ void VT220Init(VT220* vt)
 	vt->buf_lost = 0;
 
 	vt->hold_screen = 0;
+	vt->enable_buffering = 0;
 
 	vt->bell = NULL;
 	vt->keyclick = NULL;
@@ -3203,28 +3204,28 @@ void VT220ProcessChar(VT220* vt, unsigned char c)
 
 void VT220Receive(VT220* vt, unsigned char c)
 {
-#ifdef VT220_NO_BUFFER
-	VT220ProcessChar(vt, c);
-#else
-	if(vt->buf_used < 256) {
-		vt->buf[vt->buf_w++] = c;
-		vt->buf_w %= 256;
-		vt->buf_used++;
+	if(vt->enable_buffering) {
+		if(vt->buf_used < 256) {
+			vt->buf[vt->buf_w++] = c;
+			vt->buf_w %= 256;
+			vt->buf_used++;
 
-		/* XOFF handling */
-		if(vt->use_xoff) {
-			if(vt->buf_used == vt->xoff_point) {
-				VT220FlowControl(vt, 0);
-			} else if(vt->buf_used == 220) {
-				VT220FlowControl(vt, 0);
-			} else if(vt->buf_used == 254) {
-				VT220FlowControl(vt, 0);
+			/* XOFF handling */
+			if(vt->use_xoff) {
+				if(vt->buf_used == vt->xoff_point) {
+					VT220FlowControl(vt, 0);
+				} else if(vt->buf_used == 220) {
+					VT220FlowControl(vt, 0);
+				} else if(vt->buf_used == 254) {
+					VT220FlowControl(vt, 0);
+				}
 			}
+		} else {
+			vt->buf_lost++;
 		}
 	} else {
-		vt->buf_lost++;
+		VT220ProcessChar(vt, c);
 	}
-#endif
 }
 
 void VT220ReceiveText(VT220* vt, const char* s)
@@ -4190,4 +4191,9 @@ void VT220SetScreenColor(VT220* vt, unsigned int color)
 	if(color < 3) {
 		vt->screen_color = color;
 	}
+}
+
+void VT220SetBuffering(VT220* vt, int enable)
+{
+	vt->enable_buffering = enable;
 }

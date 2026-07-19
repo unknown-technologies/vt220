@@ -357,6 +357,7 @@ typedef struct {
 
 	/* flow control */
 	int		hold_screen;
+	int		enable_buffering;
 
 	/* configuration */
 	VT220NVR	config;
@@ -554,6 +555,7 @@ void VT220ProcessKey(VT220* vt, u16 key);
 void VT220ProcessKeys(VT220* vt, unsigned long dt);
 void VT220FlowControl(VT220* vt, int start);
 int  VT220CanReceive(VT220* vt);
+void VT220SetBuffering(VT220* vt, int enable);
 
 /* keyboard */
 void VT220InitKeyboard(VT220* vt);

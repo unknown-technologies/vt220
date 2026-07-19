@@ -401,6 +401,7 @@ static void print_usage(const char* self)
 		"  -s /bin/sh    Execute /bin/sh in the terminal\n"
 		"  -t host port  Establish TELNET connection to host:port\n"
 		"  -u            Unlimited FPS\n"
+		"  -b            Enable buffering (slow processing)\n"
 		"\n"
 		"If no option is provided, -s $(getent passwd $UID | cut -d: -f7) is assumed.\n", self);
 }
@@ -448,6 +449,7 @@ int main(int argc, char** argv, char** envp)
 	bool rawmode = false;
 	bool simple_phosphor = false;
 	bool unlimited_fps = false;
+	bool buffering = false;
 
 	unsigned int color = VT220_SCREEN_COLOR_GREEN;
 
@@ -509,6 +511,8 @@ int main(int argc, char** argv, char** envp)
 			rawmode = true;
 		} else if(!strcmp(arg, "-p")) {
 			simple_phosphor = true;
+		} else if(!strcmp(arg, "-b")) {
+			buffering = true;
 		} else {
 			if(i + 2 > argc) {
 				print_usage(self);
@@ -580,6 +584,7 @@ int main(int argc, char** argv, char** envp)
 
 	VT220Init(&vt);
 	VT220SetScreenColor(&vt, color);
+	VT220SetBuffering(&vt, buffering);
 	vt.rx = print_ch;
 	vt.resize = resize;
 
