@@ -3,6 +3,13 @@
 #include "types.h"
 #include "vt.h"
 
+#define	VT220_SETUP_MOVE_NONE			0
+#define	VT220_SETUP_MOVE_UP			1
+#define	VT220_SETUP_MOVE_DOWN			2
+#define	VT220_SETUP_MOVE_LEFT			3
+#define	VT220_SETUP_MOVE_RIGHT			4
+#define	VT220_SETUP_MOVE_LEFT_MARGIN		5
+
 #define	SETUP_SCREEN_DIRECTORY	0
 #define	SETUP_SCREEN_DISPLAY	1
 #define	SETUP_SCREEN_GENERAL	2
@@ -904,7 +911,13 @@ void VT220SetupShowTab(VT220* vt)
 			}
 		}
 	} else if(vt->setup.move != VT220_SETUP_MOVE_LEFT_MARGIN) {
-		if(vt->setup.move == VT220_SETUP_MOVE_UP) {
+		if(vt->setup.move == VT220_SETUP_MOVE_DOWN) {
+			if(vt->setup.cursor_y == 1) {
+				vt->setup.cursor_x = 0;
+			} else {
+				vt->setup.cursor_y = 1;
+			}
+		} else if(vt->setup.move == VT220_SETUP_MOVE_UP) {
 			vt->setup.cursor_x = 0;
 			vt->setup.cursor_y = 0;
 		} else {
