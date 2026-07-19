@@ -289,7 +289,12 @@ void main(void)
 
 	bool underline_cursor = false;
 
-	if((mode & DECTCEM) != 0u && cursor_on && !in_setup && cell == cursor) {
+	uvec2 cursor_cell = cursor;
+	uint line_length = is_132col ? 132u : 80u;
+	if(cursor_cell.x >= line_length) {
+		cursor_cell.x = line_length - 1u;
+	}
+	if((mode & DECTCEM) != 0u && cursor_on && !in_setup && cell == cursor_cell) {
 		if(block_cursor) {
 			if((attr & SGR_BLINKING) != 0u) {
 				blink_on = !blink_on;

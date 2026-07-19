@@ -22,7 +22,8 @@ static const char* vt220_setup_screen_names[SETUP_SCREEN_COUNT] = {
 	"Tab Set-Up"
 };
 
-static const char* vt220_keyboard_languages[15] = {
+static const char* vt220_keyboard_languages[16] = {
+	"Unknown Keyboard",
 	"North American Keyboard",
 	"British Keyboard",
 	"Flemish Keyboard",
@@ -121,6 +122,13 @@ void VT220SetupWriteString(VT220* vt, const char* s, const int sgr)
 	}
 }
 
+void VT220SetupFill(VT220* vt, const u16 c, unsigned int count, const int sgr)
+{
+	for(; count; count--) {
+		VT220SetupWrite(vt, c, sgr);
+	}
+}
+
 void VT220SetupWriteNumber(VT220* vt, int val, const int width, const int sgr)
 {
 	char buf[8];
@@ -159,8 +167,7 @@ void VT220SetupShowTitle(VT220* vt)
 void VT220SetupShowStatus(VT220* vt)
 {
 	VT220SetupGoto(vt, 7, 1);
-	VT220SetupWriteString(vt, "________________________________________"
-				  "________________________________________", 0);
+	VT220SetupFill(vt, '-', 80, 0);
 	VT220SetupGoto(vt, 8, 5);
 	VT220SetupEraseLine(vt);
 	if(vt->mode & IRM) {
@@ -407,10 +414,10 @@ void VT220SetupShowGeneral(VT220* vt)
 	/* line 2 */
 	VT220SetupGoto(vt, 4, 1);
 	VT220SetupEraseLine(vt);
-	if(vt->config.user_defined_keys == VT220_USER_DEFINED_KEYS_UNLOCKED) {
-		VT220SetupWriteString(vt, " User Defined Keys Unlocked ", GET_SGR(1, 0));
-	} else {
+	if(vt->udk_locked) {
 		VT220SetupWriteString(vt, " User Defined Keys Locked   ", GET_SGR(1, 0));
+	} else {
+		VT220SetupWriteString(vt, " User Defined Keys Unlocked ", GET_SGR(1, 0));
 	}
 	VT220SetupCursorRight(vt);
 	if(vt->config.user_features == VT220_USER_FEATURES_UNLOCKED) {
@@ -781,6 +788,11 @@ void VT220SetupDirectoryEnter(VT220* vt)
 					VT220SetCursor(vt, 1, 1);
 					VT220SetupShowDone(vt);
 					break;
+				case 2:
+					/* Clear Comm */
+					VT220ClearComm(vt);
+					VT220SetupShowDone(vt);
+					break;
 				case 3: /* Reset */
 					VT220SoftReset(vt);
 					VT220SetupShowDone(vt);
@@ -794,6 +806,10 @@ void VT220SetupDirectoryEnter(VT220* vt)
 			break;
 		case 2:
 			switch(vt->setup.cursor_x) {
+				case 1: /* Keyboard language */
+					vt->config.keyboard = (vt->config.keyboard + 1) % VT220_KEYBOARD_COUNT;
+					VT220SetupShow(vt);
+					break;
 				case 3: /* Exit */
 					VT220LeaveSetup(vt);
 					break;
@@ -918,11 +934,7 @@ void VT220SetupGeneralEnter(VT220* vt)
 		case 1:
 			switch(vt->setup.cursor_x) {
 				case 0:
-					if(vt->config.user_defined_keys == VT220_USER_DEFINED_KEYS_UNLOCKED) {
-						vt->config.user_defined_keys = VT220_USER_DEFINED_KEYS_LOCKED;
-					} else {
-						vt->config.user_defined_keys = VT220_USER_DEFINED_KEYS_UNLOCKED;
-					}
+					vt->udk_locked = !vt->udk_locked;
 					VT220SetupShowScreen(vt);
 					break;
 				case 1:

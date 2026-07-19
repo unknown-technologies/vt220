@@ -181,12 +181,8 @@ void VTRender(VTRenderer* self, unsigned int width, unsigned int height)
 	glUniform1i(self->post_shader_fbtex, 0);
 
 	glActiveTexture(GL_TEXTURE1);
-	glBindTexture(GL_TEXTURE_2D, self->vt_masktex);
-	glUniform1i(self->post_shader_fbmask, 1);
-
-	glActiveTexture(GL_TEXTURE2);
 	glBindTexture(GL_TEXTURE_2D, self->blur_tex[1]);
-	glUniform1i(self->post_shader_blurtex, 2);
+	glUniform1i(self->post_shader_blurtex, 1);
 
 	glUniform1i(self->post_shader_enableglow, self->enable_glow);
 	glUniform1i(self->post_shader_is132col, (self->vt->mode & DECCOLM) != 0);
@@ -257,7 +253,7 @@ void VTRenderTerminal(VTRenderer* self)
 	glDrawArrays(GL_TRIANGLES, 0, QUAD_VTX_CNT);
 
 	// unbind textures
-	for(unsigned int i = 0; i < 6; i++) {
+	for(unsigned int i = 0; i < 4; i++) {
 		glActiveTexture(GL_TEXTURE0 + i);
 		glBindTexture(GL_TEXTURE_2D, 0);
 	}
@@ -399,7 +395,6 @@ void VTCreateFrameBuffer(VTRenderer* self)
 {
 	glGenFramebuffers(1, &self->vt_fb);
 	glGenTextures(1, &self->vt_tex);
-	glGenTextures(1, &self->vt_masktex);
 
 	glBindTexture(GL_TEXTURE_2D, self->vt_tex);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, SCREEN_WIDTH_80, SCREEN_HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
