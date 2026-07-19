@@ -1120,6 +1120,8 @@ void VT220SoftReset(VT220* vt)
 /* RIS */
 void VT220HardReset(VT220* vt)
 {
+	unsigned int old_columns = vt->columns;
+
 	vt->columns = TEXT_WIDTH;
 	vt->mode = 0;
 
@@ -1201,7 +1203,7 @@ void VT220HardReset(VT220* vt)
 	/* TODO: implement properly */
 	memset(vt->answerback, 0, 31);
 
-	if(vt->resize) {
+	if(vt->resize && vt->columns != old_columns) {
 		vt->resize(vt->columns, vt->lines);
 	}
 }
