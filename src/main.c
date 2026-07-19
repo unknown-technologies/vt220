@@ -250,6 +250,7 @@ static void enter_fullscreen(void)
 
 static void exit_fullscreen(void)
 {
+	glfwSetWindowAttrib(window, GLFW_RESIZABLE, GLFW_TRUE);
 	glfwSetWindowAttrib(window, GLFW_DECORATED, GLFW_TRUE);
 	glfwSetWindowAttrib(window, GLFW_FLOATING, GLFW_FALSE);
 
