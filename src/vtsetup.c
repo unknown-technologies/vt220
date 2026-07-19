@@ -784,8 +784,7 @@ void VT220SetupDisplayEnter(VT220* vt)
 					} else {
 						VT220SetColumnMode(vt);
 					}
-					VT220SetupEraseDisplay(vt);
-					VT220SetupShowScreen(vt);
+					VT220SetupShow(vt);
 					break;
 			}
 			break;
