@@ -192,7 +192,7 @@ void TELNETRxError(TELNET* telnet, const char* what, const char* msg)
 	TELNETRxString(telnet, msg);
 	TELNETRxString(telnet, "\r\n");
 
-	LOG("[TELNET] %s failed: %s\n", what, msg);
+	printf("[TELNET] %s failed: %s\n", what, msg);
 }
 
 void TELNETConnected(TELNET* telnet)
