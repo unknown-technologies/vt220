@@ -271,17 +271,33 @@ void VT220SetupShowDirectory(VT220* vt)
 	switch(vt->setup.cursor_y) {
 		case 0:
 			if(vt->setup.cursor_x > 5) {
-				vt->setup.cursor_x = 5;
+				if(vt->setup.move == VT220_SETUP_MOVE_RIGHT) {
+					vt->setup.cursor_x = 0;
+					vt->setup.cursor_y = 1;
+				} else {
+					vt->setup.cursor_x = 5;
+				}
 			}
 			break;
 		case 1:
 			if(vt->setup.cursor_x > 5) {
+				if(vt->setup.move == VT220_SETUP_MOVE_RIGHT) {
+					vt->setup.cursor_x = 0;
+					vt->setup.cursor_y = 2;
+				} else {
+					vt->setup.cursor_x = 5;
+				}
+			} else if(vt->setup.move == VT220_SETUP_MOVE_LEFT_MARGIN) {
 				vt->setup.cursor_x = 5;
+				vt->setup.cursor_y = 0;
 			}
 			break;
 		case 2:
 			if(vt->setup.cursor_x > 3) {
 				vt->setup.cursor_x = 3;
+			} else if(vt->setup.move == VT220_SETUP_MOVE_LEFT_MARGIN) {
+				vt->setup.cursor_x = 5;
+				vt->setup.cursor_y = 1;
 			}
 			break;
 	}
@@ -342,17 +358,33 @@ void VT220SetupShowDisplay(VT220* vt)
 	switch(vt->setup.cursor_y) {
 		case 0:
 			if(vt->setup.cursor_x > 3) {
-				vt->setup.cursor_x = 3;
+				if(vt->setup.move == VT220_SETUP_MOVE_RIGHT) {
+					vt->setup.cursor_x = 0;
+					vt->setup.cursor_y = 1;
+				} else {
+					vt->setup.cursor_x = 3;
+				}
 			}
 			break;
 		case 1:
 			if(vt->setup.cursor_x > 2) {
-				vt->setup.cursor_x = 2;
+				if(vt->setup.move == VT220_SETUP_MOVE_RIGHT) {
+					vt->setup.cursor_x = 0;
+					vt->setup.cursor_y = 2;
+				} else {
+					vt->setup.cursor_x = 2;
+				}
+			} else if(vt->setup.move == VT220_SETUP_MOVE_LEFT_MARGIN) {
+				vt->setup.cursor_x = 3;
+				vt->setup.cursor_y = 0;
 			}
 			break;
 		case 2:
 			if(vt->setup.cursor_x > 1) {
 				vt->setup.cursor_x = 1;
+			} else if(vt->setup.move == VT220_SETUP_MOVE_LEFT_MARGIN) {
+				vt->setup.cursor_x = 2;
+				vt->setup.cursor_y = 1;
 			}
 			break;
 	}
@@ -420,12 +452,37 @@ void VT220SetupShowGeneral(VT220* vt)
 {
 	if(vt->vt100_mode) {
 		if(vt->setup.cursor_y == 0 && vt->setup.cursor_x > 3) {
-			vt->setup.cursor_x = 3;
+			if(vt->setup.move == VT220_SETUP_MOVE_RIGHT) {
+				vt->setup.cursor_x = 0;
+				vt->setup.cursor_y = 1;
+			} else {
+				vt->setup.cursor_x = 3;
+			}
 		} else if(vt->setup.cursor_y > 0 && vt->setup.cursor_x > 2) {
-			vt->setup.cursor_x = 2;
+			if(vt->setup.cursor_y < 2 && vt->setup.cursor_x > 2 && vt->setup.move == VT220_SETUP_MOVE_RIGHT) {
+				vt->setup.cursor_x = 0;
+				vt->setup.cursor_y++;
+			} else {
+				vt->setup.cursor_x = 2;
+			}
+		} else if(vt->setup.cursor_y > 0 && vt->setup.move == VT220_SETUP_MOVE_LEFT_MARGIN) {
+			vt->setup.cursor_y--;
+			if(vt->setup.cursor_y == 0) {
+				vt->setup.cursor_x = 3;
+			} else {
+				vt->setup.cursor_x = 2;
+			}
 		}
 	} else if(vt->setup.cursor_x > 2) {
+		if(vt->setup.cursor_y < 2 && vt->setup.cursor_x > 2 && vt->setup.move == VT220_SETUP_MOVE_RIGHT) {
+			vt->setup.cursor_x = 0;
+			vt->setup.cursor_y++;
+		} else {
+			vt->setup.cursor_x = 2;
+		}
+	} else if(vt->setup.cursor_y > 0 && vt->setup.move == VT220_SETUP_MOVE_LEFT_MARGIN) {
 		vt->setup.cursor_x = 2;
+		vt->setup.cursor_y--;
 	}
 
 	/* line 1 */
@@ -509,7 +566,15 @@ void VT220SetupShowGeneral(VT220* vt)
 void VT220SetupShowComm(VT220* vt)
 {
 	if(vt->setup.cursor_x > 3) {
+		if(vt->setup.cursor_y < 2 && vt->setup.move == VT220_SETUP_MOVE_RIGHT) {
+			vt->setup.cursor_x = 0;
+			vt->setup.cursor_y++;
+		} else {
+			vt->setup.cursor_x = 3;
+		}
+	} else if(vt->setup.cursor_y > 0  && vt->setup.move == VT220_SETUP_MOVE_LEFT_MARGIN) {
 		vt->setup.cursor_x = 3;
+		vt->setup.cursor_y--;
 	}
 	if(vt->setup.cursor_y == 2 && vt->setup.cursor_x > 2) {
 		vt->setup.cursor_x = 2;
@@ -626,10 +691,23 @@ void VT220SetupShowComm(VT220* vt)
 void VT220SetupShowPrinter(VT220* vt)
 {
 	if(vt->setup.cursor_x > 3) {
+		if(vt->setup.cursor_y < 2 && vt->setup.move == VT220_SETUP_MOVE_RIGHT) {
+			vt->setup.cursor_x = 0;
+			vt->setup.cursor_y++;
+		} else {
+			vt->setup.cursor_x = 3;
+		}
+	} else if(vt->setup.cursor_y > 0 && vt->setup.move == VT220_SETUP_MOVE_LEFT_MARGIN) {
 		vt->setup.cursor_x = 3;
+		vt->setup.cursor_y--;
 	}
 	if((vt->setup.cursor_y == 0 || vt->setup.cursor_y == 2) && vt->setup.cursor_x > 2) {
-		vt->setup.cursor_x = 2;
+		if(vt->setup.cursor_y < 2 && vt->setup.move == VT220_SETUP_MOVE_RIGHT) {
+			vt->setup.cursor_x = 0;
+			vt->setup.cursor_y = 1;
+		} else {
+			vt->setup.cursor_x = 2;
+		}
 	}
 
 	/* line 1 */
@@ -667,17 +745,33 @@ void VT220SetupShowKeyboard(VT220* vt)
 	switch(vt->setup.cursor_y) {
 		case 0:
 			if(vt->setup.cursor_x > 3) {
-				vt->setup.cursor_x = 3;
+				if(vt->setup.move == VT220_SETUP_MOVE_RIGHT) {
+					vt->setup.cursor_x = 0;
+					vt->setup.cursor_y = 1;
+				} else {
+					vt->setup.cursor_x = 3;
+				}
 			}
 			break;
 		case 1:
 			if(vt->setup.cursor_x > 4) {
-				vt->setup.cursor_x = 4;
+				if(vt->setup.move == VT220_SETUP_MOVE_RIGHT) {
+					vt->setup.cursor_x = 0;
+					vt->setup.cursor_y = 2;
+				} else {
+					vt->setup.cursor_x = 4;
+				}
+			} else if(vt->setup.move == VT220_SETUP_MOVE_LEFT_MARGIN) {
+				vt->setup.cursor_x = 3;
+				vt->setup.cursor_y = 0;
 			}
 			break;
 		case 2:
 			if(vt->setup.cursor_x > 2) {
 				vt->setup.cursor_x = 2;
+			} else if(vt->setup.move == VT220_SETUP_MOVE_LEFT_MARGIN) {
+				vt->setup.cursor_x = 4;
+				vt->setup.cursor_y = 1;
 			}
 			break;
 	}
@@ -749,10 +843,23 @@ void VT220SetupShowTab(VT220* vt)
 	int i;
 
 	if(vt->setup.cursor_y == 0) {
-		if(vt->setup.cursor_x > 3) {
-			vt->setup.cursor_x = 3;
+		if(vt->setup.move == VT220_SETUP_MOVE_UP) {
+			vt->setup.cursor_x = 0;
+		} else if(vt->setup.cursor_x > 3) {
+			if(vt->setup.move == VT220_SETUP_MOVE_RIGHT) {
+				vt->setup.cursor_x = 0;
+				vt->setup.cursor_y = 1;
+			} else {
+				vt->setup.cursor_x = 3;
+			}
 		}
+	} else if(vt->setup.move == VT220_SETUP_MOVE_LEFT_MARGIN) {
+		vt->setup.cursor_x = 3;
+		vt->setup.cursor_y = 0;
 	} else {
+		if(vt->setup.move == VT220_SETUP_MOVE_DOWN) {
+			vt->setup.cursor_x = 0;
+		}
 		vt->setup.cursor_y = 1;
 		if(vt->setup.cursor_x >= vt->columns) {
 			vt->setup.cursor_x = vt->columns - 1;
@@ -827,10 +934,13 @@ void VT220SetupShowScreen(VT220* vt)
 			VT220SetupShowTab(vt);
 			break;
 	}
+
+	vt->setup.move = VT220_SETUP_MOVE_NONE;
 }
 
 void VT220SetupShow(VT220* vt)
 {
+	vt->setup.move = VT220_SETUP_MOVE_NONE;
 	VT220SetupEraseDisplay(vt);
 	VT220SetupShowScreen(vt);
 	VT220SetupShowStatus(vt);
@@ -1327,6 +1437,7 @@ void VT220SetupProcessEnter(VT220* vt)
 
 void VT220SetupProcessKey(VT220* vt, unsigned char c)
 {
+	vt->setup.move = VT220_SETUP_MOVE_NONE;
 	switch(vt->setup.state) {
 		case STATE_TEXT:
 			switch(c) {
@@ -1364,6 +1475,7 @@ void VT220SetupProcessKey(VT220* vt, unsigned char c)
 					if(!(vt->mode & DECANM)) {
 						vt->setup.state = STATE_TEXT;
 						if(vt->setup.cursor_y > 0) {
+							vt->setup.move = VT220_SETUP_MOVE_UP;
 							vt->setup.cursor_y--;
 						}
 						VT220SetupShowStatus(vt);
@@ -1376,6 +1488,7 @@ void VT220SetupProcessKey(VT220* vt, unsigned char c)
 					if(!(vt->mode & DECANM)) {
 						vt->setup.state = STATE_TEXT;
 						if(vt->setup.cursor_y < 2) {
+							vt->setup.move = VT220_SETUP_MOVE_DOWN;
 							vt->setup.cursor_y++;
 						}
 						VT220SetupShowStatus(vt);
@@ -1388,6 +1501,7 @@ void VT220SetupProcessKey(VT220* vt, unsigned char c)
 					if(!(vt->mode & DECANM)) {
 						vt->setup.state = STATE_TEXT;
 						if(vt->setup.cursor_x < vt->columns) {
+							vt->setup.move = VT220_SETUP_MOVE_RIGHT;
 							vt->setup.cursor_x++;
 						}
 						VT220SetupShowStatus(vt);
@@ -1400,7 +1514,10 @@ void VT220SetupProcessKey(VT220* vt, unsigned char c)
 					if(!(vt->mode & DECANM)) {
 						vt->setup.state = STATE_TEXT;
 						if(vt->setup.cursor_x > 0) {
+							vt->setup.move = VT220_SETUP_MOVE_LEFT;
 							vt->setup.cursor_x--;
+						} else {
+							vt->setup.move = VT220_SETUP_MOVE_LEFT_MARGIN;
 						}
 						VT220SetupShowStatus(vt);
 					} else {
@@ -1425,6 +1542,7 @@ void VT220SetupProcessKey(VT220* vt, unsigned char c)
 				case 'A': /* cursor up */
 					vt->setup.state = STATE_TEXT;
 					if(vt->setup.cursor_y > 0) {
+						vt->setup.move = VT220_SETUP_MOVE_UP;
 						vt->setup.cursor_y--;
 					}
 					VT220SetupShowStatus(vt);
@@ -1432,6 +1550,7 @@ void VT220SetupProcessKey(VT220* vt, unsigned char c)
 				case 'B': /* cursor down */
 					vt->setup.state = STATE_TEXT;
 					if(vt->setup.cursor_y < 2) {
+						vt->setup.move = VT220_SETUP_MOVE_DOWN;
 						vt->setup.cursor_y++;
 					}
 					VT220SetupShowStatus(vt);
@@ -1439,6 +1558,7 @@ void VT220SetupProcessKey(VT220* vt, unsigned char c)
 				case 'C': /* cursor right */
 					vt->setup.state = STATE_TEXT;
 					if(vt->setup.cursor_x < vt->columns) {
+						vt->setup.move = VT220_SETUP_MOVE_RIGHT;
 						vt->setup.cursor_x++;
 					}
 					VT220SetupShowStatus(vt);
@@ -1446,7 +1566,10 @@ void VT220SetupProcessKey(VT220* vt, unsigned char c)
 				case 'D': /* cursor left */
 					vt->setup.state = STATE_TEXT;
 					if(vt->setup.cursor_x > 0) {
+						vt->setup.move = VT220_SETUP_MOVE_LEFT;
 						vt->setup.cursor_x--;
+					} else {
+						vt->setup.move = VT220_SETUP_MOVE_LEFT_MARGIN;
 					}
 					VT220SetupShowStatus(vt);
 					break;
@@ -1467,6 +1590,7 @@ void VT220SetupProcessKey(VT220* vt, unsigned char c)
 				case 'A': /* cursor up */
 					vt->setup.state = STATE_TEXT;
 					if(vt->setup.cursor_y > 0) {
+						vt->setup.move = VT220_SETUP_MOVE_UP;
 						vt->setup.cursor_y--;
 					}
 					VT220SetupShowStatus(vt);
@@ -1474,6 +1598,7 @@ void VT220SetupProcessKey(VT220* vt, unsigned char c)
 				case 'B': /* cursor down */
 					vt->setup.state = STATE_TEXT;
 					if(vt->setup.cursor_y < 2) {
+						vt->setup.move = VT220_SETUP_MOVE_DOWN;
 						vt->setup.cursor_y++;
 					}
 					VT220SetupShowStatus(vt);
@@ -1481,6 +1606,7 @@ void VT220SetupProcessKey(VT220* vt, unsigned char c)
 				case 'C': /* cursor right */
 					vt->setup.state = STATE_TEXT;
 					if(vt->setup.cursor_x < vt->columns) {
+						vt->setup.move = VT220_SETUP_MOVE_RIGHT;
 						vt->setup.cursor_x++;
 					}
 					VT220SetupShowStatus(vt);
@@ -1488,7 +1614,10 @@ void VT220SetupProcessKey(VT220* vt, unsigned char c)
 				case 'D': /* cursor left */
 					vt->setup.state = STATE_TEXT;
 					if(vt->setup.cursor_x > 0) {
+						vt->setup.move = VT220_SETUP_MOVE_LEFT;
 						vt->setup.cursor_x--;
+					} else {
+						vt->setup.move = VT220_SETUP_MOVE_LEFT_MARGIN;
 					}
 					VT220SetupShowStatus(vt);
 					break;

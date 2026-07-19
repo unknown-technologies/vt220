@@ -205,6 +205,13 @@
 #define	VT220_BREAK				0
 #define	VT220_NO_BREAK				1
 
+#define	VT220_SETUP_MOVE_NONE			0
+#define	VT220_SETUP_MOVE_UP			1
+#define	VT220_SETUP_MOVE_DOWN			2
+#define	VT220_SETUP_MOVE_LEFT			3
+#define	VT220_SETUP_MOVE_RIGHT			4
+#define	VT220_SETUP_MOVE_LEFT_MARGIN		5
+
 typedef struct {
 	unsigned int	rx_baud_rate;
 	unsigned int	tx_baud_rate;
@@ -251,6 +258,7 @@ typedef struct {
 typedef struct {
 	int		cursor_x;
 	int		cursor_y;
+	int		move;
 	int		screen;
 	int		status;
 	int		state;
