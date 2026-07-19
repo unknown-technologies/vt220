@@ -108,13 +108,8 @@ void get_cell(const in bool is_132col, const in int cell_width,
 	cell = uvec2(textpos);
 	cell_pos = uvec2((textpos - vec2(cell)) * vec2(float(cell_width), float(cell_height)));
 
-	ivec2 cell_offset = ivec2(0);
-	if(in_setup) {
-		cell_offset += ivec2(0, 8);
-	}
-
 	// retrieve glyph and attributes
-	ivec2 cellcoord = ivec2(cell) + cell_offset;
+	ivec2 cellcoord = ivec2(cell);
 	uint lineattr = texelFetch(line_attributes, ivec2(cellcoord.y, 0), 0).r;
 
 	if(lineattr != DECSWL) {
@@ -203,10 +198,7 @@ void main(void)
 			attr, bit);
 
 	// get previous cell/attribute/bit
-	vec2 last_pos = vec2(position.x - 1, position.y);
-	if(last_pos.x < 0) {
-		last_pos.x = 0;
-	}
+	vec2 last_pos = vec2(max(position.x - 1, 0), position.y);
 
 	uvec2 last_cell;
 	uvec2 last_cell_pos;
@@ -217,10 +209,7 @@ void main(void)
 			last_cell_pos, last_attr, last_bit);
 
 	// get previous - 1 cell/attribute/bit
-	vec2 last_2_pos = vec2(position.x - 2, position.y);
-	if(last_2_pos.x < 0) {
-		last_2_pos.x = 0;
-	}
+	vec2 last_2_pos = vec2(max(position.x - 2, 0), position.y);
 
 	uvec2 last_2_cell;
 	uvec2 last_2_cell_pos;
@@ -234,9 +223,7 @@ void main(void)
 	bit = bit || last_bit;
 
 	// the real VT220 is really weird
-	if(!is_132col && cell_pos.x == 1u) {
-		bit = bit || last_2_bit;
-	}
+	bit = bit || ((!is_132col && cell_pos.x == 1u) && last_2_bit);
 
 ////////////////////////////////////////////////////////////////////////////////
 	bool blink_on = blink_time < BLINK_ON_TIME;
@@ -247,17 +234,13 @@ void main(void)
 	if(cursor_cell.x >= line_length) {
 		cursor_cell.x = line_length - 1u;
 	}
+
 	if((mode & DECTCEM) != 0u && cursor_on && !in_setup && cell == cursor_cell) {
-		if(block_cursor) {
-			attr ^= SGR_REVERSE;
-		} else {
-			attr ^= SGR_UNDERSCORE;
-		}
+		uint xor = block_cursor ? SGR_REVERSE : SGR_UNDERSCORE;
+		attr ^= xor;
 	}
 
-	if((attr & SGR_UNDERSCORE) != 0u && cell_pos.y == 8u) {
-		bit = true;
-	}
+	bit = bit || ((attr & SGR_UNDERSCORE) != 0u && cell_pos.y == 8u);
 
 	// select intensity according to SGR
 	bool decscnm = (mode & DECSCNM) != 0u;
