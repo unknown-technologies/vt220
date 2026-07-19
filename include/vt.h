@@ -193,7 +193,6 @@ typedef struct {
 	int		buf_lost;
 	int		scroll;
 	int		state;
-	int		display_control;
 	u16		parameters[MAX_PARAMETERS];
 	int		parameter_id;
 	int		cursor_x;
@@ -210,6 +209,8 @@ typedef struct {
 	int		g_dst;
 	char*		tabstops;
 	int		ct_7bit;
+
+	int		vt100_mode;
 
 	int		use_xoff;
 	int		xoff;
@@ -444,7 +445,8 @@ void VT220ScrollUp(VT220* vt);
 void VT220ScrollDown(VT220* vt);
 void VT220SetTopBottomMargins(VT220* vt, int top, int bottom);
 void VT220EraseScreen(VT220* vt);
-void VT220Reset(VT220* vt);
+void VT220SoftReset(VT220* vt);
+void VT220HardReset(VT220* vt);
 int  VT220GetCharset(VT220* vt, unsigned char c);
 void VT220ProcessChar(VT220* vt, unsigned char c);
 void VT220ProcessKeys(VT220* vt);

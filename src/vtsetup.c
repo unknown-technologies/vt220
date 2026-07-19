@@ -359,7 +359,13 @@ void VT220SetupShowDisplay(VT220* vt)
 
 void VT220SetupShowGeneral(VT220* vt)
 {
-	if(vt->setup.cursor_x > 2) {
+	if(vt->vt100_mode) {
+		if(vt->setup.cursor_y == 0 && vt->setup.cursor_x > 3) {
+			vt->setup.cursor_x = 3;
+		} else if(vt->setup.cursor_y > 0 && vt->setup.cursor_x > 2) {
+			vt->setup.cursor_x = 2;
+		}
+	} else if(vt->setup.cursor_x > 2) {
 		vt->setup.cursor_x = 2;
 	}
 
@@ -370,13 +376,32 @@ void VT220SetupShowGeneral(VT220* vt)
 	VT220SetupCursorRight(vt);
 	VT220SetupWriteString(vt, " To Directory ", GET_SGR(0, 1));
 	VT220SetupCursorRight(vt);
-	/* TODO: add VT100 mode + identifier */
 	if(!(vt->mode & DECANM)) {
 		VT220SetupWriteString(vt, " VT52 Mode                  ", GET_SGR(0, 2));
+	} else if(vt->vt100_mode) {
+		VT220SetupWriteString(vt, " VT100 Mode                 ", GET_SGR(0, 2));
 	} else if(vt->ct_7bit) {
 		VT220SetupWriteString(vt, " VT200 Mode, 7 Bit Controls ", GET_SGR(0, 2));
 	} else {
 		VT220SetupWriteString(vt, " VT200 Mode, 8 Bit Controls ", GET_SGR(0, 2));
+	}
+
+	if(vt->vt100_mode) {
+		VT220SetupCursorRight(vt);
+		switch(vt->config.vt100_terminal_id) {
+			case VT220_VT100_TERMINAL_ID_VT220:
+				VT220SetupWriteString(vt, " VT220 ID ", GET_SGR(0, 3));
+				break;
+			case VT220_VT100_TERMINAL_ID_VT100:
+				VT220SetupWriteString(vt, " VT100 ID ", GET_SGR(0, 3));
+				break;
+			case VT220_VT100_TERMINAL_ID_VT101:
+				VT220SetupWriteString(vt, " VT101 ID ", GET_SGR(0, 3));
+				break;
+			case VT220_VT100_TERMINAL_ID_VT102:
+				VT220SetupWriteString(vt, " VT102 ID ", GET_SGR(0, 3));
+				break;
+		}
 	}
 
 	/* line 2 */
@@ -756,6 +781,15 @@ void VT220SetupDirectoryEnter(VT220* vt)
 					VT220SetCursor(vt, 1, 1);
 					VT220SetupShowDone(vt);
 					break;
+				case 3: /* Reset */
+					VT220SoftReset(vt);
+					VT220SetupShowDone(vt);
+					break;
+				case 4: /* Recall */
+					VT220HardReset(vt);
+					VT220SetupShow(vt);
+					VT220SetupShowDone(vt);
+					break;
 			}
 			break;
 		case 2:
@@ -785,6 +819,17 @@ void VT220SetupDisplayEnter(VT220* vt)
 						VT220SetColumnMode(vt);
 					}
 					VT220SetupShow(vt);
+					break;
+				case 3:
+					switch(vt->config.controls) {
+						case VT220_CONTROLS_INTERPRET_CONTROLS:
+							vt->config.controls = VT220_CONTROLS_DISPLAY_CONTROLS;
+							break;
+						case VT220_CONTROLS_DISPLAY_CONTROLS:
+							vt->config.controls = VT220_CONTROLS_INTERPRET_CONTROLS;
+							break;
+					}
+					VT220SetupShowScreen(vt);
 					break;
 			}
 			break;
@@ -836,13 +881,57 @@ void VT220SetupGeneralEnter(VT220* vt)
 					break;
 				case 2:
 					if(!(vt->mode & DECANM)) {
+						/* was VT52, go to VT100 */
+						vt->mode |= DECANM;
+						vt->vt100_mode = 1;
+						vt->ct_7bit = 1;
+					} else if(vt->vt100_mode) {
+						/* was VT100, go to (tek) VT200, 7bit */
 						vt->mode |= DECANM;
 						vt->ct_7bit = 1;
+						vt->vt100_mode = 0;
 					} else if(vt->ct_7bit) {
 						vt->ct_7bit = 0;
 					} else {
 						vt->mode &= ~DECANM;
 					}
+					break;
+				case 3:
+					switch(vt->config.vt100_terminal_id) {
+						case VT220_VT100_TERMINAL_ID_VT220:
+							vt->config.vt100_terminal_id = VT220_VT100_TERMINAL_ID_VT100;
+							break;
+						case VT220_VT100_TERMINAL_ID_VT100:
+							vt->config.vt100_terminal_id = VT220_VT100_TERMINAL_ID_VT101;
+							break;
+						case VT220_VT100_TERMINAL_ID_VT101:
+							vt->config.vt100_terminal_id = VT220_VT100_TERMINAL_ID_VT102;
+							break;
+						case VT220_VT100_TERMINAL_ID_VT102:
+							vt->config.vt100_terminal_id = VT220_VT100_TERMINAL_ID_VT220;
+							break;
+					}
+					VT220SetupShowScreen(vt);
+					break;
+			}
+			break;
+		case 1:
+			switch(vt->setup.cursor_x) {
+				case 0:
+					if(vt->config.user_defined_keys == VT220_USER_DEFINED_KEYS_UNLOCKED) {
+						vt->config.user_defined_keys = VT220_USER_DEFINED_KEYS_LOCKED;
+					} else {
+						vt->config.user_defined_keys = VT220_USER_DEFINED_KEYS_UNLOCKED;
+					}
+					VT220SetupShowScreen(vt);
+					break;
+				case 1:
+					if(vt->config.user_features == VT220_USER_FEATURES_UNLOCKED) {
+						vt->config.user_features = VT220_USER_FEATURES_LOCKED;
+					} else {
+						vt->config.user_features = VT220_USER_FEATURES_UNLOCKED;
+					}
+					VT220SetupShowScreen(vt);
 					break;
 			}
 			break;

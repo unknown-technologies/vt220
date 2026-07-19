@@ -40,6 +40,7 @@
 #define	STATE_ESC_SP		10
 #define	STATE_CSI_GT		11
 #define	STATE_CSI_QUOT		12
+#define	STATE_CSI_EXCL		13
 
 static const VT220NVR default_config = { 0 };
 
@@ -58,69 +59,15 @@ void VT220Init(VT220* vt)
 	vt->line_attributes = (char*) malloc(TEXT_HEIGHT);
 	vt->tabstops = (char*) malloc(TEXT_WIDTH_MAX);
 
-	vt->state = 0;
-	vt->display_control = vt->config.display;
-	vt->ct_7bit = vt->config.mode != VT220_MODE_VT200_MODE_8BIT_CONTROLS;
-
-	if(vt->config.mode != VT220_MODE_VT52_MODE) {
-		vt->mode |= DECANM;
-	}
-
-	if(vt->config.auto_wrap) {
-		vt->mode |= DECAWM;
-	}
-
-	if(vt->config.text_cursor == VT220_TEXT_CURSOR) {
-		vt->mode |= DECTCEM;
-	}
-
-	if(vt->config.new_line == VT220_NEW_LINE) {
-		vt->mode |= LNM;
-	}
-
-	if(vt->config.local_echo == VT220_NO_LOCAL_ECHO) {
-		vt->mode |= SRM;
-	}
-
-	if(vt->config.auto_repeat == VT220_AUTO_REPEAT) {
-		vt->mode |= DECARM;
-	}
-
 	vt->buf = (unsigned char*) malloc(2048); /* input buffer */
 	vt->buf_r = 0;
 	vt->buf_w = 0;
 	vt->buf_used = 0;
 	vt->buf_lost = 0;
 
-	vt->xoff = 0;
-	vt->xoff_point = 64;
-	vt->xon_point = 16;
-	vt->use_xoff = 1;
-	vt->sent_xoff = 0;
-
-	memset(vt->answerback, 0, 31);
-
 	vt->bell = NULL;
 	vt->keyclick = NULL;
 	vt->rx = NULL;
-
-	vt->margin_top = 0;
-	vt->margin_bottom = TEXT_HEIGHT - 1;
-
-	vt->gl = 0;
-	vt->gl_lock = 0;
-	vt->gr = 1;
-	vt->gr_lock = 1;
-	vt->g[0] = CHARSET_ASCII;
-	vt->g[1] = CHARSET_DEC_SUPPLEMENTAL;
-	vt->g[2] = CHARSET_DEC_SUPPLEMENTAL;
-	vt->g[3] = CHARSET_DEC_SUPPLEMENTAL;
-
-	vt->sgr = 0;
-
-	VT220SaveCursor(vt);
-
-	VT220Reset(vt);
 
 	/* configure setup screens */
 	vt->in_setup = 0;
@@ -128,6 +75,8 @@ void VT220Init(VT220* vt)
 	vt->setup.line_attributes = (char*) malloc(8);
 	memset(vt->setup.text, 0, 8 * TEXT_WIDTH_MAX * sizeof(VT220CELL));
 	memset(vt->setup.line_attributes, 0, 8);
+
+	VT220HardReset(vt);
 }
 
 static inline unsigned int VT220GetCellWidth(VT220* vt)
@@ -152,17 +101,17 @@ static inline unsigned int VT220GetCellOffset(VT220* vt)
 	}
 }
 
-void VT220Write(VT220* vt, u16 c)
+void VT220WriteGlyph(VT220* vt, u16 c, bool force_wrap)
 {
 	if(vt->cursor_x == vt->columns) {
-		if(vt->mode & DECAWM) { /* Auto Wrap Mode: enabled */
+		if(vt->mode & DECAWM || force_wrap) { /* Auto Wrap Mode: enabled */
 			VT220CarriageReturn(vt);
 			VT220Linefeed(vt);
 		} else {
 			vt->cursor_x--;
 		}
 	} else if(vt->line_attributes[vt->cursor_y] != DECSWL && 2 * vt->cursor_x >= vt->columns) {
-		if(vt->mode & DECAWM) { /* Auto Wrap Mode: enabled */
+		if(vt->mode & DECAWM || force_wrap) { /* Auto Wrap Mode: enabled */
 			VT220CarriageReturn(vt);
 			VT220Linefeed(vt);
 		} else {
@@ -188,6 +137,24 @@ void VT220Write(VT220* vt, u16 c)
 	if(vt->line_attributes[vt->cursor_y] != DECSWL && 2 * vt->cursor_x >= vt->columns) {
 		vt->cursor_x = vt->columns / 2;
 	}
+}
+
+void VT220WriteControls(VT220* vt, unsigned char c)
+{
+	u16 glyph = c;
+
+	if(glyph == 0x20) {
+		glyph = 0;
+	} else if(glyph < 0x20) {
+		glyph += 0x100;
+	}
+
+	VT220WriteGlyph(vt, glyph, true);
+}
+
+void VT220Write(VT220* vt, u16 c)
+{
+	VT220WriteGlyph(vt, c, false);
 }
 
 void VT220WriteChar(VT220* vt, unsigned char c)
@@ -999,11 +966,11 @@ void VT220SetColumnMode(VT220* vt)
 	vt->columns = TEXT_WIDTH_MAX;
 	VT220EraseInDisplay(vt, ED_ALL);
 	VT220SetCursor(vt, 1, 1);
-	vt->mode &= ~DECOM;
-	VT220SetTopBottomMargins(vt, 1, 24);
+	vt->margin_top = 0;
+	vt->margin_bottom = vt->lines - 1;
 
 	if(vt->resize) {
-		vt->resize(132, 24);
+		vt->resize(vt->columns, vt->lines);
 	}
 }
 
@@ -1013,11 +980,11 @@ void VT220ClearColumnMode(VT220* vt)
 	vt->columns = TEXT_WIDTH;
 	VT220EraseInDisplay(vt, ED_ALL);
 	VT220SetCursor(vt, 1, 1);
-	vt->mode &= ~DECOM;
-	VT220SetTopBottomMargins(vt, 1, 24);
+	vt->margin_top = 0;
+	vt->margin_bottom = vt->lines - 1;
 
 	if(vt->resize) {
-		vt->resize(80, 24);
+		vt->resize(vt->columns, vt->lines);
 	}
 }
 
@@ -1037,6 +1004,10 @@ void VT220SetANSIMode(VT220* vt)
 	vt->state = STATE_TEXT;
 	vt->gl = 0;
 	vt->gl_lock = 0;
+
+	/* go to VT100 mode */
+	vt->ct_7bit = 1;
+	vt->vt100_mode = 1;
 }
 
 void VT220Adjustments(VT220* vt)
@@ -1076,13 +1047,14 @@ void VT220SetLineMode(VT220* vt, int mode)
 	}
 }
 
-/* VT220SoftReset: page 129 */
-void VT220Reset(VT220* vt)
+void VT220SoftReset(VT220* vt)
 {
 	int i;
-	for(i = 0; i < vt->columns; i++) {
+	for(i = 0; i < TEXT_WIDTH_MAX; i++) {
 		vt->tabstops[i] = i % 8 == 7;
 	}
+
+	vt->state = 0;
 	vt->cursor_x_stored = 0;
 	vt->cursor_y_stored = 0;
 	vt->auto_wrap = 1;
@@ -1093,8 +1065,100 @@ void VT220Reset(VT220* vt)
 	vt->margin_bottom = vt->lines - 1;
 	vt->udk_locked = 0;
 	vt->keyboard_locked = 0;
+	vt->sgr = 0;
+
+	vt->mode |= DECTCEM;
+	vt->mode &= ~(IRM | DECOM | DECAWM | KAM | DECCKM);
+
+	vt->gl = 0;
+	vt->gl_lock = 0;
+	vt->gr = 2;
+	vt->gr_lock = 2;
+	vt->g[0] = CHARSET_ASCII;
+	vt->g[1] = CHARSET_DEC_SUPPLEMENTAL;
+	vt->g[2] = CHARSET_DEC_SUPPLEMENTAL;
+	vt->g[3] = CHARSET_DEC_SUPPLEMENTAL;
+
+	vt->sgr = 0;
+
 	VT220CursorHome(vt);
 	VT220EraseScreen(vt);
+	VT220SaveCursor(vt);
+}
+
+/* RIS */
+void VT220HardReset(VT220* vt)
+{
+	vt->columns = TEXT_WIDTH;
+	vt->mode = 0;
+
+	VT220SoftReset(vt);
+
+	vt->state = 0;
+	vt->mode = 0;
+	vt->ct_7bit = vt->config.mode != VT220_MODE_VT200_MODE_8BIT_CONTROLS;
+
+	if(vt->config.mode != VT220_MODE_VT52_MODE) {
+		vt->mode |= DECANM;
+	}
+
+	switch(vt->config.mode) {
+		case VT220_MODE_VT200_MODE_7BIT_CONTROLS:
+		case VT220_MODE_VT200_MODE_8BIT_CONTROLS:
+		case VT220_MODE_VT52_MODE:
+			vt->vt100_mode = 0;
+			break;
+		case VT220_MODE_VT100_MODE:
+			vt->vt100_mode = 1;
+			break;
+	}
+
+	if(vt->config.auto_wrap) {
+		vt->mode |= DECAWM;
+	}
+
+	if(vt->config.text_cursor == VT220_TEXT_CURSOR) {
+		vt->mode |= DECTCEM;
+	}
+
+	if(vt->config.new_line == VT220_NEW_LINE) {
+		vt->mode |= LNM;
+	}
+
+	if(vt->config.local_echo == VT220_NO_LOCAL_ECHO) {
+		vt->mode |= SRM;
+	}
+
+	if(vt->config.auto_repeat == VT220_AUTO_REPEAT) {
+		vt->mode |= DECARM;
+	}
+
+	vt->xoff = 0;
+	vt->xoff_point = 64;
+	vt->xon_point = 16;
+	vt->use_xoff = 1;
+	vt->sent_xoff = 0;
+
+	vt->margin_top = 0;
+	vt->margin_bottom = TEXT_HEIGHT - 1;
+
+	vt->gl = 0;
+	vt->gl_lock = 0;
+	vt->gr = 2;
+	vt->gr_lock = 2;
+	vt->g[0] = CHARSET_ASCII;
+	vt->g[1] = CHARSET_DEC_SUPPLEMENTAL;
+	vt->g[2] = CHARSET_DEC_SUPPLEMENTAL;
+	vt->g[3] = CHARSET_DEC_SUPPLEMENTAL;
+
+	VT220SaveCursor(vt);
+
+	/* TODO: implement properly */
+	memset(vt->answerback, 0, 31);
+
+	if(vt->resize) {
+		vt->resize(vt->columns, vt->lines);
+	}
 }
 
 void VT220Substitute(VT220* vt)
@@ -1213,11 +1277,29 @@ void VT220SendAnswerback(VT220* vt)
 
 void VT220SendPrimaryDA(VT220* vt)
 {
-	VT220SendText(vt, "\x9b?62;1;2;6;7;8c");
+	if(vt->vt100_mode) {
+		switch(vt->config.vt100_terminal_id) {
+			case VT220_VT100_TERMINAL_ID_VT220:
+				VT220SendText(vt, "\x9b?62;1;2;6;7;8c");
+				break;
+			case VT220_VT100_TERMINAL_ID_VT100:
+				VT220SendText(vt, "\x1b[?1;2c");
+				break;
+			case VT220_VT100_TERMINAL_ID_VT101:
+				VT220SendText(vt, "\x1b[?1;0c");
+				break;
+			case VT220_VT100_TERMINAL_ID_VT102:
+				VT220SendText(vt, "\x1b[?6c");
+				break;
+		}
+	} else {
+		VT220SendText(vt, "\x9b?62;1;2;6;7;8c");
+	}
 }
 
 void VT220SendSecondaryDA(VT220* vt)
 {
+	/* version 2.0, no options */
 	VT220SendText(vt, "\x9b>1;20;0c");
 }
 
@@ -1283,7 +1365,9 @@ void VT220ProcessCharVT220(VT220* vt, unsigned char c)
 					VT220NextLine(vt);
 					break;
 				case HTS:
-					VT220SetTabstop(vt);
+					if(vt->config.user_features == VT220_USER_FEATURES_UNLOCKED) {
+						VT220SetTabstop(vt);
+					}
 					break;
 				case RI:
 					VT220ReverseIndex(vt);
@@ -1339,37 +1423,55 @@ void VT220ProcessCharVT220(VT220* vt, unsigned char c)
 					vt->g_dst = 1;
 					break;
 				case '*':
-					vt->state = STATE_G;
-					vt->g_dst = 2;
+					if(vt->vt100_mode) {
+						vt->state = STATE_TEXT;
+					} else {
+						vt->state = STATE_G;
+						vt->g_dst = 2;
+					}
 					break;
 				case '+':
-					vt->state = STATE_G;
-					vt->g_dst = 3;
+					if(vt->vt100_mode) {
+						vt->state = STATE_TEXT;
+					} else {
+						vt->state = STATE_G;
+						vt->g_dst = 3;
+					}
 					break;
 				case '~': /* LS1R */
 					vt->state = STATE_TEXT;
-					vt->gr      = 1;
-					vt->gr_lock = 1;
+					if(!vt->vt100_mode) {
+						vt->gr      = 1;
+						vt->gr_lock = 1;
+					}
 					break;
 				case 'n': /* LS2 */
 					vt->state = STATE_TEXT;
-					vt->gl      = 2;
-					vt->gl_lock = 2;
+					if(!vt->vt100_mode) {
+						vt->gl      = 2;
+						vt->gl_lock = 2;
+					}
 					break;
 				case '}': /* LS2R */
 					vt->state = STATE_TEXT;
-					vt->gr      = 2;
-					vt->gr_lock = 2;
+					if(!vt->vt100_mode) {
+						vt->gr      = 2;
+						vt->gr_lock = 2;
+					}
 					break;
 				case 'o': /* LS3 */
 					vt->state = STATE_TEXT;
-					vt->gl      = 3;
-					vt->gl_lock = 3;
+					if(!vt->vt100_mode) {
+						vt->gl      = 3;
+						vt->gl_lock = 3;
+					}
 					break;
 				case '|': /* LS3R */
 					vt->state = STATE_TEXT;
-					vt->gr      = 3;
-					vt->gr_lock = 3;
+					if(!vt->vt100_mode) {
+						vt->gr      = 3;
+						vt->gr_lock = 3;
+					}
 					break;
 				case ' ':
 					vt->state = STATE_ESC_SP;
@@ -1396,10 +1498,16 @@ void VT220ProcessCharVT220(VT220* vt, unsigned char c)
 					break;
 				case 'H': /* HTS */
 					vt->state = STATE_TEXT;
-					VT220SetTabstop(vt);
+					if(vt->config.user_features == VT220_USER_FEATURES_UNLOCKED) {
+						VT220SetTabstop(vt);
+					}
 					break;
 				case '#':
 					vt->state = STATE_ESC_HASH;
+					break;
+				case 'c': /* RIS */
+					vt->state = STATE_TEXT;
+					VT220HardReset(vt);
 					break;
 				default:
 					vt->state = STATE_TEXT;
@@ -1496,7 +1604,7 @@ void VT220ProcessCharVT220(VT220* vt, unsigned char c)
 					break;
 				case 'G': /* S8C1T */
 					vt->state = STATE_TEXT;
-					vt->ct_7bit = 0;
+					vt->ct_7bit = vt->vt100_mode;
 					break;
 			}
 			break;
@@ -1684,13 +1792,15 @@ void VT220ProcessCharVT220(VT220* vt, unsigned char c)
 					break;
 				case 'g': /* TBC */
 					vt->state = STATE_TEXT;
-					switch(vt->parameters[0]) {
-						case 0:
-							VT220ClearTabstop(vt);
-							break;
-						case 3:
-							VT220ClearAllTabstops(vt);
-							break;
+					if(vt->config.user_features == VT220_USER_FEATURES_UNLOCKED) {
+						switch(vt->parameters[0]) {
+							case 0:
+								VT220ClearTabstop(vt);
+								break;
+							case 3:
+								VT220ClearAllTabstops(vt);
+								break;
+						}
 					}
 					break;
 				case 'm': /* SGR */
@@ -1744,7 +1854,9 @@ void VT220ProcessCharVT220(VT220* vt, unsigned char c)
 					break;
 				case '@': /* ICH */
 					vt->state = STATE_TEXT;
-					VT220InsertCharacterN(vt, vt->parameters[0]);
+					if(!vt->vt100_mode) {
+						VT220InsertCharacterN(vt, vt->parameters[0]);
+					}
 					break;
 				case 'P': /* DCH */
 					vt->state = STATE_TEXT;
@@ -1752,7 +1864,9 @@ void VT220ProcessCharVT220(VT220* vt, unsigned char c)
 					break;
 				case 'X': /* ECH */
 					vt->state = STATE_TEXT;
-					VT220EraseCharacter(vt, vt->parameters[0]);
+					if(!vt->vt100_mode) {
+						VT220EraseCharacter(vt, vt->parameters[0]);
+					}
 					break;
 				case 'K': /* EL */
 					vt->state = STATE_TEXT;
@@ -1768,6 +1882,9 @@ void VT220ProcessCharVT220(VT220* vt, unsigned char c)
 					break;
 				case 'R': /* report cursor position result; ignore */
 					vt->state = STATE_TEXT;
+					break;
+				case '!':
+					vt->state = STATE_CSI_EXCL;
 					break;
 			}
 			break;
@@ -1895,9 +2012,6 @@ void VT220ProcessCharVT220(VT220* vt, unsigned char c)
 							case 25:
 								vt->mode |= DECTCEM;
 								break;
-							case 38:
-								vt->mode |= DECTEK;
-								break;
 							case 42:
 								vt->mode |= DECNRCM;
 								break;
@@ -1966,8 +2080,6 @@ void VT220ProcessCharVT220(VT220* vt, unsigned char c)
 							case 25:
 								vt->mode &= ~DECTCEM;
 								break;
-							case 38:
-								vt->mode &= ~DECTEK;
 								break;
 							case 42:
 								vt->mode &= ~DECNRCM;
@@ -1996,11 +2108,15 @@ void VT220ProcessCharVT220(VT220* vt, unsigned char c)
 					break;
 				case 'J': /* DECSEL */
 					vt->state = STATE_TEXT;
-					VT220SelectiveEraseInLine(vt, vt->parameters[0]);
+					if(!vt->vt100_mode) {
+						VT220SelectiveEraseInLine(vt, vt->parameters[0]);
+					}
 					break;
 				case 'K': /* DECSED */
 					vt->state = STATE_TEXT;
-					VT220SelectiveEraseInDisplay(vt, vt->parameters[0]);
+					if(!vt->vt100_mode) {
+						VT220SelectiveEraseInDisplay(vt, vt->parameters[0]);
+					}
 					break;
 				case 'c':
 					/* ignore */
@@ -2010,7 +2126,7 @@ void VT220ProcessCharVT220(VT220* vt, unsigned char c)
 					vt->state = STATE_TEXT;
 					switch(vt->parameters[0]) {
 						case 15:
-							VT220SendText(vt, "\x9b?13n");
+							VT220SendText(vt, "\x9b?13n"); /* no printer */
 							break;
 						case 25:
 							if(vt->udk_locked) {
@@ -2021,7 +2137,7 @@ void VT220ProcessCharVT220(VT220* vt, unsigned char c)
 							break;
 						case 26:
 							VT220SendText(vt, "\x9b?27;");
-							VT220SendDecimal(vt, 0); /* TODO: return real keyboard layout */
+							VT220SendDecimal(vt, vt->config.keyboard + 1);
 							VT220Send(vt, 'n');
 							break;
 					}
@@ -2046,17 +2162,68 @@ void VT220ProcessCharVT220(VT220* vt, unsigned char c)
 					vt->state = STATE_TEXT;
 					VT220Substitute(vt);
 					break;
-				case 'q':
+				case 'p':
 					switch(vt->parameters[0]) {
-						case 0:
-						case 2:
-							vt->sgr &= ~SCA_ON;
+						case 61: /* terminal level 1 */
+							vt->ct_7bit = 1;
+							vt->vt100_mode = 1;
 							break;
-						case 1:
-							vt->sgr |= SCA_ON;
+						case 62: /* terminal level 2 */
+							vt->vt100_mode = 0;
+							switch(vt->parameters[1]) {
+								case 0:
+								case 2:
+									vt->ct_7bit = 0;
+									break;
+								default:
+								case 1:
+									/* VT200, 7bit */
+									vt->ct_7bit = 1;
+									break;
+							}
 							break;
 					}
 					vt->state = STATE_TEXT;
+					break;
+				case 'q':
+					if(!vt->vt100_mode) {
+						switch(vt->parameters[0]) {
+							case 0:
+							case 2:
+								vt->sgr &= ~SCA_ON;
+								break;
+							case 1:
+								vt->sgr |= SCA_ON;
+								break;
+						}
+					}
+					vt->state = STATE_TEXT;
+					break;
+			}
+			break;
+		case STATE_CSI_EXCL:
+			switch(c) {
+				case ESC:
+					vt->state = STATE_ESC;
+					break;
+				case CSI:
+					vt->state = STATE_CSI;
+					vt->parameter_id = 0;
+					memset(vt->parameters, 0, MAX_PARAMETERS * sizeof(u16));
+					break;
+				default:
+				case CAN:
+					vt->state = STATE_TEXT;
+					break;
+				case SUB:
+					vt->state = STATE_TEXT;
+					VT220Substitute(vt);
+					break;
+				case 'p': /* DECSTR */
+					vt->state = STATE_TEXT;
+					if(!vt->vt100_mode) {
+						VT220SoftReset(vt);
+					}
 					break;
 			}
 			break;
@@ -2213,7 +2380,9 @@ void VT220ProcessCharVT52(VT220* vt, unsigned char c)
 					VT220NextLine(vt);
 					break;
 				case HTS:
-					VT220SetTabstop(vt);
+					if(vt->config.user_features == VT220_USER_FEATURES_UNLOCKED) {
+						VT220SetTabstop(vt);
+					}
 					break;
 				case RI:
 					VT220ReverseIndex(vt);
@@ -2443,10 +2612,43 @@ void VT220ProcessCharVT52(VT220* vt, unsigned char c)
 
 void VT220ProcessChar(VT220* vt, unsigned char c)
 {
-	if(vt->mode & DECANM) {
-		VT220ProcessCharVT220(vt, c);
-	} else {
-		VT220ProcessCharVT52(vt, c);
+	/* strip MSB in VT52 mode */
+	if(!(vt->mode & DECANM)) {
+		c &= 0x7F;
+	}
+
+	switch(vt->config.controls) {
+		default:
+		case VT220_CONTROLS_INTERPRET_CONTROLS:
+			if(vt->mode & DECANM) {
+				VT220ProcessCharVT220(vt, c);
+			} else {
+				VT220ProcessCharVT52(vt, c);
+			}
+			break;
+		case VT220_CONTROLS_DISPLAY_CONTROLS:
+			switch(c) {
+				case LF:
+				case VT:
+				case FF:
+					VT220WriteControls(vt, c);
+					VT220Linefeed(vt);
+					break;
+				case CR:
+					VT220CarriageReturn(vt);
+					break;
+				case DC1:
+					VT220Xon(vt);
+					VT220WriteControls(vt, c);
+					break;
+				case DC3:
+					VT220Xoff(vt);
+					VT220WriteControls(vt, c);
+					break;
+				default:
+					VT220WriteControls(vt, c);
+					break;
+			}
 	}
 }
 
@@ -2695,6 +2897,93 @@ void VT220ProcessKeyVT220(VT220* vt, u16 key)
 
 }
 
+void VT220ProcessKeyVT100(VT220* vt, u16 key)
+{
+	switch(key) {
+		case CR:
+			VT220SendInput(vt, key);
+			if(vt->mode & LNM) {
+				VT220SendInput(vt, LF);
+			}
+			break;
+		case VT220_KEY_UP:
+			if(vt->mode & DECCKM) {
+				VT220SendInput(vt, SS3);
+			} else {
+				VT220SendInput(vt, CSI);
+			}
+			VT220SendInput(vt, 'A');
+			break;
+		case VT220_KEY_DOWN:
+			if(vt->mode & DECCKM) {
+				VT220SendInput(vt, SS3);
+			} else {
+				VT220SendInput(vt, CSI);
+			}
+			VT220SendInput(vt, 'B');
+			break;
+		case VT220_KEY_RIGHT:
+			if(vt->mode & DECCKM) {
+				VT220SendInput(vt, SS3);
+			} else {
+				VT220SendInput(vt, CSI);
+			}
+			VT220SendInput(vt, 'C');
+			break;
+		case VT220_KEY_LEFT:
+			if(vt->mode & DECCKM) {
+				VT220SendInput(vt, SS3);
+			} else {
+				VT220SendInput(vt, CSI);
+			}
+			VT220SendInput(vt, 'D');
+			break;
+		case VT220_KEY_HOLD_SCREEN:
+		case VT220_KEY_PRINT_SCREEN:
+			break;
+		case VT220_KEY_SET_UP:
+			if(vt->in_setup) {
+				VT220LeaveSetup(vt);
+			} else {
+				VT220EnterSetup(vt);
+			}
+			break;
+		case VT220_KEY_DATA_TALK:
+		case VT220_KEY_BREAK:
+			/* local function keys */
+			/* TODO: implement */
+			break;
+		case VT220_KEY_F6:
+		case VT220_KEY_F7:
+		case VT220_KEY_F8:
+		case VT220_KEY_F9:
+		case VT220_KEY_F10:
+			break;
+		case VT220_KEY_F11:
+			VT220SendInput(vt, ESC);
+			break;
+		case VT220_KEY_F12:
+			VT220SendInput(vt, BS);
+			break;
+		case VT220_KEY_F13:
+			VT220SendInput(vt, LF);
+			break;
+		case VT220_KEY_F14:
+		case VT220_KEY_F15:
+		case VT220_KEY_F16:
+		case VT220_KEY_F17:
+		case VT220_KEY_F18:
+		case VT220_KEY_F19:
+		case VT220_KEY_F20:
+			break;
+		default:
+			if(key < 0x80) {
+				VT220SendInput(vt, key);
+			}
+	}
+
+}
+
 void VT220ProcessKeyVT52(VT220* vt, u16 key)
 {
 	switch(key) {
@@ -2766,14 +3055,20 @@ void VT220ProcessKeyVT52(VT220* vt, u16 key)
 		case VT220_KEY_F20:
 			break;
 		default:
-			VT220SendInput(vt, key);
+			if(key < 0x80) {
+				VT220SendInput(vt, key);
+			}
 	}
 }
 
 void VT220ProcessKey(VT220* vt, u16 key)
 {
 	if(vt->mode & DECANM) {
-		VT220ProcessKeyVT220(vt, key);
+		if(vt->vt100_mode) {
+			VT220ProcessKeyVT100(vt, key);
+		} else {
+			VT220ProcessKeyVT220(vt, key);
+		}
 	} else {
 		VT220ProcessKeyVT52(vt, key);
 	}
