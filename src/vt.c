@@ -81,6 +81,7 @@ void VT220Init(VT220* vt)
 	vt->rx = NULL;
 
 	vt->drcs = (unsigned char*) malloc(940);
+	vt->drcs_dirty = 1;
 
 	/* configure setup screens */
 	vt->in_setup = 0;
@@ -1276,6 +1277,7 @@ void VT220ClearDRCS(VT220* vt)
 	for(unsigned int i = 0; i < 94; i++) {
 		memcpy(&vt->drcs[i * 10], &vt220font[0x20 * 10], 10);
 	}
+	vt->drcs_dirty = 1;
 }
 
 void VT220Substitute(VT220* vt)
@@ -2789,6 +2791,7 @@ void VT220ProcessCharVT220(VT220* vt, unsigned char c)
 						u8 bits = c - '?';
 						if(vt->decdld_row < 2 && vt->decdld_col < 8 && vt->decdld_glyph >= 1
 								&& vt->decdld_glyph <= 94) {
+							vt->drcs_dirty = 1;
 							u8* glyph = &vt->drcs[(vt->decdld_glyph - 1) * 10];
 							if(vt->decdld_row == 0  && vt->decdld_col == 0) {
 								memset(glyph, 0, 10);

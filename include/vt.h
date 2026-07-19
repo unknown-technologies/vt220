@@ -307,6 +307,7 @@ typedef struct {
 	unsigned int	decdld_glyph;
 	unsigned int	decdld_row;
 	unsigned int	decdld_col;
+	int		drcs_dirty;
 
 	/* configuration */
 	VT220NVR	config;
@@ -430,7 +431,6 @@ void VT220Destroy(VT220* vt);
 void VT220Process(VT220* vt, unsigned long dt);
 void VT220Receive(VT220* vt, unsigned char c);
 void VT220ReceiveText(VT220* vt, const char* s);
-void VT220SetTextureFilter(VT220* vt, bool linear);
 void VT220Draw(VT220* vt);
 void VT220SetScreenColor(VT220* vt, unsigned int color);
 

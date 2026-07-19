@@ -226,9 +226,12 @@ void VTRenderTerminal(VTRenderer* self)
 
 	glActiveTexture(GL_TEXTURE1);
 	glBindTexture(GL_TEXTURE_2D, self->drcs_tex);
-	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_R8UI, DRCS_WIDTH, DRCS_HEIGHT, 0, GL_RED_INTEGER, GL_UNSIGNED_BYTE, self->vt->drcs);
-	glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
+	if(self->vt->drcs_dirty) {
+		glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_R8UI, DRCS_WIDTH, DRCS_HEIGHT, 0, GL_RED_INTEGER, GL_UNSIGNED_BYTE, self->vt->drcs);
+		glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
+		self->vt->drcs_dirty = 0;
+	}
 	glUniform1i(self->vt_shader_drcs, 1);
 
 	glActiveTexture(GL_TEXTURE2);
