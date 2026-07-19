@@ -161,7 +161,7 @@ void VT220SetupShowStatus(VT220* vt)
 	VT220SetupGoto(vt, 7, 1);
 	VT220SetupWriteString(vt, "________________________________________"
 				  "________________________________________", 0);
-	VT220SetupGoto(vt, 8, 2);
+	VT220SetupGoto(vt, 8, 5);
 	VT220SetupEraseLine(vt);
 	if(vt->mode & IRM) {
 		VT220SetupWriteString(vt, "Insert Mode", 0);
@@ -169,7 +169,7 @@ void VT220SetupShowStatus(VT220* vt)
 		VT220SetupWriteString(vt, "Replace Mode", 0);
 	}
 
-	VT220SetupGoto(vt, 8, 18);
+	VT220SetupGoto(vt, 8, 28);
 	VT220SetupWriteString(vt, "Printer: None", 0);
 }
 
