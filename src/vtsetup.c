@@ -1748,11 +1748,6 @@ void VT220SetupProcessKey(VT220* vt, u16 key)
 {
 	vt->setup.move = VT220_SETUP_MOVE_NONE;
 	switch(key) {
-		/* TODO: it is EXTREMELY convenient to have CR = ENTER.
-		 * Unfortunately this causes issues with the Answerback entry
-		 * field because there you can enter CR as a valid character.
-		 * Therefore, CR is currently handled like on the real VT220:
-		 * it is not the same as ENTER and not a valid key in Setup */
 		case VT220_KEY_KP_ENTER:
 			VT220SetupProcessEnter(vt);
 			break;
@@ -1793,6 +1788,16 @@ void VT220SetupProcessKey(VT220* vt, u16 key)
 		default:
 			if(vt->setup.in_enq >= 0) {
 				VT220SetupProcessAnswerback(vt, key);
+			} else if(key == CR) {
+				/* On the real VT220, ENTER (keypad) is not the
+				 * same as Return (CR). Only ENTER is accepted
+				 * in Setup. However, not every PC keyboard has
+				 * a numeric keypad, therefore it is extremely
+				 * convenient to have Return = ENTER here.
+				 * This is NOT true for the Answerback field:
+				 * that field treats ENTER and Return as
+				 * separate keys, just like the real VT220. */
+				VT220SetupProcessEnter(vt);
 			} else {
 				VT220SetupShowHint(vt);
 			}
