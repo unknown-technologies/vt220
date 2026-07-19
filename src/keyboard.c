@@ -125,7 +125,7 @@ u16 VT220TranslateKey(VT220* vt, int key)
 		case GLFW_KEY_DELETE:
 			return VT220_KEY_REMOVE;
 		case GLFW_KEY_BACKSPACE:
-			return DEL;
+			return ctrl ? CAN : DEL;
 		case GLFW_KEY_TAB:
 			return HT;
 		case GLFW_KEY_ESCAPE:
@@ -286,6 +286,14 @@ void VT220KeyboardKeyDownHost(VT220* vt, int key)
 					vt->repeat_char = 0;
 
 					VT220ProcessKey(vt, 0);
+				} else if(key == GLFW_KEY_BACKSPACE) {
+					vt->repeat_time = 0;
+					vt->repeat_state = 0;
+
+					vt->repeat_scancode = key;
+					vt->repeat_char = CAN;
+
+					VT220ProcessKey(vt, CAN);
 				}
 			} else {
 				u16 code = VT220TranslateKey(vt, key);

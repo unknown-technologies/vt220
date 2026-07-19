@@ -17,12 +17,15 @@
 #include <pwd.h>
 #include <sys/types.h>
 #include <sys/time.h>
+#include <time.h>
 
 #include "types.h"
 #include "vt.h"
 #include "renderer.h"
 #include "telnet.h"
 #include "pty.h"
+
+#define	FPS			60
 
 #define	SCREEN_WIDTH		800
 #define	SCREEN_HEIGHT		480
@@ -47,7 +50,7 @@ static VTRenderer renderer;
 static TELNET telnet;
 static PTY pty;
 
-static unsigned long time = 0;
+static unsigned long current_time = 0;
 
 #ifdef _WIN32
 PFNGLGENFRAMEBUFFERSPROC	glGenFramebuffers;
@@ -114,7 +117,7 @@ void process(void)
 {
 	unsigned long now = get_time();
 
-	unsigned long dt = now - time;
+	unsigned long dt = now - current_time;
 
 	if(use_telnet) {
 		TELNETPoll(&telnet);
@@ -127,7 +130,7 @@ void process(void)
 	VT220Process(&vt, dt);
 	VTProcess(&renderer, dt);
 
-	time = now;
+	current_time = now;
 }
 
 static int get_monitor(GLFWmonitor** monitor, GLFWwindow* window)
@@ -232,11 +235,14 @@ static void enter_fullscreen(void)
 		glfwGetMonitorPos(mon, &pos_x, &pos_y);
 		const GLFWvidmode* mode = glfwGetVideoMode(mon);
 
+		glfwSetWindowAttrib(window, GLFW_RESIZABLE, GLFW_FALSE);
 		glfwSetWindowAttrib(window, GLFW_DECORATED, GLFW_FALSE);
 		glfwSetWindowAttrib(window, GLFW_FLOATING, GLFW_TRUE);
 
 		glfwSetWindowPos(window, pos_x, pos_y);
 		glfwSetWindowSize(window, mode->width, mode->height);
+
+		glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_HIDDEN);
 
 		is_fullscreen = true;
 	}
@@ -250,6 +256,8 @@ static void exit_fullscreen(void)
 	glfwSetWindowSize(window, window_width, SCREEN_HEIGHT);
 	glfwSetWindowPos(window, window_pos_x, window_pos_y);
 
+	glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+
 	is_fullscreen = false;
 }
 
@@ -260,6 +268,8 @@ static void toggle_fullscreen(void)
 	} else {
 		enter_fullscreen();
 	}
+
+	glfwSwapInterval(1);
 }
 
 void key_handler(GLFWwindow* window, int key, int scancode, int action, int mods)
@@ -273,13 +283,6 @@ void key_handler(GLFWwindow* window, int key, int scancode, int action, int mods
 					toggle_fullscreen();
 				}
 				break;
-			case GLFW_KEY_F5:
-				if(mods & (GLFW_MOD_CONTROL | GLFW_MOD_ALT)) {
-					VT220KeyboardKeyDown(&vt, key);
-				} else {
-					glfwSetWindowShouldClose(window, GLFW_TRUE);
-				}
-				break;
 			default:
 				VT220KeyboardKeyDown(&vt, key);
 				break;
@@ -287,7 +290,6 @@ void key_handler(GLFWwindow* window, int key, int scancode, int action, int mods
 	} else if(action == GLFW_RELEASE) {
 		switch(key) {
 			case GLFW_KEY_F2:
-			case GLFW_KEY_F5:
 				if(mods & (GLFW_MOD_CONTROL | GLFW_MOD_ALT)) {
 					VT220KeyboardKeyUp(&vt, key);
 				}
@@ -341,6 +343,11 @@ static void telnet_tx(unsigned char c)
 	TELNETSend(&telnet, c);
 }
 
+static void telnet_brk(void)
+{
+	TELNETBreak(&telnet);
+}
+
 static void resize(unsigned int width, unsigned int height)
 {
 	window_width = width == 132 ? (9 * 132) : (10 * 80);
@@ -354,6 +361,11 @@ static void pty_tx(unsigned char c)
 	PTYSend(&pty, c);
 }
 
+static void pty_brk(void)
+{
+	PTYBreak(&pty);
+}
+
 static void pty_resize(unsigned int width, unsigned int height)
 {
 	resize(width, height);
@@ -362,7 +374,23 @@ static void pty_resize(unsigned int width, unsigned int height)
 
 static void print_usage(const char* self)
 {
-	printf("Usage: %s [-g] [-l | -s command | -t hostname port]\n", self);
+	printf("Usage: %s [OPTIONS] [-l | -s command | -t hostname port]\n"
+		"\n"
+		"OPTIONS\n"
+		"  -h            Show this help message\n"
+		"  -g            Disable glow effect\n"
+		"  -cg           Screen color: green\n"
+		"  -cw           Screen color: white\n"
+		"  -ca           Screen color: amber\n"
+		"  -f 0.75       Electron beam focus\n"
+		"  -i 1.0        Electron beam intensity (brightness)\n"
+		"  -r            Raw mode, deactivates all post processing; implies -g\n"
+		"  -l            Loopback / local mode\n"
+		"  -s /bin/sh    Execute /bin/sh in the terminal\n"
+		"  -t host port  Establish TELNET connection to host:port\n"
+		"  -u            Unlimited FPS\n"
+		"\n"
+		"If no option is provided, -s $(getent passwd $UID | cut -d: -f7) is assumed.\n", self);
 }
 
 char** get_default_argv(void)
@@ -403,6 +431,12 @@ int main(int argc, char** argv, char** envp)
 	const char* hostname = NULL;
 	int port;
 	bool loopback = false;
+	float focus = 0.75f;
+	float intensity = 1.0f;
+	bool rawmode = false;
+	bool unlimited_fps = false;
+
+	unsigned int color = VT220_SCREEN_COLOR_GREEN;
 
 	argc--;
 	argv++;
@@ -431,10 +465,35 @@ int main(int argc, char** argv, char** envp)
 			break;
 		} else if(!strcmp(arg, "-l")) {
 			loopback = true;
-			break;
+		} else if(!strcmp(arg, "-cw")) {
+			color = VT220_SCREEN_COLOR_WHITE;
+		} else if(!strcmp(arg, "-cg")) {
+			color = VT220_SCREEN_COLOR_GREEN;
+		} else if(!strcmp(arg, "-ca")) {
+			color = VT220_SCREEN_COLOR_AMBER;
+		} else if(!strcmp(arg, "-u")) {
+			unlimited_fps = true;
 		} else if(!strcmp(arg, "-h") || !strcmp(arg, "--help")) {
 			print_usage(self);
 			return 0;
+		} else if(!strcmp(arg, "-f")) {
+			if(i + 1 >= argc) {
+				print_usage(self);
+				return 1;
+			} else {
+				focus = atof(argv[i + 1]);
+				i += 1;
+			}
+		} else if(!strcmp(arg, "-i")) {
+			if(i + 1 >= argc) {
+				print_usage(self);
+				return 1;
+			} else {
+				intensity = atof(argv[i + 1]);
+				i += 1;
+			}
+		} else if(!strcmp(arg, "-r")) {
+			rawmode = true;
 		} else {
 			if(i + 2 > argc) {
 				print_usage(self);
@@ -501,11 +560,18 @@ int main(int argc, char** argv, char** envp)
 	GL_ERROR();
 
 	VT220Init(&vt);
+	VT220SetScreenColor(&vt, color);
 	vt.rx = print_ch;
 	vt.resize = resize;
 
 	VTInitRenderer(&renderer, &vt);
 	VTEnableGlow(&renderer, enable_glow);
+	VTSetRaw(&renderer, rawmode);
+	VTSetFocus(&renderer, focus);
+	VTSetIntensity(&renderer, intensity);
+
+	glDisable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
 	glDepthFunc(GL_LEQUAL);
 
@@ -524,6 +590,7 @@ int main(int argc, char** argv, char** envp)
 		TELNETInit(&telnet);
 		telnet.rx = vt_rx;
 		vt.rx = telnet_tx;
+		vt.brk = telnet_brk;
 
 		TELNETConnect(&telnet, hostname, port);
 	} else if(shell) {
@@ -536,12 +603,62 @@ int main(int argc, char** argv, char** envp)
 
 		pty.rx = vt_rx;
 		vt.rx = pty_tx;
+		vt.brk = pty_brk;
 		vt.resize = pty_resize;
 	}
 
-	time = get_time();
+	current_time = get_time();
 
+#define	FRAME_TIME	((unsigned int) (1000.0 / FPS))
+	unsigned long last_time = get_time();
+	unsigned long last_frame = get_time();
+	unsigned long next = last_frame + FRAME_TIME;
+	unsigned long frames = 0;
+	unsigned long fps = 0;
+	bool fps_limit = false;
 	while(!glfwWindowShouldClose(window)) {
+		/* compute current FPS */
+		unsigned long now = get_time();
+		unsigned long dt = now - last_time;
+		if(dt >= 1000) {
+			last_time = now;
+			fps = frames;
+			frames = 0;
+
+#ifdef SHOW_FPS
+			printf("\r\x1b[2KFPS: %lu", fps);
+			fflush(stdout);
+#endif
+
+			if(!unlimited_fps && fps > FPS * 4) {
+				printf("\r\x1b[2KLimiting FPS to %u\n", FPS);
+				fps_limit = true;
+			}
+		} else {
+			frames++;
+		}
+
+		if(fps_limit && !unlimited_fps) {
+			/* sleep between frames to roughly get the target FPS,
+			 * this is relevant on GPUs which ignore vsync like
+			 * NVIDIA T4 cards */
+			unsigned long unow = get_time();
+			if(next < unow) {
+				next = last_frame + FRAME_TIME;
+				if(next < unow) {
+					next = unow + FRAME_TIME;
+				}
+			}
+			unsigned long udelay = next - unow;
+			struct timespec dly = {
+				.tv_sec = udelay / 1000,
+				.tv_nsec = (udelay % 1000) * 1000000
+			};
+			nanosleep(&dly, NULL);
+
+			last_frame = unow;
+		}
+
 		glfwGetFramebufferSize(window, &screen_width, &screen_height);
 
 		glViewport(0, 0, screen_width, screen_height);

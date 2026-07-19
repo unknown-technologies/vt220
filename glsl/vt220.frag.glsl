@@ -69,32 +69,32 @@ const int cell_height = 10;
 const uvec2 vt220_colors_normal[12] = uvec2[](
 	/* normal */			uvec2(0, 2),
 	/* reverse */			uvec2(1, 0),
-	/* blink off */			uvec2(0, 2),
-	/* blink on */			uvec2(1, 3),
-	/* reverse blink off */		uvec2(1, 0),
-	/* reverse blink on */		uvec2(0, 1),
+	/* blink off */			uvec2(0, 0),
+	/* blink on */			uvec2(0, 2),
+	/* reverse blink off */		uvec2(0, 0),
+	/* reverse blink on */		uvec2(1, 0),
 	/* bold */			uvec2(0, 3),
-	/* bold blink off */		uvec2(0, 3),
-	/* bold blink on */		uvec2(1, 2),
-	/* reverse bold */		uvec2(2, 0),
-	/* reverse bold blink off */	uvec2(2, 0),
-	/* reverse bold blink on */	uvec2(3, 1)
+	/* bold blink off */		uvec2(0, 2),
+	/* bold blink on */		uvec2(0, 3),
+	/* reverse bold */		uvec2(3, 0),
+	/* reverse bold blink off */	uvec2(1, 0),
+	/* reverse bold blink on */	uvec2(3, 0)
 );
 
 /* monochrome: reverse */
 const uvec2 vt220_colors_reverse[12] = uvec2[](
 	/* normal */			uvec2(1, 0),
 	/* reverse */			uvec2(0, 2),
-	/* blink off */			uvec2(1, 0),
-	/* blink on */			uvec2(0, 1),
-	/* reverse blink off */		uvec2(0, 2),
-	/* reverse blink on */		uvec2(1, 3),
-	/* bold */			uvec2(2, 0),
-	/* bold blink off */		uvec2(2, 0),
-	/* bold blink on */		uvec2(3, 1),
+	/* blink off */			uvec2(0, 0),
+	/* blink on */			uvec2(1, 0),
+	/* reverse blink off */		uvec2(0, 0),
+	/* reverse blink on */		uvec2(0, 2),
+	/* bold */			uvec2(3, 0),
+	/* bold blink off */		uvec2(1, 0),
+	/* bold blink on */		uvec2(3, 0),
 	/* reverse bold */		uvec2(0, 3),
-	/* reverse bold blink off */	uvec2(0, 3),
-	/* reverse bold blink on */	uvec2(1, 2)
+	/* reverse bold blink off */	uvec2(0, 1),
+	/* reverse bold blink on */	uvec2(0, 3)
 );
 
 uniform uvec2 text_size;
@@ -112,6 +112,7 @@ uniform uint mode;
 uniform bool in_setup;
 uniform bool block_cursor;
 
+uniform float intensity = 1.0;
 uniform vec3 colorscheme[4];
 
 in  vec2 pos;
@@ -287,8 +288,6 @@ void main(void)
 	bool blink_on = blink_time < BLINK_ON_TIME;
 	bool cursor_on = cursor_time < CURSOR_ON_TIME;
 
-	bool underline_cursor = false;
-
 	uvec2 cursor_cell = cursor;
 	uint line_length = is_132col ? 132u : 80u;
 	if(cursor_cell.x >= line_length) {
@@ -296,21 +295,13 @@ void main(void)
 	}
 	if((mode & DECTCEM) != 0u && cursor_on && !in_setup && cell == cursor_cell) {
 		if(block_cursor) {
-			if((attr & SGR_BLINKING) != 0u) {
-				blink_on = !blink_on;
-			} else {
-				blink_on = true;
-			}
-			attr |= SGR_BLINKING;
+			attr ^= SGR_REVERSE;
 		} else {
-			underline_cursor = true;
+			attr ^= SGR_UNDERSCORE;
 		}
 	}
 
 	if((attr & SGR_UNDERSCORE) != 0u && cell_pos.y == 8u) {
-		bit = true;
-	} else if(underline_cursor && cell_pos.y >= 8u) {
-		// although this is ugly, it's probably how this should look like
 		bit = true;
 	}
 
@@ -318,5 +309,5 @@ void main(void)
 	uvec2 colors = VT220GetColor(attr, blink_on);
 	vec3 text_color = colorscheme[bit ? colors.y : colors.x];
 
-	color = vec4(text_color, bit ? 1.0 : 0.0);
+	color = vec4(text_color * intensity, bit ? 1.0 : 0.0);
 }

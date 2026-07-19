@@ -154,20 +154,20 @@ void VT220SetupShowTitle(VT220* vt)
 	VT220SetupGoto(vt, 1, 1);
 	VT220SetupEraseLine(vt);
 	VT220SetupSetLineAttribute(vt, DECDWL);
-	VT220SetupWriteString(vt, title, SGR_BLINKING);
+	VT220SetupWriteString(vt, title, SGR_BOLD | SGR_BLINKING);
 
 	VT220SetupGoto(vt, 1, 31);
 	if(vt->mode & DECSCNM) {
-		VT220SetupWriteString(vt, "VT220 V2.0", SGR_UNDERSCORE);
+		VT220SetupWriteString(vt, "VT220 V2.3", SGR_UNDERSCORE);
 	} else {
-		VT220SetupWriteString(vt, "VT220 V2.0", SGR_BOLD | SGR_UNDERSCORE);
+		VT220SetupWriteString(vt, "VT220 V2.3", SGR_BOLD | SGR_UNDERSCORE);
 	}
 }
 
 void VT220SetupShowStatus(VT220* vt)
 {
 	VT220SetupGoto(vt, 7, 1);
-	VT220SetupFill(vt, '-', 80, 0);
+	VT220SetupFill(vt, '-', 132, 0);
 	VT220SetupGoto(vt, 8, 5);
 	VT220SetupEraseLine(vt);
 	if(vt->mode & IRM) {

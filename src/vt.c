@@ -54,6 +54,7 @@ void VT220Init(VT220* vt)
 {
 	vt->cursor_time = 0;
 	vt->config = default_config;
+	vt->screen_color = VT220_SCREEN_COLOR_GREEN;
 
 	vt->columns = TEXT_WIDTH;
 	vt->lines = TEXT_HEIGHT;
@@ -78,6 +79,15 @@ void VT220Init(VT220* vt)
 	vt->setup.line_attributes = (char*) malloc(8);
 	memset(vt->setup.text, 0, 8 * TEXT_WIDTH_MAX * sizeof(VT220CELL));
 	memset(vt->setup.line_attributes, 0, 8);
+
+	/* reset config */
+	vt->config.user_features = VT220_USER_FEATURES_UNLOCKED;
+	vt->config.mode = VT220_MODE_VT200_MODE_7BIT_CONTROLS;
+	vt->config.auto_wrap = true;
+	vt->config.text_cursor = VT220_TEXT_CURSOR;
+	vt->config.new_line = VT220_NO_NEW_LINE;
+	vt->config.local_echo = VT220_NO_LOCAL_ECHO;
+	vt->config.auto_repeat = VT220_AUTO_REPEAT;
 
 	VT220InitKeyboard(vt);
 	VT220HardReset(vt);
@@ -1136,22 +1146,32 @@ void VT220HardReset(VT220* vt)
 
 	if(vt->config.auto_wrap) {
 		vt->mode |= DECAWM;
+	} else {
+		vt->mode &= ~DECAWM;
 	}
 
 	if(vt->config.text_cursor == VT220_TEXT_CURSOR) {
 		vt->mode |= DECTCEM;
+	} else {
+		vt->mode &= ~DECTCEM;
 	}
 
 	if(vt->config.new_line == VT220_NEW_LINE) {
 		vt->mode |= LNM;
+	} else {
+		vt->mode &= ~LNM;
 	}
 
 	if(vt->config.local_echo == VT220_NO_LOCAL_ECHO) {
 		vt->mode |= SRM;
+	} else {
+		vt->mode &= ~SRM;
 	}
 
 	if(vt->config.auto_repeat == VT220_AUTO_REPEAT) {
 		vt->mode |= DECARM;
+	} else {
+		vt->mode &= DECARM;
 	}
 
 	vt->xoff = 0;
@@ -1398,8 +1418,8 @@ void VT220SendPrimaryDA(VT220* vt)
 
 void VT220SendSecondaryDA(VT220* vt)
 {
-	/* version 2.0, no options */
-	VT220SendText(vt, "\x9b>1;20;0c");
+	/* version 2.3, no options */
+	VT220SendText(vt, "\x9b>1;23;0c");
 }
 
 void VT220IdentifyVT52(VT220* vt)
@@ -2889,7 +2909,7 @@ void VT220ProcessCharVT52(VT220* vt, unsigned char c)
 					VT220NextLine(vt);
 					break;
 				default:
-					vt->parameters[0] = c - 0x1F;
+					vt->parameters[0] = c - 037;
 					vt->state = STATE_DCA2;
 			}
 			break;
@@ -2940,9 +2960,14 @@ void VT220ProcessCharVT52(VT220* vt, unsigned char c)
 					VT220NextLine(vt);
 					break;
 				default:
-					vt->parameters[1] = c - 0x1F;
+					vt->parameters[1] = c - 037;
 					vt->state = STATE_TEXT;
-					VT220SetCursor(vt, vt->parameters[0], vt->parameters[1]);
+					/* special handling: if the line is out of range, it is not updated */
+					if(vt->parameters[0] < 1 || vt->parameters[0] > vt->lines) {
+						VT220SetCursor(vt, vt->cursor_y + 1, vt->parameters[1]);
+					} else {
+						VT220SetCursor(vt, vt->parameters[0], vt->parameters[1]);
+					}
 			}
 			break;
 	}
@@ -3905,8 +3930,12 @@ void VT220ProcessKey(VT220* vt, u16 key)
 		case VT220_KEY_HOLD_SCREEN:
 		case VT220_KEY_PRINT_SCREEN:
 		case VT220_KEY_DATA_TALK:
-		case VT220_KEY_BREAK:
 			/* TODO: implement */
+			return;
+		case VT220_KEY_BREAK:
+			if(vt->brk) {
+				vt->brk();
+			}
 			return;
 	}
 
@@ -3918,5 +3947,12 @@ void VT220ProcessKey(VT220* vt, u16 key)
 		}
 	} else {
 		VT220ProcessKeyVT52(vt, key);
+	}
+}
+
+void VT220SetScreenColor(VT220* vt, unsigned int color)
+{
+	if(color < 3) {
+		vt->screen_color = color;
 	}
 }

@@ -2,11 +2,11 @@
 
 #define M_PI	3.14159265358979323846
 
-const int width_80  = 800;
+const int width_80  = 80 * 10;
 const int width_132  = 132 * 9;
 const int height = 240;
 
-const float focus = 0.75;
+uniform float focus = 0.75;
 const float glow_control = 0.9;
 const float glow_intensity = 0.5;
 
@@ -15,13 +15,14 @@ uniform sampler2D blur_texture;
 
 uniform bool is_132col;
 uniform bool enable_glow;
+uniform bool raw_mode;
 
 in  vec2 pos;
 out vec4 color;
 
 void main(void)
 {
-	// the VT220/VT220 has 240 lines
+	// the VT220 has 240 lines
 	float line = pos.y * float(height);
 	float linebase = float(int(line));
 
@@ -29,12 +30,12 @@ void main(void)
 	float phi = 2.0 * M_PI * lineoffset;
 	float intensity = pow((sin(phi) + 1.0) / 2.0, focus);
 
-	// ... and 800 columns
+	// ... and 800 columns (unless in 132col mode)
 	int width = is_132col ? width_132 : width_80;
 	float column = pos.x * float(width);
 	float colbase = float(int(column));
 
-	float xblend = column - colbase;
+	float xblend = raw_mode ? 0.0 : (column - colbase);
 
 	// jump to next line if we are over 75% of the line
 	int texline = int(linebase);
@@ -67,11 +68,16 @@ void main(void)
 
 	// third sample: current - 2
 	ivec2 texcoord2 = texcoord1 - ivec2(1, 0);
-	if(texcoord2.x < 0) {
+	bool blank1 = texcoord2.x < 0;
+	if(blank1) {
 		texcoord2.x = 0;
 	}
 
 	vec4 fb2 = texelFetch(vt220_screen, texcoord2, 0);
+	if(blank1) {
+		// blank it if we are outside of the screen
+		fb2 = vec4(0.0);
+	}
 
 	// combine the samples with phosphor simulation
 	vec4 result;
@@ -101,6 +107,10 @@ void main(void)
 	// combine VT220 screen with scanlines and a bit of glow
 	vec4 vt220 = (result + pow(glow, vec4(2.0)) * 0.2) * vec4(intensity);
 
-	// combine with glow for the final result
-	color = vec4((vt220 + glow * glow_intensity).rgb, 1.0);
+	if(raw_mode) {
+		color = vec4(result.rgb, 1.0);
+	} else {
+		// combine with glow for the final result
+		color = vec4((vt220 + glow * glow_intensity).rgb, 1.0);
+	}
 }

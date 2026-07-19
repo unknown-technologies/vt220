@@ -32,6 +32,7 @@ typedef struct {
 	GLuint		vt_shader_mode;
 	GLuint		vt_shader_in_setup;
 	GLuint		vt_shader_block_cursor;
+	GLuint		vt_shader_intensity;
 
 	GLuint		blur_fb[2];
 	GLuint		blur_tex[2];
@@ -45,16 +46,24 @@ typedef struct {
 	GLuint		post_shader_blurtex;
 	GLuint		post_shader_enableglow;
 	GLuint		post_shader_is132col;
+	GLuint		post_shader_raw;
+	GLuint		post_shader_focus;
 
 	unsigned long	blink_time;
 
 	bool		enable_glow;
+	bool		raw;
+	float		focus;
+	float		intensity;
 
 	bool		was_132col;
 } VTRenderer;
 
 void	VTInitRenderer(VTRenderer* renderer, VT220* vt);
 void	VTEnableGlow(VTRenderer* self, bool enabled);
+void	VTSetRaw(VTRenderer* vt, bool raw);
+void	VTSetFocus(VTRenderer* vt, float color);
+void	VTSetIntensity(VTRenderer* vt, float intensity);
 void	VTProcess(VTRenderer* self, unsigned long dt);
 void	VTRender(VTRenderer* self, unsigned int width, unsigned int height);
 
