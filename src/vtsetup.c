@@ -105,10 +105,21 @@ void VT220SetupEraseLine(VT220* vt)
 	memset(&vt->setup.text[vt->setup.write_y * vt->columns], 0, vt->columns * sizeof(VT220CELL));
 }
 
-void VT220SetupWrite(VT220* vt, const unsigned char c, const int sgr)
+void VT220SetupWrite(VT220* vt, const u16 c, const int sgr, int display_controls)
 {
+	u16 glyph = c;
+	if(display_controls) {
+		if(glyph == 0x20) {
+			glyph = 0;
+		} else if(glyph < 0x20) {
+			glyph += 0x100;
+		}
+	} else if(c == 0x20) {
+		glyph = 0;
+	}
+
 	int idx = vt->setup.write_y * vt->columns + vt->setup.write_x;
-	vt->setup.text[idx].text = c == ' ' ? 0 : c;
+	vt->setup.text[idx].text = glyph;
 	vt->setup.text[idx].attr = sgr;
 
 	vt->setup.write_x++;
@@ -162,14 +173,14 @@ void VT220SetupCursorRestore(VT220* vt)
 void VT220SetupWriteString(VT220* vt, const char* s, const int sgr)
 {
 	for(; *s; s++) {
-		VT220SetupWrite(vt, *s, sgr);
+		VT220SetupWrite(vt, (unsigned char) *s, sgr, 0);
 	}
 }
 
 void VT220SetupFill(VT220* vt, const u16 c, unsigned int count, const int sgr)
 {
 	for(; count; count--) {
-		VT220SetupWrite(vt, c, sgr);
+		VT220SetupWrite(vt, c, sgr, 0);
 	}
 }
 
@@ -186,16 +197,16 @@ void VT220SetupWriteNumber(VT220* vt, int val, const int width, const int align,
 
 	if(align) {
 		for(; j < width - 1; j++) {
-			VT220SetupWrite(vt, ' ', sgr);
+			VT220SetupWrite(vt, ' ', sgr, 0);
 		}
 	}
 
 	for(; i < 8; i++) {
-		VT220SetupWrite(vt, buf[i] + '0', sgr);
+		VT220SetupWrite(vt, buf[i] + '0', sgr, 0);
 	}
 
 	for(; j < width; j++) {
-		VT220SetupWrite(vt, ' ', sgr);
+		VT220SetupWrite(vt, ' ', sgr, 0);
 	}
 }
 
@@ -222,14 +233,33 @@ void VT220SetupShowStatus(VT220* vt)
 	VT220SetupFill(vt, '-', 132, 0);
 	VT220SetupGoto(vt, 8, 5);
 	VT220SetupEraseLine(vt);
-	if(vt->mode & IRM) {
-		VT220SetupWriteString(vt, "Insert Mode", 0);
+	if(vt->setup.in_enq >= 0) {
+		VT220SetupGoto(vt, 8, 15);
+		VT220SetupWriteString(vt, "Enter Answerback=", 0);
+		for(unsigned int i = 0; i < 30; i++) {
+			if(vt->setup.enq[i]) {
+				int bold = i == vt->setup.in_enq || (i == 29 && vt->setup.in_enq == 30);
+				int sgr = bold ? (SGR_REVERSE | SGR_BOLD) : SGR_REVERSE;
+				VT220SetupWrite(vt, (unsigned char) vt->setup.enq[i], sgr, 1);
+			} else {
+				for(; i < 30; i++) {
+					int bold = i == vt->setup.in_enq || (i == 29 && vt->setup.in_enq == 30);
+					int sgr = bold ? (SGR_REVERSE | SGR_BOLD) : SGR_REVERSE;
+					VT220SetupWrite(vt, ' ', sgr, 1);
+				}
+				break;
+			}
+		}
 	} else {
-		VT220SetupWriteString(vt, "Replace Mode", 0);
-	}
+		if(vt->mode & IRM) {
+			VT220SetupWriteString(vt, "Insert Mode", 0);
+		} else {
+			VT220SetupWriteString(vt, "Replace Mode", 0);
+		}
 
-	VT220SetupGoto(vt, 8, 28);
-	VT220SetupWriteString(vt, "Printer: None", 0);
+		VT220SetupGoto(vt, 8, 28);
+		VT220SetupWriteString(vt, "Printer: None", 0);
+	}
 }
 
 void VT220SetupShowHint(VT220* vt)
@@ -833,9 +863,28 @@ void VT220SetupShowKeyboard(VT220* vt)
 	VT220SetupEraseLine(vt);
 	VT220SetupWriteString(vt, " No Auto Answerback ", GET_SGR(2, 0));
 	VT220SetupCursorRight(vt);
-	VT220SetupWriteString(vt, " Answerback=                               ", GET_SGR(2, 1));
+	if(vt->config.concealed == VT220_ANSWERBACK_CONCEALED) {
+		VT220SetupWriteString(vt, " Answerback=<Concealed>                   ", GET_SGR(2, 1));
+	} else {
+		VT220SetupWriteString(vt, " Answerback=", GET_SGR(2, 1));
+		for(unsigned int i = 0; i < 30; i++) {
+			if(vt->answerback[i]) {
+				VT220SetupWrite(vt, (unsigned char) vt->answerback[i], GET_SGR(2, 1), 1);
+			} else {
+				for(; i < 30; i++) {
+					VT220SetupWrite(vt, ' ', GET_SGR(2, 1), 1);
+				}
+				break;
+			}
+		}
+	}
+	VT220SetupWriteString(vt, " ", GET_SGR(2, 1));
 	VT220SetupCursorRight(vt);
-	VT220SetupWriteString(vt, " Not Concealed ", GET_SGR(2, 2));
+	if(vt->config.concealed == VT220_ANSWERBACK_CONCEALED) {
+		VT220SetupWriteString(vt, " Concealed     ", GET_SGR(2, 2));
+	} else {
+		VT220SetupWriteString(vt, " Not Concealed ", GET_SGR(2, 2));
+	}
 }
 
 void VT220SetupShowTab(VT220* vt)
@@ -888,7 +937,7 @@ void VT220SetupShowTab(VT220* vt)
 			VT220SetupWriteString(vt, " ", GET_SGR(1, i));
 		}
 		VT220SetupGoto(vt, 5, i + 1);
-		VT220SetupWrite(vt, '0' + (i + 1) % 10, ((i / 10) % 2) ? SGR_REVERSE : 0);
+		VT220SetupWrite(vt, '0' + (i + 1) % 10, ((i / 10) % 2) ? SGR_REVERSE : 0, 0);
 	}
 
 	/* line 3 */
@@ -969,6 +1018,7 @@ void VT220SetupNextScreen(VT220* vt)
 void VT220EnterSetup(VT220* vt)
 {
 	vt->in_setup = 1;
+	vt->setup.in_enq = -1;
 	vt->setup.cursor_x = 0;
 	vt->setup.cursor_y = 0;
 	vt->setup.screen = SETUP_SCREEN_DIRECTORY;
@@ -1366,6 +1416,35 @@ void VT220SetupKeyboardEnter(VT220* vt)
 					break;
 			}
 			break;
+		case 2:
+			switch(vt->setup.cursor_x) {
+				case 1:
+					if(vt->setup.in_enq >= 0) {
+						/* commit */
+						memcpy(vt->answerback, vt->setup.enq, 30);
+						vt->setup.in_enq = -1;
+						vt->config.concealed = VT220_ANSWERBACK_NOT_CONCEALED;
+					} else {
+						if(vt->config.concealed == VT220_ANSWERBACK_CONCEALED) {
+							memset(vt->setup.enq, 0, 30);
+						} else {
+							memcpy(vt->setup.enq, vt->answerback, 30);
+						}
+
+						/* set edit cursor to end of answerback message */
+						for(vt->setup.in_enq = 0; vt->setup.in_enq < 30; vt->setup.in_enq++) {
+							if(!vt->setup.enq[vt->setup.in_enq]) {
+								break;
+							}
+						}
+					}
+					VT220SetupShowStatus(vt);
+					break;
+				case 2:
+					vt->config.concealed = VT220_ANSWERBACK_CONCEALED;
+					break;
+			}
+			break;
 	}
 }
 
@@ -1430,6 +1509,31 @@ void VT220SetupProcessEnter(VT220* vt)
 	}
 }
 
+void VT220SetupProcessAnswerback(VT220* vt, unsigned char c)
+{
+	if(c == DEL) {
+		if(vt->setup.in_enq > 0) {
+			vt->setup.in_enq--;
+			vt->setup.enq[vt->setup.in_enq] = 0;
+		}
+	} else {
+		if(vt->setup.in_enq <= 30) {
+			unsigned int cursor = vt->setup.in_enq;
+			if(cursor >= 30) {
+				cursor = 29;
+			}
+
+			vt->setup.enq[cursor] = c;
+			vt->setup.in_enq++;
+			if(vt->setup.in_enq > 30) {
+				vt->setup.in_enq = 30;
+			}
+		}
+	}
+
+	VT220SetupShowStatus(vt);
+}
+
 #define	STATE_TEXT	0
 #define	STATE_ESC	1
 #define	STATE_CSI	2
@@ -1456,7 +1560,11 @@ void VT220SetupProcessKey(VT220* vt, unsigned char c)
 					vt->setup.state = STATE_SS3;
 					break;
 				default:
-					VT220SetupShowHint(vt);
+					if(vt->setup.in_enq >= 0) {
+						VT220SetupProcessAnswerback(vt, c);
+					} else {
+						VT220SetupShowHint(vt);
+					}
 					break;
 			}
 			break;
@@ -1478,6 +1586,7 @@ void VT220SetupProcessKey(VT220* vt, unsigned char c)
 							vt->setup.move = VT220_SETUP_MOVE_UP;
 							vt->setup.cursor_y--;
 						}
+						vt->setup.in_enq = -1;
 						VT220SetupShowStatus(vt);
 					} else {
 						vt->setup.state = STATE_TEXT;
@@ -1491,6 +1600,7 @@ void VT220SetupProcessKey(VT220* vt, unsigned char c)
 							vt->setup.move = VT220_SETUP_MOVE_DOWN;
 							vt->setup.cursor_y++;
 						}
+						vt->setup.in_enq = -1;
 						VT220SetupShowStatus(vt);
 					} else {
 						vt->setup.state = STATE_TEXT;
@@ -1504,6 +1614,7 @@ void VT220SetupProcessKey(VT220* vt, unsigned char c)
 							vt->setup.move = VT220_SETUP_MOVE_RIGHT;
 							vt->setup.cursor_x++;
 						}
+						vt->setup.in_enq = -1;
 						VT220SetupShowStatus(vt);
 					} else {
 						vt->setup.state = STATE_TEXT;
@@ -1519,6 +1630,7 @@ void VT220SetupProcessKey(VT220* vt, unsigned char c)
 						} else {
 							vt->setup.move = VT220_SETUP_MOVE_LEFT_MARGIN;
 						}
+						vt->setup.in_enq = -1;
 						VT220SetupShowStatus(vt);
 					} else {
 						vt->setup.state = STATE_TEXT;
@@ -1545,6 +1657,7 @@ void VT220SetupProcessKey(VT220* vt, unsigned char c)
 						vt->setup.move = VT220_SETUP_MOVE_UP;
 						vt->setup.cursor_y--;
 					}
+					vt->setup.in_enq = -1;
 					VT220SetupShowStatus(vt);
 					break;
 				case 'B': /* cursor down */
@@ -1553,6 +1666,7 @@ void VT220SetupProcessKey(VT220* vt, unsigned char c)
 						vt->setup.move = VT220_SETUP_MOVE_DOWN;
 						vt->setup.cursor_y++;
 					}
+					vt->setup.in_enq = -1;
 					VT220SetupShowStatus(vt);
 					break;
 				case 'C': /* cursor right */
@@ -1561,6 +1675,7 @@ void VT220SetupProcessKey(VT220* vt, unsigned char c)
 						vt->setup.move = VT220_SETUP_MOVE_RIGHT;
 						vt->setup.cursor_x++;
 					}
+					vt->setup.in_enq = -1;
 					VT220SetupShowStatus(vt);
 					break;
 				case 'D': /* cursor left */
@@ -1571,6 +1686,7 @@ void VT220SetupProcessKey(VT220* vt, unsigned char c)
 					} else {
 						vt->setup.move = VT220_SETUP_MOVE_LEFT_MARGIN;
 					}
+					vt->setup.in_enq = -1;
 					VT220SetupShowStatus(vt);
 					break;
 				default:
@@ -1593,6 +1709,7 @@ void VT220SetupProcessKey(VT220* vt, unsigned char c)
 						vt->setup.move = VT220_SETUP_MOVE_UP;
 						vt->setup.cursor_y--;
 					}
+					vt->setup.in_enq = -1;
 					VT220SetupShowStatus(vt);
 					break;
 				case 'B': /* cursor down */
@@ -1601,6 +1718,7 @@ void VT220SetupProcessKey(VT220* vt, unsigned char c)
 						vt->setup.move = VT220_SETUP_MOVE_DOWN;
 						vt->setup.cursor_y++;
 					}
+					vt->setup.in_enq = -1;
 					VT220SetupShowStatus(vt);
 					break;
 				case 'C': /* cursor right */
@@ -1609,6 +1727,7 @@ void VT220SetupProcessKey(VT220* vt, unsigned char c)
 						vt->setup.move = VT220_SETUP_MOVE_RIGHT;
 						vt->setup.cursor_x++;
 					}
+					vt->setup.in_enq = -1;
 					VT220SetupShowStatus(vt);
 					break;
 				case 'D': /* cursor left */
@@ -1619,6 +1738,7 @@ void VT220SetupProcessKey(VT220* vt, unsigned char c)
 					} else {
 						vt->setup.move = VT220_SETUP_MOVE_LEFT_MARGIN;
 					}
+					vt->setup.in_enq = -1;
 					VT220SetupShowStatus(vt);
 					break;
 				default:

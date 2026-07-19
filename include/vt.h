@@ -205,6 +205,9 @@
 #define	VT220_BREAK				0
 #define	VT220_NO_BREAK				1
 
+#define	VT220_ANSWERBACK_NOT_CONCEALED		0
+#define	VT220_ANSWERBACK_CONCEALED		1
+
 #define	VT220_SETUP_MOVE_NONE			0
 #define	VT220_SETUP_MOVE_UP			1
 #define	VT220_SETUP_MOVE_DOWN			2
@@ -248,6 +251,7 @@ typedef struct {
 	char		margin_bell;
 	char		bell;
 	char		brk;
+	char		concealed;
 } VT220NVR;
 
 typedef struct {
@@ -260,7 +264,7 @@ typedef struct {
 	int		cursor_y;
 	int		move;
 	int		screen;
-	int		status;
+	int		in_enq;
 	int		state;
 	int		write_x;
 	int		write_y;
@@ -268,6 +272,7 @@ typedef struct {
 	int		write_y_save;
 	VT220CELL*	text;
 	char*		line_attributes;
+	char		enq[30];
 } VT220Setup;
 
 typedef struct {
