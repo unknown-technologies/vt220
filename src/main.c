@@ -539,6 +539,7 @@ int main(int argc, char** argv, char** envp)
 	glfwMakeContextCurrent(window);
 	glfwSwapInterval(1);
 
+#ifndef NDEBUG
 	const unsigned char* gl_vendor = glGetString(GL_VENDOR);
 	const unsigned char* gl_renderer = glGetString(GL_RENDERER);
 	const unsigned char* gl_version = glGetString(GL_VERSION);
@@ -548,11 +549,13 @@ int main(int argc, char** argv, char** envp)
 	printf("GL Renderer:  %s\n", gl_renderer);
 	printf("GL Version:   %s\n", gl_version);
 	printf("GLSL Version: %s\n", gl_glsl_version);
+#endif
 
 #ifdef _WIN32
 	load_gl_extensions();
 #endif
 
+#ifndef NDEBUG
 	int num_ext = 0;
 	glGetIntegerv(GL_NUM_EXTENSIONS, &num_ext);
 	for(int i = 0; i < num_ext; i++) {
@@ -561,6 +564,7 @@ int main(int argc, char** argv, char** envp)
 			break;
 		}
 	}
+#endif
 
 	GL_ERROR();
 
