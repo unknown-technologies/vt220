@@ -33,21 +33,6 @@
 #define	BLINK_ON_TIME		1.8f
 #define	BLINK_TIME		(BLINK_OFF_TIME + BLINK_ON_TIME)
 
-/* monochrome green */
-#define	FGCOLOR_R_G	0.25f
-#define	FGCOLOR_G_G	1.00f
-#define	FGCOLOR_B_G	0.25f
-
-/* monochrome white */
-#define	FGCOLOR_R_W	1.00f
-#define	FGCOLOR_G_W	1.00f
-#define	FGCOLOR_B_W	1.00f
-
-/* monochrome amber */
-#define	FGCOLOR_R_A	1.00f
-#define	FGCOLOR_G_A	0.658824f
-#define	FGCOLOR_B_A	0.00f
-
 extern const char vt220_vert[];
 extern const char vt220_frag[];
 
@@ -76,24 +61,15 @@ static const float quad_vertices[] = {
 
 #define	QUAD_VTX_CNT	(sizeof(quad_vertices) / (sizeof(*quad_vertices) * 3))
 
-static const GLfloat vt220_colors[12][3] = {
-	/* monochrome: green */
-	/* color 0: black  */ { FGCOLOR_R_G * 0.00f, FGCOLOR_G_G * 0.00f, FGCOLOR_B_G * 0.00f },
-	/* color 1: gray 1 */ { FGCOLOR_R_G * 0.30f, FGCOLOR_G_G * 0.30f, FGCOLOR_B_G * 0.30f },
-	/* color 2: gray 2 */ { FGCOLOR_R_G * 0.50f, FGCOLOR_G_G * 0.50f, FGCOLOR_B_G * 0.50f },
-	/* color 3: white  */ { FGCOLOR_R_G * 1.00f, FGCOLOR_G_G * 1.00f, FGCOLOR_B_G * 1.00f },
+static const GLfloat vt220_colors[3][3] = {
+	/* phosphor color: green */
+	{ 0.25f, 1.00f, 0.25f },
 
-	/* monochrome: white */
-	/* color 0: black  */ { FGCOLOR_R_W * 0.00f, FGCOLOR_G_W * 0.00f, FGCOLOR_B_W * 0.00f },
-	/* color 1: gray 1 */ { FGCOLOR_R_W * 0.30f, FGCOLOR_G_W * 0.30f, FGCOLOR_B_W * 0.30f },
-	/* color 2: gray 2 */ { FGCOLOR_R_W * 0.50f, FGCOLOR_G_W * 0.50f, FGCOLOR_B_W * 0.50f },
-	/* color 3: white  */ { FGCOLOR_R_W * 1.00f, FGCOLOR_G_W * 1.00f, FGCOLOR_B_W * 1.00f },
+	/* phosphor color: white */
+	{ 1.00f, 1.00f, 1.00f },
 
-	/* monochrome: amber */
-	/* color 0: black  */ { FGCOLOR_R_A * 0.00f, FGCOLOR_G_A * 0.00f, FGCOLOR_B_A * 0.00f },
-	/* color 1: gray 1 */ { FGCOLOR_R_A * 0.30f, FGCOLOR_G_A * 0.30f, FGCOLOR_B_A * 0.30f },
-	/* color 2: gray 2 */ { FGCOLOR_R_A * 0.50f, FGCOLOR_G_A * 0.50f, FGCOLOR_B_A * 0.50f },
-	/* color 3: white  */ { FGCOLOR_R_A * 1.00f, FGCOLOR_G_A * 1.00f, FGCOLOR_B_A * 1.00f },
+	/* phosphor color: amber */
+	{ 1.00f, 0.658824f, 0.00f }
 };
 
 void VTInitRenderer(VTRenderer* self, VT220* vt)
@@ -107,6 +83,7 @@ void VTInitRenderer(VTRenderer* self, VT220* vt)
 	self->focus = 0.75f;
 	self->intensity = 1.0f;
 	self->raw = false;
+	self->simple_phosphor = false;
 
 	self->vt_shader = VTCreateShader(vt220_vert, vt220_frag);
 	self->vt_shader_font = glGetUniformLocation(self->vt_shader, "font");
@@ -115,7 +92,6 @@ void VTInitRenderer(VTRenderer* self, VT220* vt)
 	self->vt_shader_setup_text = glGetUniformLocation(self->vt_shader, "setup_text");
 	self->vt_shader_setup_line_attributes = glGetUniformLocation(self->vt_shader, "setup_line_attributes");
 	self->vt_shader_text_size = glGetUniformLocation(self->vt_shader, "text_size");
-	self->vt_shader_colorscheme = glGetUniformLocation(self->vt_shader, "colorscheme");
 	self->vt_shader_cursor = glGetUniformLocation(self->vt_shader, "cursor");
 	self->vt_shader_cursor_time = glGetUniformLocation(self->vt_shader, "cursor_time");
 	self->vt_shader_blink_time = glGetUniformLocation(self->vt_shader, "blink_time");
@@ -134,7 +110,9 @@ void VTInitRenderer(VTRenderer* self, VT220* vt)
 	self->post_shader_enableglow = glGetUniformLocation(self->post_shader, "enable_glow");
 	self->post_shader_is132col = glGetUniformLocation(self->post_shader, "is_132col");
 	self->post_shader_raw = glGetUniformLocation(self->post_shader, "raw_mode");
+	self->post_shader_simple = glGetUniformLocation(self->post_shader, "use_simple_phosphor");
 	self->post_shader_focus = glGetUniformLocation(self->post_shader, "focus");
+	self->post_shader_colorscheme = glGetUniformLocation(self->post_shader, "colorscheme");
 	GL_ERROR();
 
 	VTCreateBuffers(self);
@@ -153,6 +131,11 @@ void VTEnableGlow(VTRenderer* self, bool enabled)
 void VTSetRaw(VTRenderer* self, bool raw)
 {
 	self->raw = raw;
+}
+
+void VTSetSimplePhosphor(VTRenderer* self, bool simple)
+{
+	self->simple_phosphor = simple;
 }
 
 void VTSetFocus(VTRenderer* self, float focus)
@@ -185,7 +168,7 @@ void VTRender(VTRenderer* self, unsigned int width, unsigned int height)
 
 	GL_ERROR();
 
-	// PASS 3: post-process VT220 screen
+	// PASS 5: post-process VT220 screen
 	glViewport(0, 0, width, height);
 	glUseProgram(self->post_shader);
 
@@ -200,7 +183,9 @@ void VTRender(VTRenderer* self, unsigned int width, unsigned int height)
 	glUniform1i(self->post_shader_enableglow, self->enable_glow);
 	glUniform1i(self->post_shader_is132col, (self->vt->mode & DECCOLM) != 0);
 	glUniform1i(self->post_shader_raw, self->raw);
+	glUniform1i(self->post_shader_simple, self->simple_phosphor);
 	glUniform1f(self->post_shader_focus, self->focus);
+	glUniform3fv(self->post_shader_colorscheme, 1, (GLfloat*) vt220_colors[self->vt->screen_color]);
 
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -263,8 +248,6 @@ void VTRenderTerminal(VTRenderer* self)
 	glUniform1ui(self->vt_shader_block_cursor, self->vt->config.cursor_style == VT220_CURSOR_STYLE_BLOCK_CURSOR);
 	glUniform1f(self->vt_shader_intensity, self->intensity);
 
-	glUniform3fv(self->vt_shader_colorscheme, 4, (GLfloat*) vt220_colors[4 * self->vt->screen_color]);
-
 	glBindVertexArray(self->quad_vao);
 	glDrawArrays(GL_TRIANGLES, 0, QUAD_VTX_CNT);
 
@@ -317,32 +300,37 @@ void VTRenderBlur(VTRenderer* self)
 	glBindVertexArray(self->quad_vao);
 	glDrawArrays(GL_TRIANGLES, 0, QUAD_VTX_CNT);
 
-	// PASS 2: render horizontal blur
-	glBindFramebuffer(GL_FRAMEBUFFER, self->blur_fb[0]);
-	glClear(GL_COLOR_BUFFER_BIT);
+	// run final blur passes
+	// TODO: figure out the best parameters for this
+	const float spread = 1.0f;
+	for(unsigned int i = 0; i < 1; i++) {
+		// PASS 2: render horizontal blur
+		glBindFramebuffer(GL_FRAMEBUFFER, self->blur_fb[0]);
+		glClear(GL_COLOR_BUFFER_BIT);
 
-	glUseProgram(self->blur_shader);
+		glUseProgram(self->blur_shader);
 
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, self->blur_tex[1]);
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, self->blur_tex[1]);
 
-	glUniform1i(self->blur_shader_tex, 0);
-	glUniform2f(self->blur_shader_dir, 2.0f, 0.0f);
+		glUniform1i(self->blur_shader_tex, 0);
+		glUniform2f(self->blur_shader_dir, spread, 0.0f);
 
-	glBindVertexArray(self->quad_vao);
-	glDrawArrays(GL_TRIANGLES, 0, QUAD_VTX_CNT);
+		glBindVertexArray(self->quad_vao);
+		glDrawArrays(GL_TRIANGLES, 0, QUAD_VTX_CNT);
 
-	// PASS 3: render vertical blur
-	glBindFramebuffer(GL_FRAMEBUFFER, self->blur_fb[1]);
-	glClear(GL_COLOR_BUFFER_BIT);
+		// PASS 3: render vertical blur
+		glBindFramebuffer(GL_FRAMEBUFFER, self->blur_fb[1]);
+		glClear(GL_COLOR_BUFFER_BIT);
 
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, self->blur_tex[0]);
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, self->blur_tex[0]);
 
-	glUniform2f(self->blur_shader_dir, 0.0f, 2.0f);
+		glUniform2f(self->blur_shader_dir, 0.0f, spread);
 
-	glBindVertexArray(self->quad_vao);
-	glDrawArrays(GL_TRIANGLES, 0, QUAD_VTX_CNT);
+		glBindVertexArray(self->quad_vao);
+		glDrawArrays(GL_TRIANGLES, 0, QUAD_VTX_CNT);
+	}
 
 	// unbind texture
 	glActiveTexture(GL_TEXTURE0);

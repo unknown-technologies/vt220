@@ -26,7 +26,6 @@ typedef struct {
 	GLuint		vt_shader_setup_line_attributes;
 	GLuint		vt_shader_text_size;
 	GLuint		vt_shader_cursor;
-	GLuint		vt_shader_colorscheme;
 	GLuint		vt_shader_cursor_time;
 	GLuint		vt_shader_blink_time;
 	GLuint		vt_shader_mode;
@@ -47,12 +46,15 @@ typedef struct {
 	GLuint		post_shader_enableglow;
 	GLuint		post_shader_is132col;
 	GLuint		post_shader_raw;
+	GLuint		post_shader_simple;
 	GLuint		post_shader_focus;
+	GLuint		post_shader_colorscheme;
 
 	unsigned long	blink_time;
 
 	bool		enable_glow;
 	bool		raw;
+	bool		simple_phosphor;
 	float		focus;
 	float		intensity;
 
@@ -62,6 +64,7 @@ typedef struct {
 void	VTInitRenderer(VTRenderer* renderer, VT220* vt);
 void	VTEnableGlow(VTRenderer* self, bool enabled);
 void	VTSetRaw(VTRenderer* vt, bool raw);
+void	VTSetSimplePhosphor(VTRenderer* self, bool simple);
 void	VTSetFocus(VTRenderer* vt, float color);
 void	VTSetIntensity(VTRenderer* vt, float intensity);
 void	VTProcess(VTRenderer* self, unsigned long dt);

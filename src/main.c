@@ -384,6 +384,7 @@ static void print_usage(const char* self)
 		"  -ca           Screen color: amber\n"
 		"  -f 0.75       Electron beam focus\n"
 		"  -i 1.0        Electron beam intensity (brightness)\n"
+		"  -p            Use simple linear phosphor emulation model\n"
 		"  -r            Raw mode, deactivates all post processing; implies -g\n"
 		"  -l            Loopback / local mode\n"
 		"  -s /bin/sh    Execute /bin/sh in the terminal\n"
@@ -434,6 +435,7 @@ int main(int argc, char** argv, char** envp)
 	float focus = 0.75f;
 	float intensity = 1.0f;
 	bool rawmode = false;
+	bool simple_phosphor = false;
 	bool unlimited_fps = false;
 
 	unsigned int color = VT220_SCREEN_COLOR_GREEN;
@@ -494,6 +496,8 @@ int main(int argc, char** argv, char** envp)
 			}
 		} else if(!strcmp(arg, "-r")) {
 			rawmode = true;
+		} else if(!strcmp(arg, "-p")) {
+			simple_phosphor = true;
 		} else {
 			if(i + 2 > argc) {
 				print_usage(self);
@@ -567,6 +571,7 @@ int main(int argc, char** argv, char** envp)
 	VTInitRenderer(&renderer, &vt);
 	VTEnableGlow(&renderer, enable_glow);
 	VTSetRaw(&renderer, rawmode);
+	VTSetSimplePhosphor(&renderer, simple_phosphor);
 	VTSetFocus(&renderer, focus);
 	VTSetIntensity(&renderer, intensity);
 
