@@ -34,19 +34,20 @@
 #define	STATE_ESC_HASH		4
 #define	STATE_DCS		5
 #define	STATE_DCS_ESC		6
-#define	STATE_DCA1		7
-#define	STATE_DCA2		8
-#define	STATE_G			9
-#define	STATE_ESC_SP		10
-#define	STATE_CSI_GT		11
-#define	STATE_CSI_QUOT		12
-#define	STATE_CSI_EXCL		13
-#define	STATE_DECUDK		14
-#define	STATE_DECUDK_ESC	15
-#define	STATE_DECUDK_ODD	16
-#define	STATE_DECUDK_ODD_ESC	17
-#define	STATE_DECUDK_EVEN	18
-#define	STATE_DECUDK_EVEN_ESC	19
+#define	STATE_DCS_UNK		7
+#define	STATE_DCA1		8
+#define	STATE_DCA2		9
+#define	STATE_G			10
+#define	STATE_ESC_SP		11
+#define	STATE_CSI_GT		12
+#define	STATE_CSI_QUOT		13
+#define	STATE_CSI_EXCL		14
+#define	STATE_DECUDK		15
+#define	STATE_DECUDK_ESC	16
+#define	STATE_DECUDK_ODD	17
+#define	STATE_DECUDK_ODD_ESC	18
+#define	STATE_DECUDK_EVEN	19
+#define	STATE_DECUDK_EVEN_ESC	20
 
 static const VT220NVR default_config = { 0 };
 
@@ -2436,6 +2437,26 @@ void VT220ProcessCharVT220(VT220* vt, unsigned char c)
 						vt->parameter_id--;
 						vt->parameters[vt->parameter_id] = 0;
 					}
+					break;
+				default:
+					vt->state = STATE_DCS_UNK;
+					break;
+			}
+			break;
+		case STATE_DCS_UNK:
+			switch(c) {
+				case ESC:
+					vt->state = STATE_DCS_ESC;
+					break;
+				case CAN:
+					vt->state = STATE_TEXT;
+					break;
+				case SUB:
+					vt->state = STATE_TEXT;
+					VT220Substitute(vt);
+					break;
+				case ST:
+					vt->state = STATE_TEXT;
 					break;
 			}
 			break;
