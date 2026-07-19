@@ -216,8 +216,27 @@ void main(void)
 	get_cell(is_132col, cell_width, width, last_pos, last_cell,
 			last_cell_pos, last_attr, last_bit);
 
+	// get previous - 1 cell/attribute/bit
+	vec2 last_2_pos = vec2(position.x - 2, position.y);
+	if(last_2_pos.x < 0) {
+		last_2_pos.x = 0;
+	}
+
+	uvec2 last_2_cell;
+	uvec2 last_2_cell_pos;
+	uint last_2_attr;
+	bool last_2_bit;
+
+	get_cell(is_132col, cell_width, width, last_2_pos, last_2_cell,
+			last_2_cell_pos, last_2_attr, last_2_bit);
+
 	// perform dot stretching
 	bit = bit || last_bit;
+
+	// the real VT220 is really weird
+	if(!is_132col && cell_pos.x == 1u) {
+		bit = bit || last_2_bit;
+	}
 
 ////////////////////////////////////////////////////////////////////////////////
 	bool blink_on = blink_time < BLINK_ON_TIME;
