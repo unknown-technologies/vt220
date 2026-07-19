@@ -327,7 +327,7 @@ void VTRenderBlur(VTRenderer* self)
 	glBindTexture(GL_TEXTURE_2D, self->blur_tex[1]);
 
 	glUniform1i(self->blur_shader_tex, 0);
-	glUniform2f(self->blur_shader_dir, 1.0f, 0.0f);
+	glUniform2f(self->blur_shader_dir, 2.0f, 0.0f);
 
 	glBindVertexArray(self->quad_vao);
 	glDrawArrays(GL_TRIANGLES, 0, QUAD_VTX_CNT);
@@ -339,7 +339,7 @@ void VTRenderBlur(VTRenderer* self)
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, self->blur_tex[0]);
 
-	glUniform2f(self->blur_shader_dir, 0.0f, 1.0f);
+	glUniform2f(self->blur_shader_dir, 0.0f, 2.0f);
 
 	glBindVertexArray(self->quad_vao);
 	glDrawArrays(GL_TRIANGLES, 0, QUAD_VTX_CNT);
