@@ -59,6 +59,12 @@
 
 #define	BUFFER_SIZE	256
 
+#ifdef DEBUG
+#define	LOG(x, ...)	printf(x, __VA_ARGS__)
+#else
+#define LOG(x, ...)
+#endif
+
 static const char* telnet_option_names[50] = {
 	/* 0x00 */ "TRANSMIT-BINARY",
 	/* 0x01 */ "ECHO",
@@ -186,7 +192,7 @@ void TELNETRxError(TELNET* telnet, const char* what, const char* msg)
 	TELNETRxString(telnet, msg);
 	TELNETRxString(telnet, "\r\n");
 
-	printf("[TELNET] %s failed: %s\n", what, msg);
+	LOG("[TELNET] %s failed: %s\n", what, msg);
 }
 
 void TELNETConnected(TELNET* telnet)
@@ -377,7 +383,7 @@ void TELNETSendRawString(TELNET* telnet, const char* s)
 
 void TELNETProcessSB(TELNET* telnet)
 {
-	printf("[TELNET] SB %s [%d]\n", TELNETGetOptionName(telnet->sb_buf[0]), telnet->sb_buf[0]);
+	LOG("[TELNET] SB %s [%d]\n", TELNETGetOptionName(telnet->sb_buf[0]), telnet->sb_buf[0]);
 	switch(telnet->sb_buf[0]) {
 		case TERMINAL_TYPE:
 			if(telnet->sb_write_ptr == 2 && telnet->sb_buf[1] == SEND) {
@@ -393,15 +399,19 @@ void TELNETProcessSB(TELNET* telnet)
 		case NEW_ENVIRON:
 			if(telnet->sb_buf[1] == SEND) {
 				int i = 0;
+#ifdef DEBUG
 				int var_start = 0;
 				int var_type = 0;
+#endif
 				int state = 0;
 				for(i = 2; i < telnet->sb_write_ptr; i++) {
 					switch(state) {
 						case 0: /* type */
 							state = 1;
+#ifdef DEBUG
 							var_type = telnet->sb_buf[i];
 							var_start = i + 1;
+#endif
 							break;
 						case 1: /* name */
 							switch(telnet->sb_buf[i]) {
@@ -409,10 +419,12 @@ void TELNETProcessSB(TELNET* telnet)
 								case USERVAR:
 									/* undefined */
 									state = 1;
+#ifdef DEBUG
 									var_type = telnet->sb_buf[i];
 									telnet->sb_buf[i] = 0;
-									printf("[TELNET] VAR [%d]: %s\n", var_type, &telnet->sb_buf[var_start]);
+									LOG("[TELNET] VAR [%d]: %s\n", var_type, &telnet->sb_buf[var_start]);
 									var_start = i + 1;
+#endif
 									break;
 								/* default: nothing */
 							}
@@ -421,7 +433,7 @@ void TELNETProcessSB(TELNET* telnet)
 				}
 				if(state == 1) {
 					telnet->sb_buf[i] = 0;
-					printf("[TELNET] VAR [%d]: %s\n", var_type, &telnet->sb_buf[var_start]);
+					LOG("[TELNET] VAR [%d]: %s\n", var_type, &telnet->sb_buf[var_start]);
 				}
 
 				TELNETSendRaw(telnet, IAC);
@@ -488,7 +500,7 @@ void TELNETProcess(TELNET* telnet, unsigned char c)
 			break;
 		case STATE_WILL:
 			telnet->state = STATE_TEXT;
-			printf("[TELNET] WILL %s [%d]\n", TELNETGetOptionName(c), c);
+			LOG("[TELNET] WILL %s [%d]\n", TELNETGetOptionName(c), c);
 			switch(c) {
 				case ECHO:
 				case SUPPRESS_GA:
@@ -505,14 +517,14 @@ void TELNETProcess(TELNET* telnet, unsigned char c)
 			break;
 		case STATE_WONT:
 			telnet->state = STATE_TEXT;
-			printf("[TELNET] WONT %s [%d]\n", TELNETGetOptionName(c), c);
+			LOG("[TELNET] WONT %s [%d]\n", TELNETGetOptionName(c), c);
 			TELNETSendRaw(telnet, IAC);
 			TELNETSendRaw(telnet, DONT);
 			TELNETSendRaw(telnet, c);
 			break;
 		case STATE_DO:
 			telnet->state = STATE_TEXT;
-			printf("[TELNET] DO %s [%d]\n", TELNETGetOptionName(c), c);
+			LOG("[TELNET] DO %s [%d]\n", TELNETGetOptionName(c), c);
 			switch(c) {
 				case ECHO:
 				case SUPPRESS_GA:
@@ -530,7 +542,7 @@ void TELNETProcess(TELNET* telnet, unsigned char c)
 			break;
 		case STATE_DONT:
 			telnet->state = STATE_TEXT;
-			printf("[TELNET] DONT %s [%d]\n", TELNETGetOptionName(c), c);
+			LOG("[TELNET] DONT %s [%d]\n", TELNETGetOptionName(c), c);
 			TELNETSendRaw(telnet, IAC);
 			TELNETSendRaw(telnet, WONT);
 			TELNETSendRaw(telnet, c);
