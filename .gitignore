@@ -1,0 +1,4 @@
+*.sw?
+build
+vt220
+web/build
