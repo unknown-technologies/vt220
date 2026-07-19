@@ -105,7 +105,7 @@ void main(void)
 	}
 
 	// combine VT220 screen with scanlines and a bit of glow
-	vec4 vt220 = (result + pow(glow, vec4(2.0)) * 0.2) * vec4(intensity);
+	vec4 vt220 = result * vec4(intensity) + pow(glow, vec4(2.0)) * 0.2;
 
 	if(raw_mode) {
 		color = vec4(result.rgb, 1.0);
