@@ -152,10 +152,8 @@
 #define	VT220_NEW_LINE				1
 
 #define	VT220_XOFF_64				0
-#define	VT220_XOFF_256				1
-#define	VT220_XOFF_512				2
-#define	VT220_XOFF_1024				3
-#define	VT220_XOFF_OFF				4
+#define	VT220_XOFF_128				1
+#define	VT220_XOFF_OFF				2
 
 #define	VT220_NO_LOCAL_ECHO			0
 #define	VT220_LOCAL_ECHO			1
@@ -174,6 +172,9 @@
 
 #define	VT220_KEYCLICK				0
 #define	VT220_NO_KEYCLICK			1
+
+#define	VT220_MARGIN_BELL			0
+#define	VT220_NO_MARGIN_BELL			1
 
 #define	VT220_BELL				0
 #define	VT220_NO_BELL				1
@@ -204,6 +205,7 @@ typedef struct {
 	char		lock;
 	char		auto_repeat;
 	char		keyclick;
+	char		margin_bell;
 	char		bell;
 } VT220NVR;
 

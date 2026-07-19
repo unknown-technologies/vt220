@@ -602,7 +602,11 @@ void VT220SetupShowKeyboard(VT220* vt)
 		VT220SetupWriteString(vt, " No Keyclick ", GET_SGR(1, 1));
 	}
 	VT220SetupCursorRight(vt);
-	VT220SetupWriteString(vt, " No Margin Bell ", GET_SGR(1, 2));
+	if(vt->config.margin_bell == VT220_MARGIN_BELL) {
+		VT220SetupWriteString(vt, " Margin Bell    ", GET_SGR(1, 2));
+	} else {
+		VT220SetupWriteString(vt, " No Margin Bell ", GET_SGR(1, 2));
+	}
 	VT220SetupCursorRight(vt);
 	if(vt->config.bell == VT220_BELL) {
 		VT220SetupWriteString(vt, " Warning Bell    ", GET_SGR(1, 3));
@@ -984,15 +988,9 @@ void VT220SetupCommEnter(VT220* vt)
 				case 0:
 					switch(vt->xoff_point) {
 						case 64:
-							vt->xoff_point = 256;
+							vt->xoff_point = 128;
 							break;
-						case 256:
-							vt->xoff_point = 512;
-							break;
-						case 512:
-							vt->xoff_point = 1024;
-							break;
-						case 1024:
+						case 128:
 							vt->use_xoff = 0;
 							vt->xoff_point = 0;
 							break;
