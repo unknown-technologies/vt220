@@ -18,6 +18,7 @@ typedef struct {
 	GLuint		line_attrib_tex;
 	GLuint		setup_text_tex;
 	GLuint		setup_line_attrib_tex;
+	GLuint		scroll_tex;
 
 	GLuint		vt_shader;
 	GLuint		vt_shader_font;
@@ -34,6 +35,13 @@ typedef struct {
 	GLuint		vt_shader_in_setup;
 	GLuint		vt_shader_block_cursor;
 	GLuint		vt_shader_intensity;
+
+	GLuint		vt_shader_scrolling;
+	GLuint		vt_shader_scroll_text;
+	GLuint		vt_shader_scroll_attributes;
+	GLuint		vt_shader_scroll_time;
+	GLuint		vt_shader_margin_top;
+	GLuint		vt_shader_margin_bottom;
 
 	GLuint		blur_fb[2];
 	GLuint		blur_tex[2];

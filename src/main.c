@@ -633,6 +633,7 @@ int main(int argc, char** argv, char** envp)
 		vt.rx = pty_tx;
 		vt.brk = pty_brk;
 		vt.resize = pty_resize;
+		vt.flowcontrol = vt_flowcontrol_nop;
 	}
 
 	current_time = get_time();

@@ -42,6 +42,8 @@
 #define	BLINK_OFF_TIME			1.8f
 #define	BLINK_ON_TIME			1.8f
 
+#define	SCROLL_TIME			(10.0f / 60.0f)
+
 const int width_80  = 80 * 10;
 const int width_132  = 132 * 9;
 const int height = 240;
@@ -57,6 +59,7 @@ uniform usampler2D text;
 uniform usampler2D line_attributes;
 uniform usampler2D setup_text;
 uniform usampler2D setup_line_attributes;
+uniform usampler2D scroll_text;
 
 uniform uvec2 cursor;
 uniform float cursor_time;
@@ -64,6 +67,12 @@ uniform float blink_time;
 uniform uint mode;
 uniform bool in_setup;
 uniform bool block_cursor;
+
+uniform int scrolling;
+uniform uint scroll_attributes;
+uniform float scroll_time;
+uniform uint margin_top;
+uniform uint margin_bottom;
 
 uniform float intensity = 1.0;
 
@@ -106,17 +115,55 @@ void get_cell(const in bool is_132col, const in int cell_width,
 	// compute text cell and relative glyph coordinates
 	vec2 textpos = position / vec2(float(cell_width), float(cell_height));
 	cell = uvec2(textpos);
+
+	bool replace = false;
+
+	if(!in_setup && scrolling == 1 && cell.y >= margin_top && cell.y <= margin_bottom) {
+		// scroll upwards
+		float off = scroll_time / SCROLL_TIME;
+		float line_off = textpos.y - float(cell.y);
+		replace = cell.y == margin_top && 1.0 - line_off > off;
+		if(replace) {
+			textpos.y = line_off + off;
+		} else {
+			textpos.y = max(0.0, textpos.y + off - 1.0);
+		}
+		cell = uvec2(textpos);
+	} else if(!in_setup && scrolling == -1 && cell.y >= margin_top && cell.y <= margin_bottom) {
+		// scroll downwards
+		float off = scroll_time / SCROLL_TIME;
+		float line_off = textpos.y - float(cell.y);
+		replace = cell.y == margin_bottom && line_off > off;
+		if(replace) {
+			textpos.y = line_off - off;
+		} else {
+			textpos.y = max(0.0, textpos.y - off + 1.0);
+		}
+		cell = uvec2(textpos);
+	}
+
 	cell_pos = uvec2((textpos - vec2(cell)) * vec2(float(cell_width), float(cell_height)));
 
 	// retrieve glyph and attributes
 	ivec2 cellcoord = ivec2(cell);
 	uint lineattr = texelFetch(line_attributes, ivec2(cellcoord.y, 0), 0).r;
 
+	if(replace) {
+		lineattr = scroll_attributes;
+	}
+
 	if(lineattr != DECSWL) {
 		cellcoord.x /= 2;
 	}
 
+	ivec2 scrollcoord = ivec2(cellcoord.x, 0);
+
 	uvec2 textcell = texelFetch(text, cellcoord, 0).rg;
+	uvec2 scrollcell = texelFetch(scroll_text, scrollcoord, 0).rg;
+
+	if(replace) {
+		textcell = scrollcell;
+	}
 
 	// maybe this is overwritten by the setup?
 	int setupline = int(cell.y) - (int(text_size.y) - 8);
@@ -161,6 +208,8 @@ void get_cell(const in bool is_132col, const in int cell_width,
 		// beginning of the cell; fix it by moving everything left by
 		// one pixel = half a font pixel
 
+		// TODO: this should not be here, but removing it messes up the
+		// weird dot stretching beyond the character cell
 		if((x % 2u) == 1u && cell_pos.x < 9u) {
 			cell_pos.x += 1u;
 		}
@@ -235,7 +284,7 @@ void main(void)
 		cursor_cell.x = line_length - 1u;
 	}
 
-	if((mode & DECTCEM) != 0u && cursor_on && !in_setup && cell == cursor_cell) {
+	if(scrolling == 0 && (mode & DECTCEM) != 0u && cursor_on && !in_setup && cell == cursor_cell) {
 		uint xor = block_cursor ? SGR_REVERSE : SGR_UNDERSCORE;
 		attr ^= xor;
 	}
@@ -255,6 +304,12 @@ void main(void)
 	float beam_bold = pixel && sgr_bold ? 0.5 : 0.0;
 	float beam_blink = pixel && sgr_blink && blink_on ? -0.5 : 0.0;
 	float beam = (beam_base + beam_bold + beam_blink) * intensity;
+
+	// this effect could probably be achieved by adjusting the coefficients
+	// above, but this is simpler for now
+	if(beam == 0.0 && pixel) {
+		beam = 0.2;
+	}
 
 	// multiply by 1.2 to compress intensity range; this compensates
 	// for the gamma function used in the CRT rendering step

@@ -20,6 +20,9 @@
 #define	BLINK_ON_TIME		1.8f
 #define	BLINK_TIME		(BLINK_OFF_TIME + BLINK_ON_TIME)
 
+/* scrolling on a VT220 happens one scan line per frame / 6 lines per second */
+#define	SCROLL_TIME		(10.0f / 60.0f)
+
 #define	FRAMEBUFFER_WIDTH	800
 #define	FRAMEBUFFER_HEIGHT	240
 
@@ -63,10 +66,15 @@ void VT220Init(VT220* vt)
 	vt->config = default_config;
 	vt->screen_color = VT220_SCREEN_COLOR_GREEN;
 
+	vt->scroll_time = 0;
+	vt->scroll_latch = 0;
+	vt->scrolling = 0;
+
 	vt->columns = TEXT_WIDTH;
 	vt->lines = TEXT_HEIGHT;
 
 	vt->text = (VT220CELL*) malloc(TEXT_WIDTH_MAX * TEXT_HEIGHT * sizeof(VT220CELL));
+	vt->scroll_text = (VT220CELL*) malloc(TEXT_WIDTH_MAX * sizeof(VT220CELL));
 	vt->line_attributes = (char*) malloc(TEXT_HEIGHT);
 	vt->tabstops = (char*) malloc(TEXT_WIDTH_MAX);
 
@@ -78,6 +86,7 @@ void VT220Init(VT220* vt)
 
 	vt->hold_screen = 0;
 	vt->enable_buffering = 0;
+	vt->pause_input = 0;
 
 	vt->bell = NULL;
 	vt->keyclick = NULL;
@@ -551,15 +560,35 @@ void VT220NextLine(VT220* vt)
 
 void VT220ScrollUp(VT220* vt)
 {
+	if(vt->mode & DECSCLM) {
+		/* are we scrolling already? */
+		if(vt->scrolling && vt->scroll_time < SCROLL_TIME * 1000.0f) {
+			VT220PauseInput(vt, 1);
+			vt->scroll_latch = 1;
+			return;
+		}
+
+		vt->scroll_attributes = vt->line_attributes[vt->margin_top];
+		memcpy(vt->scroll_text, &vt->text[vt->margin_top * vt->columns], vt->columns * sizeof(VT220CELL));
+		vt->scrolling = 1;
+		vt->scroll_time = 0;
+		vt->scroll_latch = 0;
+	} else {
+		vt->scrolling = 0;
+		vt->scroll_latch = 0;
+	}
+
 	int start = (vt->margin_top + 1) * vt->columns;
 	int end = (vt->margin_bottom + 1) * vt->columns;
 	for(int i = start; i < end; i++) {
 		vt->text[i - vt->columns] = vt->text[i];
 	}
 
-	for(int i = vt->margin_top + 1; i < vt->margin_bottom; i++) {
+	for(int i = vt->margin_top + 1; i <= vt->margin_bottom; i++) {
 		vt->line_attributes[i - 1] = vt->line_attributes[i];
 	}
+
+	vt->line_attributes[vt->margin_bottom] = DECSWL;
 
 	end = vt->margin_bottom * vt->columns;
 	memset(&vt->text[end], 0, vt->columns * sizeof(VT220CELL));
@@ -567,6 +596,22 @@ void VT220ScrollUp(VT220* vt)
 
 void VT220ScrollDown(VT220* vt)
 {
+	if(vt->mode & DECSCLM) {
+		/* are we scrolling already? */
+		if(vt->scrolling && vt->scroll_time < SCROLL_TIME * 1000.0f) {
+			VT220PauseInput(vt, 1);
+			vt->scroll_latch = 2;
+			return;
+		}
+
+		vt->scroll_attributes = vt->line_attributes[vt->margin_bottom];
+		memcpy(vt->scroll_text, &vt->text[vt->margin_bottom * vt->columns], vt->columns * sizeof(VT220CELL));
+		vt->scrolling = -1;
+		vt->scroll_time = 0;
+	} else {
+		vt->scrolling = 0;
+	}
+
 	int start = vt->margin_top * vt->columns;
 	int end = vt->margin_bottom * vt->columns;
 	for(int i = end - 1; i >= start; i--) {
@@ -576,6 +621,8 @@ void VT220ScrollDown(VT220* vt)
 	for(int i = vt->margin_bottom - 1; i >= vt->margin_top; i--) {
 		vt->line_attributes[i + 1] = vt->line_attributes[i];
 	}
+
+	vt->line_attributes[vt->margin_top] = DECSWL;
 
 	memset(&vt->text[start], 0, vt->columns * sizeof(VT220CELL));
 }
@@ -629,6 +676,7 @@ void VT220EraseScreen(VT220* vt)
 	memset(vt->line_attributes, 0, vt->lines);
 }
 
+/* TODO: implement smooth scroll here too */
 void VT220InsertLine(VT220* vt)
 {
 	if(vt->cursor_y < vt->margin_top || vt->cursor_y > vt->margin_bottom) {
@@ -1053,14 +1101,22 @@ void VT220ClearComm(VT220* vt)
 
 	vt->xoff = 0;
 	vt->sent_xoff = 0;
+	vt->pause_input = 0;
 	vt->hold_screen = 0;
-
-	VT220FlowControl(vt, 1);
+	vt->scroll_latch = 0;
+	vt->scrolling = 0;
 
 	vt->buf_r = 0;
 	vt->buf_w = 0;
 	vt->buf_used = 0;
 	vt->buf_lost = 0;
+
+	/* reset flow control but only send XON if XOFF/XON is used */
+	if(vt->flowcontrol) {
+		vt->flowcontrol(1);
+	} else if(vt->use_xoff) {
+		VT220Send(vt, DC1);
+	}
 }
 
 /* DECSTR: page 129 */
@@ -1169,7 +1225,7 @@ void VT220HardReset(VT220* vt)
 
 	vt->xoff = 0;
 	vt->xoff_point = 64;
-	vt->xon_point = 16;
+	vt->xon_point = 32;
 	vt->use_xoff = 1;
 
 	vt->margin_top = 0;
@@ -1318,6 +1374,7 @@ void VT220Destroy(VT220* vt)
 {
 	free(vt->buf);
 	free(vt->tabstops);
+	free(vt->scroll_text);
 	free(vt->text);
 	free(vt->drcs);
 }
@@ -3240,23 +3297,42 @@ void VT220Process(VT220* vt, unsigned long dt)
 	vt->cursor_time = (vt->cursor_time + dt)
 		% (unsigned long) roundf(CURSOR_TIME * 1000.0f);
 
-	VT220ProcessKeys(vt, dt);
+	if(!vt->hold_screen) {
+		vt->scroll_time += dt;
+	}
+	if(vt->scrolling && vt->scroll_time >= SCROLL_TIME * 1000.0f) {
+		vt->scrolling = 0;
+		int latch = vt->scroll_latch;
+		vt->scroll_latch = 0;
 
-	while(vt->buf_used > 0) {
-		unsigned char c = vt->buf[vt->buf_r++];
-		vt->buf_used--;
-		vt->buf_r %= 256;
+		VT220PauseInput(vt, 0);
 
-		VT220ProcessChar(vt, c);
-
-		if(vt->use_xoff && vt->sent_xoff && vt->buf_used == vt->xon_point - 1) {
-			VT220FlowControl(vt, 1);
+		if(latch == 1) {
+			VT220ScrollUp(vt);
+		} else if(latch == 2) {
+			VT220ScrollDown(vt);
 		}
 	}
 
-	while(vt->buf_lost) {
-		vt->buf_lost--;
-		VT220Write(vt, 0x20);
+	VT220ProcessKeys(vt, dt);
+
+	if(!vt->hold_screen) {
+		while(!vt->pause_input && vt->buf_used > 0) {
+			unsigned char c = vt->buf[vt->buf_r++];
+			vt->buf_used--;
+			vt->buf_r %= 256;
+
+			VT220ProcessChar(vt, c);
+
+			if(vt->use_xoff && vt->sent_xoff && vt->buf_used <= vt->xon_point - 1) {
+				VT220FlowControl(vt, 1);
+			}
+		}
+
+		while(vt->buf_lost) {
+			vt->buf_lost--;
+			VT220Write(vt, 0x20);
+		}
 	}
 }
 
@@ -4160,7 +4236,11 @@ void VT220ProcessKey(VT220* vt, u16 key)
 void VT220FlowControl(VT220* vt, int start)
 {
 	if(!vt->use_xoff) {
-		vt->sent_xoff = !start;
+		// TODO: why was this added here?
+		// vt->sent_xoff = !start;
+		if(vt->sent_xoff && start) {
+			vt->sent_xoff = 0;
+		}
 		return;
 	}
 
@@ -4181,9 +4261,18 @@ void VT220FlowControl(VT220* vt, int start)
 	}
 }
 
+void VT220PauseInput(VT220* vt, int pause)
+{
+	vt->pause_input = pause;
+}
+
 int VT220CanReceive(VT220* vt)
 {
-	return !vt->sent_xoff;
+	if(vt->enable_buffering) {
+		return !vt->sent_xoff;
+	} else {
+		return !vt->pause_input && !vt->hold_screen && !vt->sent_xoff;
+	}
 }
 
 void VT220SetScreenColor(VT220* vt, unsigned int color)

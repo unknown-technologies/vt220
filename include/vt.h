@@ -358,6 +358,14 @@ typedef struct {
 	/* flow control */
 	int		hold_screen;
 	int		enable_buffering;
+	int		pause_input;
+
+	/* smooth scroll */
+	char		scroll_attributes;
+	int		scrolling;
+	int		scroll_latch;
+	VT220CELL*	scroll_text;
+	unsigned long	scroll_time;
 
 	/* configuration */
 	VT220NVR	config;
@@ -554,6 +562,7 @@ void VT220ProcessChar(VT220* vt, unsigned char c);
 void VT220ProcessKey(VT220* vt, u16 key);
 void VT220ProcessKeys(VT220* vt, unsigned long dt);
 void VT220FlowControl(VT220* vt, int start);
+void VT220PauseInput(VT220* vt, int pause);
 int  VT220CanReceive(VT220* vt);
 void VT220SetBuffering(VT220* vt, int enable);
 

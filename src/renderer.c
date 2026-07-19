@@ -103,6 +103,12 @@ void VTInitRenderer(VTRenderer* self, VT220* vt)
 	self->vt_shader_in_setup = glGetUniformLocation(self->vt_shader, "in_setup");
 	self->vt_shader_block_cursor = glGetUniformLocation(self->vt_shader, "block_cursor");
 	self->vt_shader_intensity = glGetUniformLocation(self->vt_shader, "intensity");
+	self->vt_shader_scrolling = glGetUniformLocation(self->vt_shader, "scrolling");
+	self->vt_shader_scroll_text = glGetUniformLocation(self->vt_shader, "scroll_text");
+	self->vt_shader_scroll_attributes = glGetUniformLocation(self->vt_shader, "scroll_attributes");
+	self->vt_shader_scroll_time = glGetUniformLocation(self->vt_shader, "scroll_time");
+	self->vt_shader_margin_top = glGetUniformLocation(self->vt_shader, "margin_top");
+	self->vt_shader_margin_bottom = glGetUniformLocation(self->vt_shader, "margin_bottom");
 
 	self->blur_shader = VTCreateShader(blur_vert, blur_frag);
 	self->blur_shader_tex = glGetUniformLocation(self->blur_shader, "image");
@@ -254,6 +260,11 @@ void VTRenderTerminal(VTRenderer* self)
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_R8UI, SETUP_TEXT_HEIGHT, 1, 0, GL_RED_INTEGER, GL_UNSIGNED_BYTE, (GLvoid*) self->vt->setup.line_attributes);
 	glUniform1i(self->vt_shader_setup_line_attributes, 5);
 
+	glActiveTexture(GL_TEXTURE6);
+	glBindTexture(GL_TEXTURE_2D, self->scroll_tex);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RG16UI, self->vt->columns, 1, 0, GL_RG_INTEGER, GL_UNSIGNED_SHORT, (GLvoid*) self->vt->scroll_text);
+	glUniform1i(self->vt_shader_scroll_text, 6);
+
 	glUniform2ui(self->vt_shader_text_size, self->vt->columns, self->vt->lines);
 	glUniform2ui(self->vt_shader_cursor, self->vt->cursor_x, self->vt->cursor_y);
 	glUniform1f(self->vt_shader_cursor_time, self->vt->cursor_time / 1000.0f);
@@ -262,6 +273,13 @@ void VTRenderTerminal(VTRenderer* self)
 	glUniform1ui(self->vt_shader_in_setup, self->vt->in_setup);
 	glUniform1ui(self->vt_shader_block_cursor, self->vt->config.cursor_style == VT220_CURSOR_STYLE_BLOCK_CURSOR);
 	glUniform1f(self->vt_shader_intensity, self->intensity);
+
+	// smooth scroll handling
+	glUniform1i(self->vt_shader_scrolling, self->vt->scrolling);
+	glUniform1ui(self->vt_shader_scroll_attributes, self->vt->scroll_attributes);
+	glUniform1f(self->vt_shader_scroll_time, self->vt->scroll_time / 1000.0f);
+	glUniform1ui(self->vt_shader_margin_top, self->vt->margin_top);
+	glUniform1ui(self->vt_shader_margin_bottom, self->vt->margin_bottom);
 
 	glBindVertexArray(self->quad_vao);
 	glDrawArrays(GL_TRIANGLES, 0, QUAD_VTX_CNT);
@@ -420,6 +438,13 @@ void VTCreateTextTexture(VTRenderer* self)
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	GL_ERROR();
+
+	// smooth scroll
+	glGenTextures(1, &self->scroll_tex);
+	glBindTexture(GL_TEXTURE_2D, self->scroll_tex);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RG16UI, TEXT_WIDTH, 1, 0, GL_RG_INTEGER, GL_UNSIGNED_SHORT, NULL);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 }
 
 void VTCreateFrameBuffer(VTRenderer* self)
