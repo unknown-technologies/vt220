@@ -1369,9 +1369,7 @@ void VT220SendDecimal(VT220* vt, int x)
 
 void VT220SendInput(VT220* vt, unsigned char c)
 {
-	if(vt->in_setup) {
-		VT220SetupProcessKey(vt, c);
-	} else if(vt->config.local) {
+	if(vt->config.local) {
 		VT220Receive(vt, c);
 	} else {
 		if(vt->rx) {
@@ -4119,7 +4117,9 @@ void VT220ProcessKey(VT220* vt, u16 key)
 			return;
 	}
 
-	if(vt->mode & DECANM) {
+	if(vt->in_setup) {
+		VT220SetupProcessKey(vt, key);
+	} else if(vt->mode & DECANM) {
 		if(vt->vt100_mode) {
 			VT220ProcessKeyVT100(vt, key);
 		} else {

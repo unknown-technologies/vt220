@@ -73,6 +73,8 @@
 #define	VT220_KEY_LEFT				362
 #define	VT220_KEY_RIGHT				363
 
+/* TODO: make RETURN a separate key from CR */
+
 #define	VT220_KEY_CTRL				364
 #define	VT220_KEY_SHIFT				365
 
@@ -265,7 +267,6 @@ typedef struct {
 	int		move;
 	int		screen;
 	int		in_enq;
-	int		state;
 	int		write_x;
 	int		write_y;
 	int		write_x_save;
@@ -566,6 +567,6 @@ void VT220KeyboardProcess(VT220* vt, unsigned long dt);
 /* setup functions */
 void VT220EnterSetup(VT220* vt);
 void VT220LeaveSetup(VT220* vt);
-void VT220SetupProcessKey(VT220* vt, unsigned char c);
+void VT220SetupProcessKey(VT220* vt, u16 key);
 
 #endif

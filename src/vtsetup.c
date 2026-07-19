@@ -267,6 +267,7 @@ void VT220SetupShowHint(VT220* vt)
 	VT220SetupGoto(vt, 8, 2);
 	VT220SetupEraseLine(vt);
 	VT220SetupWriteString(vt, "Press ENTER to take this action - Press Cursor Keys to move", 0);
+	VT220Bell(vt);
 }
 
 void VT220SetupShowDone(VT220* vt)
@@ -1021,7 +1022,6 @@ void VT220EnterSetup(VT220* vt)
 	vt->setup.cursor_x = 0;
 	vt->setup.cursor_y = 0;
 	vt->setup.screen = SETUP_SCREEN_DIRECTORY;
-	vt->setup.state = 0;
 	VT220Send(vt, DC3);
 
 	VT220SetupShow(vt);
@@ -1508,12 +1508,197 @@ void VT220SetupProcessEnter(VT220* vt)
 	}
 }
 
-void VT220SetupProcessAnswerback(VT220* vt, unsigned char c)
+unsigned int VT220SetupEncodeAnswerback(u16 key, unsigned char* buf)
 {
-	if(c == DEL) {
+	switch(key) {
+		case VT220_KEY_FIND:
+			buf[0] = CSI;
+			buf[1] = '1';
+			buf[2] = '~';
+			return 3;
+		case VT220_KEY_INSERT:
+			buf[0] = CSI;
+			buf[1] = '2';
+			buf[2] = '~';
+			return 3;
+		case VT220_KEY_REMOVE:
+			buf[0] = CSI;
+			buf[1] = '3';
+			buf[2] = '~';
+			return 3;
+		case VT220_KEY_SELECT:
+			buf[0] = CSI;
+			buf[1] = '4';
+			buf[2] = '~';
+			return 3;
+		case VT220_KEY_PREV_SCREEN:
+			buf[0] = CSI;
+			buf[1] = '5';
+			buf[2] = '~';
+			return 3;
+		case VT220_KEY_NEXT_SCREEN:
+			buf[0] = CSI;
+			buf[1] = '6';
+			buf[2] = '~';
+			return 3;
+		case VT220_KEY_F6:
+			buf[0] = CSI;
+			buf[1] = '1';
+			buf[2] = '7';
+			buf[3] = '~';
+			return 4;
+		case VT220_KEY_F7:
+			buf[0] = CSI;
+			buf[1] = '1';
+			buf[2] = '8';
+			buf[3] = '~';
+			return 4;
+		case VT220_KEY_F8:
+			buf[0] = CSI;
+			buf[1] = '1';
+			buf[2] = '9';
+			buf[3] = '~';
+			return 4;
+		case VT220_KEY_F9:
+			buf[0] = CSI;
+			buf[1] = '2';
+			buf[2] = '0';
+			buf[3] = '~';
+			return 4;
+		case VT220_KEY_F10:
+			buf[0] = CSI;
+			buf[1] = '2';
+			buf[2] = '1';
+			buf[3] = '~';
+			return 4;
+		case VT220_KEY_F11:
+			buf[0] = CSI;
+			buf[1] = '2';
+			buf[2] = '3';
+			buf[3] = '~';
+			return 4;
+		case VT220_KEY_F12:
+			buf[0] = CSI;
+			buf[1] = '2';
+			buf[2] = '4';
+			buf[3] = '~';
+			return 4;
+		case VT220_KEY_F13:
+			buf[0] = CSI;
+			buf[1] = '2';
+			buf[2] = '5';
+			buf[3] = '~';
+			return 4;
+		case VT220_KEY_F14:
+			buf[0] = CSI;
+			buf[1] = '2';
+			buf[2] = '6';
+			buf[3] = '~';
+			return 4;
+		case VT220_KEY_F15:
+			buf[0] = CSI;
+			buf[1] = '2';
+			buf[2] = '8';
+			buf[3] = '~';
+			return 4;
+		case VT220_KEY_F16:
+			buf[0] = CSI;
+			buf[1] = '2';
+			buf[2] = '9';
+			buf[3] = '~';
+			return 4;
+		case VT220_KEY_F17:
+			buf[0] = CSI;
+			buf[1] = '3';
+			buf[2] = '1';
+			buf[3] = '~';
+			return 4;
+		case VT220_KEY_F18:
+			buf[0] = CSI;
+			buf[1] = '3';
+			buf[2] = '2';
+			buf[3] = '~';
+			return 4;
+		case VT220_KEY_F19:
+			buf[0] = CSI;
+			buf[1] = '3';
+			buf[2] = '3';
+			buf[3] = '~';
+			return 4;
+		case VT220_KEY_F20:
+			buf[0] = CSI;
+			buf[1] = '3';
+			buf[2] = '4';
+			buf[3] = '~';
+			return 4;
+		case VT220_KEY_KP_0:
+			*buf = '0';
+			return 1;
+		case VT220_KEY_KP_1:
+			*buf = '1';
+			return 1;
+		case VT220_KEY_KP_2:
+			*buf = '2';
+			return 1;
+		case VT220_KEY_KP_3:
+			*buf = '3';
+			return 1;
+		case VT220_KEY_KP_4:
+			*buf = '4';
+			return 1;
+		case VT220_KEY_KP_5:
+			*buf = '5';
+			return 1;
+		case VT220_KEY_KP_6:
+			*buf = '6';
+			return 1;
+		case VT220_KEY_KP_7:
+			*buf = '7';
+			return 1;
+		case VT220_KEY_KP_8:
+			*buf = '8';
+			return 1;
+		case VT220_KEY_KP_9:
+			*buf = '9';
+			return 1;
+		case VT220_KEY_KP_MINUS:
+			*buf = '-';
+			return 1;
+		case VT220_KEY_KP_COMMA:
+			*buf = ',';
+			return 1;
+		case VT220_KEY_KP_PERIOD:
+			*buf = '.';
+			return 1;
+		case VT220_KEY_KP_PF1:
+			buf[0] = SS3;
+			buf[1] = 'P';
+			return 2;
+		case VT220_KEY_KP_PF2:
+			buf[0] = SS3;
+			buf[1] = 'Q';
+			return 2;
+		case VT220_KEY_KP_PF3:
+			buf[0] = SS3;
+			buf[1] = 'R';
+			return 2;
+		case VT220_KEY_KP_PF4:
+			buf[0] = SS3;
+			buf[1] = 'S';
+			return 2;
+	}
+	return 0;
+}
+
+void VT220SetupProcessAnswerback(VT220* vt, u16 key)
+{
+	if(key == DEL) {
 		if(vt->setup.in_enq > 0) {
 			vt->setup.in_enq--;
 			vt->setup.enq[vt->setup.in_enq] = 0;
+		} else {
+			/* DEL in empty answerback = exit the field */
+			vt->setup.in_enq = -1;
 		}
 	} else {
 		if(vt->setup.in_enq <= 30) {
@@ -1522,10 +1707,36 @@ void VT220SetupProcessAnswerback(VT220* vt, unsigned char c)
 				cursor = 29;
 			}
 
-			vt->setup.enq[cursor] = c;
-			vt->setup.in_enq++;
-			if(vt->setup.in_enq > 30) {
-				vt->setup.in_enq = 30;
+			/* The real VT220 encodes special keys as 8-bit control
+			 * sequences using CSI (9B) or SS3 (8F). If the encoded
+			 * sequence does not fit into the answerback string
+			 * anymore, the error bell sounds and the end of the
+			 * sequence is truncated. */
+
+			if(key > 0xFF) {
+				unsigned char buf[4]; /* the longest sequence is 4 characters */
+				unsigned int len = VT220SetupEncodeAnswerback(key, buf);
+				if(vt->setup.in_enq + len > 30) {
+					if(vt->setup.in_enq == 30) {
+						/* only copy the first character */
+						vt->setup.enq[29] = buf[0];
+					} else {
+						/* truncate string */
+						len = 30 - vt->setup.in_enq;
+						memcpy(&vt->setup.enq[vt->setup.in_enq], buf, len);
+						vt->setup.in_enq = 30;
+					}
+					VT220Bell(vt);
+				} else {
+					memcpy(&vt->setup.enq[vt->setup.in_enq], buf, len);
+					vt->setup.in_enq += len;
+				}
+			} else {
+				vt->setup.enq[cursor] = (unsigned char) key;
+				vt->setup.in_enq++;
+				if(vt->setup.in_enq > 30) {
+					vt->setup.in_enq = 30;
+				}
 			}
 		}
 	}
@@ -1533,217 +1744,57 @@ void VT220SetupProcessAnswerback(VT220* vt, unsigned char c)
 	VT220SetupShowStatus(vt);
 }
 
-#define	STATE_TEXT	0
-#define	STATE_ESC	1
-#define	STATE_CSI	2
-#define	STATE_SS3	3
-
-void VT220SetupProcessKey(VT220* vt, unsigned char c)
+void VT220SetupProcessKey(VT220* vt, u16 key)
 {
 	vt->setup.move = VT220_SETUP_MOVE_NONE;
-	switch(vt->setup.state) {
-		case STATE_TEXT:
-			switch(c) {
-				case CR:
-					VT220SetupProcessEnter(vt);
-					break;
-				case LF:
-					break;
-				case ESC:
-					vt->setup.state = STATE_ESC;
-					break;
-				case CSI:
-					vt->setup.state = STATE_CSI;
-					break;
-				case SS3:
-					vt->setup.state = STATE_SS3;
-					break;
-				default:
-					if(vt->setup.in_enq >= 0) {
-						VT220SetupProcessAnswerback(vt, c);
-					} else {
-						VT220SetupShowHint(vt);
-					}
-					break;
-			}
+	switch(key) {
+		/* TODO: it is EXTREMELY convenient to have CR = ENTER.
+		 * Unfortunately this causes issues with the Answerback entry
+		 * field because there you can enter CR as a valid character.
+		 * Therefore, CR is currently handled like on the real VT220:
+		 * it is not the same as ENTER and not a valid key in Setup */
+		case VT220_KEY_KP_ENTER:
+			VT220SetupProcessEnter(vt);
 			break;
-		case STATE_ESC:
-			switch(c) {
-				case ESC:
-					vt->setup.state = STATE_ESC;
-					break;
-				case CSI:
-					vt->setup.state = STATE_CSI;
-					break;
-				case '[':
-					vt->setup.state = STATE_CSI;
-					break;
-				case 'A': /* cursor up (VT52) */
-					if(!(vt->mode & DECANM)) {
-						vt->setup.state = STATE_TEXT;
-						if(vt->setup.cursor_y > 0) {
-							vt->setup.move = VT220_SETUP_MOVE_UP;
-							vt->setup.cursor_y--;
-						}
-						vt->setup.in_enq = -1;
-						VT220SetupShowStatus(vt);
-					} else {
-						vt->setup.state = STATE_TEXT;
-						VT220SetupShowHint(vt);
-					}
-					break;
-				case 'B': /* cursor down (VT52) */
-					if(!(vt->mode & DECANM)) {
-						vt->setup.state = STATE_TEXT;
-						if(vt->setup.cursor_y < 2) {
-							vt->setup.move = VT220_SETUP_MOVE_DOWN;
-							vt->setup.cursor_y++;
-						}
-						vt->setup.in_enq = -1;
-						VT220SetupShowStatus(vt);
-					} else {
-						vt->setup.state = STATE_TEXT;
-						VT220SetupShowHint(vt);
-					}
-					break;
-				case 'C': /* cursor right (VT52) */
-					if(!(vt->mode & DECANM)) {
-						vt->setup.state = STATE_TEXT;
-						if(vt->setup.cursor_x < vt->columns) {
-							vt->setup.move = VT220_SETUP_MOVE_RIGHT;
-							vt->setup.cursor_x++;
-						}
-						vt->setup.in_enq = -1;
-						VT220SetupShowStatus(vt);
-					} else {
-						vt->setup.state = STATE_TEXT;
-						VT220SetupShowHint(vt);
-					}
-					break;
-				case 'D': /* cursor left (VT52) */
-					if(!(vt->mode & DECANM)) {
-						vt->setup.state = STATE_TEXT;
-						if(vt->setup.cursor_x > 0) {
-							vt->setup.move = VT220_SETUP_MOVE_LEFT;
-							vt->setup.cursor_x--;
-						} else {
-							vt->setup.move = VT220_SETUP_MOVE_LEFT_MARGIN;
-						}
-						vt->setup.in_enq = -1;
-						VT220SetupShowStatus(vt);
-					} else {
-						vt->setup.state = STATE_TEXT;
-						VT220SetupShowHint(vt);
-					}
-					break;
-				default:
-					vt->setup.state = STATE_TEXT;
-					VT220SetupShowHint(vt);
-					break;
+		case VT220_KEY_UP:
+			if(vt->setup.cursor_y > 0) {
+				vt->setup.move = VT220_SETUP_MOVE_UP;
+				vt->setup.cursor_y--;
 			}
+			vt->setup.in_enq = -1;
+			VT220SetupShowStatus(vt);
 			break;
-		case STATE_CSI:
-			switch(c) {
-				case ESC:
-					vt->setup.state = STATE_ESC;
-					break;
-				case CSI:
-					vt->setup.state = STATE_CSI;
-					break;
-				case 'A': /* cursor up */
-					vt->setup.state = STATE_TEXT;
-					if(vt->setup.cursor_y > 0) {
-						vt->setup.move = VT220_SETUP_MOVE_UP;
-						vt->setup.cursor_y--;
-					}
-					vt->setup.in_enq = -1;
-					VT220SetupShowStatus(vt);
-					break;
-				case 'B': /* cursor down */
-					vt->setup.state = STATE_TEXT;
-					if(vt->setup.cursor_y < 2) {
-						vt->setup.move = VT220_SETUP_MOVE_DOWN;
-						vt->setup.cursor_y++;
-					}
-					vt->setup.in_enq = -1;
-					VT220SetupShowStatus(vt);
-					break;
-				case 'C': /* cursor right */
-					vt->setup.state = STATE_TEXT;
-					if(vt->setup.cursor_x < vt->columns) {
-						vt->setup.move = VT220_SETUP_MOVE_RIGHT;
-						vt->setup.cursor_x++;
-					}
-					vt->setup.in_enq = -1;
-					VT220SetupShowStatus(vt);
-					break;
-				case 'D': /* cursor left */
-					vt->setup.state = STATE_TEXT;
-					if(vt->setup.cursor_x > 0) {
-						vt->setup.move = VT220_SETUP_MOVE_LEFT;
-						vt->setup.cursor_x--;
-					} else {
-						vt->setup.move = VT220_SETUP_MOVE_LEFT_MARGIN;
-					}
-					vt->setup.in_enq = -1;
-					VT220SetupShowStatus(vt);
-					break;
-				default:
-					vt->setup.state = STATE_TEXT;
-					VT220SetupShowHint(vt);
-					break;
+		case VT220_KEY_DOWN:
+			if(vt->setup.cursor_y < 2) {
+				vt->setup.move = VT220_SETUP_MOVE_DOWN;
+				vt->setup.cursor_y++;
 			}
+			vt->setup.in_enq = -1;
+			VT220SetupShowStatus(vt);
 			break;
-		case STATE_SS3:
-			switch(c) {
-				case ESC:
-					vt->setup.state = STATE_ESC;
-					break;
-				case CSI:
-					vt->setup.state = STATE_CSI;
-					break;
-				case 'A': /* cursor up */
-					vt->setup.state = STATE_TEXT;
-					if(vt->setup.cursor_y > 0) {
-						vt->setup.move = VT220_SETUP_MOVE_UP;
-						vt->setup.cursor_y--;
-					}
-					vt->setup.in_enq = -1;
-					VT220SetupShowStatus(vt);
-					break;
-				case 'B': /* cursor down */
-					vt->setup.state = STATE_TEXT;
-					if(vt->setup.cursor_y < 2) {
-						vt->setup.move = VT220_SETUP_MOVE_DOWN;
-						vt->setup.cursor_y++;
-					}
-					vt->setup.in_enq = -1;
-					VT220SetupShowStatus(vt);
-					break;
-				case 'C': /* cursor right */
-					vt->setup.state = STATE_TEXT;
-					if(vt->setup.cursor_x < vt->columns) {
-						vt->setup.move = VT220_SETUP_MOVE_RIGHT;
-						vt->setup.cursor_x++;
-					}
-					vt->setup.in_enq = -1;
-					VT220SetupShowStatus(vt);
-					break;
-				case 'D': /* cursor left */
-					vt->setup.state = STATE_TEXT;
-					if(vt->setup.cursor_x > 0) {
-						vt->setup.move = VT220_SETUP_MOVE_LEFT;
-						vt->setup.cursor_x--;
-					} else {
-						vt->setup.move = VT220_SETUP_MOVE_LEFT_MARGIN;
-					}
-					vt->setup.in_enq = -1;
-					VT220SetupShowStatus(vt);
-					break;
-				default:
-					vt->setup.state = STATE_TEXT;
-					VT220SetupShowHint(vt);
-					break;
+		case VT220_KEY_RIGHT:
+			if(vt->setup.cursor_x < vt->columns) {
+				vt->setup.move = VT220_SETUP_MOVE_RIGHT;
+				vt->setup.cursor_x++;
+			}
+			vt->setup.in_enq = -1;
+			VT220SetupShowStatus(vt);
+			break;
+		case VT220_KEY_LEFT:
+			if(vt->setup.cursor_x > 0) {
+				vt->setup.move = VT220_SETUP_MOVE_LEFT;
+				vt->setup.cursor_x--;
+			} else {
+				vt->setup.move = VT220_SETUP_MOVE_LEFT_MARGIN;
+			}
+			vt->setup.in_enq = -1;
+			VT220SetupShowStatus(vt);
+			break;
+		default:
+			if(vt->setup.in_enq >= 0) {
+				VT220SetupProcessAnswerback(vt, key);
+			} else {
+				VT220SetupShowHint(vt);
 			}
 			break;
 	}
