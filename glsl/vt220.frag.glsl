@@ -244,9 +244,15 @@ void main(void)
 	}
 	uvec2 setupcell = texelFetch(setup_text, setupcell_pos, 0).rg;
 
-	if(in_setup && setupline >= 0) {
-		textcell = setupcell;
-		lineattr = setuplineattr;
+	if(in_setup) {
+		if(setupline >= 0) {
+			textcell = setupcell;
+			lineattr = setuplineattr;
+		} else {
+			// top part of screen is empty in setup
+			textcell = uvec2(0u);
+			lineattr = 0u;
+		}
 	}
 
 	uint glyph = textcell.r;
