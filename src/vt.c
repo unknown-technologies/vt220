@@ -48,6 +48,12 @@
 #define	STATE_DECUDK_ODD_ESC	18
 #define	STATE_DECUDK_EVEN	19
 #define	STATE_DECUDK_EVEN_ESC	20
+#define	STATE_DECDLD		21
+#define	STATE_DECDLD_ESC	22
+#define	STATE_DECDLD_GLYPH	23
+#define	STATE_DECDLD_GLYPH_ESC	24
+#define	STATE_DECDLD_ERR	25
+#define	STATE_DECDLD_ERR_ESC	26
 
 static const VT220NVR default_config = { 0 };
 
@@ -73,6 +79,8 @@ void VT220Init(VT220* vt)
 	vt->bell = NULL;
 	vt->keyclick = NULL;
 	vt->rx = NULL;
+
+	vt->drcs = (unsigned char*) malloc(940);
 
 	/* configure setup screens */
 	vt->in_setup = 0;
@@ -211,35 +219,8 @@ void VT220WriteCS(VT220* vt, unsigned char ch, int cs)
 		case CHARSET_NRCS_BRITISH:
 			cs_table = vt220_cs_british;
 			break;
-		case CHARSET_NRCS_DUTCH:
-			cs_table = vt220_cs_dutch;
-			break;
-		case CHARSET_NRCS_FINNISH:
-			cs_table = vt220_cs_finnish;
-			break;
-		case CHARSET_NRCS_FRENCH:
-			cs_table = vt220_cs_french;
-			break;
-		case CHARSET_NRCS_FRENCH_CANADIAN:
-			cs_table = vt220_cs_french_canadian;
-			break;
-		case CHARSET_NRCS_GERMAN:
-			cs_table = vt220_cs_german;
-			break;
-		case CHARSET_NRCS_ITALIAN:
-			cs_table = vt220_cs_italian;
-			break;
-		case CHARSET_NRCS_NORWEGIAN:
-			cs_table = vt220_cs_norwegian;
-			break;
-		case CHARSET_NRCS_SPANISH:
-			cs_table = vt220_cs_spanish;
-			break;
-		case CHARSET_NRCS_SWEDISH:
-			cs_table = vt220_cs_swedish;
-			break;
-		case CHARSET_NRCS_SWISS:
-			cs_table = vt220_cs_swiss;
+		case CHARSET_DRCS:
+			cs_table = vt220_cs_drcs;
 			break;
 		case CHARSET_ASCII_DC:
 			cs_table = vt220_cs_ascii_dc;
@@ -1197,6 +1178,12 @@ void VT220HardReset(VT220* vt)
 	vt->g[2] = CHARSET_DEC_SUPPLEMENTAL;
 	vt->g[3] = CHARSET_DEC_SUPPLEMENTAL;
 
+	/* clear DRCS */
+	memset(vt->drcs_name, 0, 3);
+	vt->drcs_name[0] = ' '; /* set it to the default unregistered */
+	vt->drcs_name[1] = '@'; /* character set */
+	VT220ClearDRCS(vt);
+
 	VT220CursorHome(vt);
 	VT220EraseScreen(vt);
 	VT220SaveCursor(vt);
@@ -1284,6 +1271,13 @@ void VT220ClearAllUDK(VT220* vt)
 	memset(vt->udk_memory, 0, 256);
 }
 
+void VT220ClearDRCS(VT220* vt)
+{
+	for(unsigned int i = 0; i < 94; i++) {
+		memcpy(&vt->drcs[i * 10], &vt220font[0x20 * 10], 10);
+	}
+}
+
 void VT220Substitute(VT220* vt)
 {
 	VT220Write(vt, 0x20);
@@ -1315,6 +1309,7 @@ void VT220Destroy(VT220* vt)
 	free(vt->buf);
 	free(vt->tabstops);
 	free(vt->text);
+	free(vt->drcs);
 }
 
 void VT220Bell(VT220* vt)
@@ -1539,10 +1534,14 @@ void VT220ProcessCharVT220(VT220* vt, unsigned char c)
 				case '(':
 					vt->state = STATE_G;
 					vt->g_dst = 0;
+					vt->parameter_id = 0;
+					memset(vt->parameters, 0, MAX_PARAMETERS * sizeof(u16));
 					break;
 				case ')':
 					vt->state = STATE_G;
 					vt->g_dst = 1;
+					vt->parameter_id = 0;
+					memset(vt->parameters, 0, MAX_PARAMETERS * sizeof(u16));
 					break;
 				case '*':
 					if(vt->vt100_mode) {
@@ -1550,6 +1549,8 @@ void VT220ProcessCharVT220(VT220* vt, unsigned char c)
 					} else {
 						vt->state = STATE_G;
 						vt->g_dst = 2;
+						vt->parameter_id = 0;
+						memset(vt->parameters, 0, MAX_PARAMETERS * sizeof(u16));
 					}
 					break;
 				case '+':
@@ -1558,6 +1559,8 @@ void VT220ProcessCharVT220(VT220* vt, unsigned char c)
 					} else {
 						vt->state = STATE_G;
 						vt->g_dst = 3;
+						vt->parameter_id = 0;
+						memset(vt->parameters, 0, MAX_PARAMETERS * sizeof(u16));
 					}
 					break;
 				case '~': /* LS1R */
@@ -1650,6 +1653,27 @@ void VT220ProcessCharVT220(VT220* vt, unsigned char c)
 					memset(vt->parameters, 0, MAX_PARAMETERS * sizeof(u16));
 					break;
 				default:
+					if(c >= 0x20 && c <= 0x2F) {
+						/* intermediate */
+						if(vt->parameter_id < 2) {
+							vt->state = STATE_G;
+							vt->parameters[vt->parameter_id++] = c;
+						}
+					} else if(c >= 0x30 && c <= 0x7E) {
+						/* final */
+						vt->parameters[vt->parameter_id] = c;
+						BOOL is_drcs = TRUE;
+						for(int i = 0; i < 3; i++) {
+							if(vt->parameters[i] != vt->drcs_name[i]) {
+								is_drcs = FALSE;
+								break;
+							}
+						}
+						if(is_drcs) {
+							vt->g[vt->g_dst] = CHARSET_DRCS;
+						}
+					}
+					break;
 				case CAN:
 					break;
 				case SUB:
@@ -1665,40 +1689,9 @@ void VT220ProcessCharVT220(VT220* vt, unsigned char c)
 					vt->g[vt->g_dst] = CHARSET_DEC_SPECIAL_GRAPHICS;
 					break;
 				case 'A':
-					vt->g[vt->g_dst] = CHARSET_NRCS_BRITISH;
-					break;
-				case '4':
-					vt->g[vt->g_dst] = CHARSET_NRCS_DUTCH;
-					break;
-				case 'C':
-				case '5':
-					vt->g[vt->g_dst] = CHARSET_NRCS_FINNISH;
-					break;
-				case 'R':
-					vt->g[vt->g_dst] = CHARSET_NRCS_FRENCH;
-					break;
-				case 'Q':
-					vt->g[vt->g_dst] = CHARSET_NRCS_FRENCH_CANADIAN;
-					break;
-				case 'K':
-					vt->g[vt->g_dst] = CHARSET_NRCS_GERMAN;
-					break;
-				case 'Y':
-					vt->g[vt->g_dst] = CHARSET_NRCS_ITALIAN;
-					break;
-				case 'E':
-				case '6':
-					vt->g[vt->g_dst] = CHARSET_NRCS_NORWEGIAN;
-					break;
-				case 'Z':
-					vt->g[vt->g_dst] = CHARSET_NRCS_SPANISH;
-					break;
-				case 'H':
-				case '7':
-					vt->g[vt->g_dst] = CHARSET_NRCS_SWEDISH;
-					break;
-				case '=':
-					vt->g[vt->g_dst] = CHARSET_NRCS_SWISS;
+					if(vt->vt100_mode) {
+						vt->g[vt->g_dst] = CHARSET_NRCS_BRITISH;
+					}
 					break;
 			}
 			break;
@@ -2415,6 +2408,16 @@ void VT220ProcessCharVT220(VT220* vt, unsigned char c)
 						}
 					}
 					break;
+				case '{':
+					if(!vt->vt100_mode) {
+						if(vt->parameters[2] == 0 || vt->parameters[2] == 2) {
+							VT220ClearDRCS(vt);
+						}
+						vt->state = STATE_DECDLD;
+						memset(vt->decdld_dscs, 0, sizeof(vt->decdld_dscs));
+						vt->decdld_dscs_pos = 0;
+					}
+					break;
 				case ST:
 					vt->state = STATE_TEXT;
 					break;
@@ -2457,6 +2460,8 @@ void VT220ProcessCharVT220(VT220* vt, unsigned char c)
 					break;
 				case ST:
 					vt->state = STATE_TEXT;
+					break;
+				default:
 					break;
 			}
 			break;
@@ -2690,12 +2695,8 @@ void VT220ProcessCharVT220(VT220* vt, unsigned char c)
 					break;
 				case ';':
 				default:
-					if((c + 0x40) >= 0x80 && (c + 0x40) < 0xA0) {
-						VT220ProcessCharVT220(vt, c + 0x40);
-					} else {
-						vt->state = STATE_TEXT;
-						vt->udk_locked = 1;
-					}
+					vt->state = STATE_TEXT;
+					vt->udk_locked = 1;
 					break;
 			}
 			break;
@@ -2706,6 +2707,150 @@ void VT220ProcessCharVT220(VT220* vt, unsigned char c)
 			} else {
 				vt->state = STATE_TEXT;
 				vt->udk_locked = 1;
+			}
+			break;
+		case STATE_DECDLD:
+			switch(c) {
+				case ESC:
+					vt->state = STATE_DECDLD_ESC;
+					break;
+				case CAN:
+					vt->state = STATE_TEXT;
+					break;
+				case SUB:
+					vt->state = STATE_TEXT;
+					VT220Substitute(vt);
+					break;
+				case ST:
+					vt->state = STATE_TEXT;
+					break;
+				default:
+					if(c >= 0x20 && c <= 0x2F) {
+						/* intermediate */
+						if(vt->decdld_dscs_pos < 2) {
+							vt->decdld_dscs[vt->decdld_dscs_pos++] = c;
+						} else {
+							vt->state = STATE_DECDLD_ERR;
+						}
+					} else if(c >= 0x30 && c <= 0x7E) {
+						/* final */
+						vt->decdld_dscs[vt->decdld_dscs_pos++] = c;
+						vt->state = STATE_DECDLD_GLYPH;
+						vt->decdld_glyph = vt->parameters[1];
+						vt->decdld_row = 0;
+						vt->decdld_col = 0;
+					} else {
+						vt->state = STATE_DECDLD_ERR;
+					}
+					break;
+			}
+			break;
+		case STATE_DECDLD_ESC:
+			if((c + 0x40) >= 0x80 && (c + 0x40) < 0xA0) {
+				vt->state = STATE_DECDLD;
+				VT220ProcessCharVT220(vt, c + 0x40);
+			} else {
+				vt->state = STATE_TEXT;
+			}
+			break;
+		case STATE_DECDLD_GLYPH:
+			switch(c) {
+				case ESC:
+					vt->state = STATE_DECDLD_GLYPH_ESC;
+					break;
+				case CAN:
+					vt->state = STATE_TEXT;
+					break;
+				case SUB:
+					vt->state = STATE_TEXT;
+					VT220Substitute(vt);
+					break;
+				case ST:
+					vt->state = STATE_TEXT;
+					memcpy(vt->drcs_name, vt->decdld_dscs, sizeof(vt->decdld_dscs));
+					break;
+				case '/':
+					/* newline */
+					if(vt->decdld_row < 2) {
+						vt->decdld_row++;
+					}
+					vt->decdld_col = 0;
+					break;
+				case ';':
+					/* next glyph */
+					if(vt->decdld_glyph < 96) {
+						vt->decdld_glyph++;
+					}
+					vt->decdld_row = 0;
+					vt->decdld_col = 0;
+					break;
+				default:
+					if(c >= '?' && c <= '~') {
+						u8 bits = c - '?';
+						if(vt->decdld_row < 2 && vt->decdld_col < 8 && vt->decdld_glyph >= 1
+								&& vt->decdld_glyph <= 94) {
+							u8* glyph = &vt->drcs[(vt->decdld_glyph - 1) * 10];
+							if(vt->decdld_row == 0  && vt->decdld_col == 0) {
+								memset(glyph, 0, 10);
+							}
+
+							u8* glyph_bits = &glyph[vt->decdld_row * 6];
+
+							unsigned int max;
+							if(vt->decdld_row == 0) {
+								max = 6;
+							} else {
+								max = 4;
+							}
+
+							for(unsigned int i = 0; i < max; i++) {
+								if(bits & 1) {
+									glyph_bits[i] |= 1 << (7 - vt->decdld_col);
+								}
+								bits >>= 1;
+							}
+
+							vt->decdld_col++;
+						}
+					} else {
+						vt->state = STATE_DECDLD_ERR;
+					}
+					break;
+			}
+			break;
+		case STATE_DECDLD_GLYPH_ESC:
+			if((c + 0x40) >= 0x80 && (c + 0x40) < 0xA0) {
+				vt->state = STATE_DECDLD_GLYPH;
+				VT220ProcessCharVT220(vt, c + 0x40);
+			} else {
+				vt->state = STATE_TEXT;
+			}
+			break;
+		case STATE_DECDLD_ERR:
+			switch(c) {
+				case ESC:
+					vt->state = STATE_DECDLD_ERR_ESC;
+					break;
+				case CAN:
+					vt->state = STATE_TEXT;
+					break;
+				case SUB:
+					vt->state = STATE_TEXT;
+					VT220Substitute(vt);
+					break;
+				case ST:
+					vt->state = STATE_TEXT;
+					break;
+				default:
+					break;
+			}
+			break;
+		case STATE_DECDLD_ERR_ESC:
+			if((c + 0x40) >= 0x80 && (c + 0x40) < 0xA0) {
+				vt->state = STATE_DECDLD_ERR;
+				VT220ProcessCharVT220(vt, c + 0x40);
+			} else {
+				vt->state = STATE_TEXT;
 			}
 			break;
 	}
@@ -2985,12 +3130,20 @@ void VT220ProcessCharVT52(VT220* vt, unsigned char c)
 				default:
 					vt->parameters[1] = c - 037;
 					vt->state = STATE_TEXT;
-					/* special handling: if the line is out of range, it is not updated */
-					if(vt->parameters[0] < 1 || vt->parameters[0] > vt->lines) {
-						VT220SetCursor(vt, vt->cursor_y + 1, vt->parameters[1]);
-					} else {
-						VT220SetCursor(vt, vt->parameters[0], vt->parameters[1]);
+
+					/* Special handling:
+					 * - if the line is out of range, it is not updated
+					 * - if the column is out of range, it is not updated */
+					/* See: DEC 070 (VSRM - VT52 Emulation EL-00070-0A, page A-28) */
+					unsigned int line = vt->parameters[0];
+					unsigned int column = vt->parameters[1];
+					if(line < 1 || line > vt->lines) {
+						line = vt->cursor_y + 1;
 					}
+					if(column < 1 || column > vt->columns) {
+						column = vt->cursor_x + 1;
+					}
+					VT220SetCursor(vt, line, column);
 			}
 			break;
 	}

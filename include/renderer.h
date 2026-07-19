@@ -13,6 +13,7 @@ typedef struct {
 	GLuint		vt_tex;
 
 	GLuint		font_tex;
+	GLuint		drcs_tex;
 	GLuint		text_tex;
 	GLuint		line_attrib_tex;
 	GLuint		setup_text_tex;
@@ -20,6 +21,7 @@ typedef struct {
 
 	GLuint		vt_shader;
 	GLuint		vt_shader_font;
+	GLuint		vt_shader_drcs;
 	GLuint		vt_shader_text;
 	GLuint		vt_shader_line_attributes;
 	GLuint		vt_shader_setup_text;
@@ -75,6 +77,7 @@ void	VTCreateFrameBuffer(VTRenderer* self);
 void	VTCreateBlurFrameBuffer(VTRenderer* self);
 void	VTCreateGraphicsTexture(VTRenderer* self);
 void	VTCreateFontTexture(VTRenderer* self);
+void	VTCreateDRCSTexture(VTRenderer* self);
 void	VTCreateTextTexture(VTRenderer* self);
 GLuint	VTCompileShader(GLuint type, const char* src);
 GLuint	VTCreateShader(const char* vs_src, const char* fs_src);

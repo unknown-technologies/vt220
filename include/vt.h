@@ -299,6 +299,15 @@ typedef struct {
 	char		udk_memory[256];
 	u16		udk_free;
 
+	/* DRCS */
+	unsigned char*	drcs;
+	char		drcs_name[4];
+	char		decdld_dscs[4];
+	unsigned int	decdld_dscs_pos;
+	unsigned int	decdld_glyph;
+	unsigned int	decdld_row;
+	unsigned int	decdld_col;
+
 	/* configuration */
 	VT220NVR	config;
 	unsigned int	screen_color;
@@ -323,18 +332,9 @@ typedef struct {
 #define	CHARSET_DEC_SUPPLEMENTAL	1
 #define	CHARSET_DEC_SPECIAL_GRAPHICS	2
 #define	CHARSET_NRCS_BRITISH		3
-#define	CHARSET_NRCS_DUTCH		4
-#define	CHARSET_NRCS_FINNISH		5
-#define	CHARSET_NRCS_FRENCH		6
-#define	CHARSET_NRCS_FRENCH_CANADIAN	7
-#define	CHARSET_NRCS_GERMAN		8
-#define	CHARSET_NRCS_ITALIAN		9
-#define	CHARSET_NRCS_NORWEGIAN		10
-#define	CHARSET_NRCS_SPANISH		11
-#define	CHARSET_NRCS_SWEDISH		12
-#define	CHARSET_NRCS_SWISS		13
-#define	CHARSET_ASCII_DC		14
-#define	CHARSET_DEC_SUPPLEMENTAL_DC	15
+#define	CHARSET_DRCS			4
+#define	CHARSET_ASCII_DC		5
+#define	CHARSET_DEC_SUPPLEMENTAL_DC	6
 
 #define	NUL		0x00
 #define	SOH		0x01
@@ -501,6 +501,7 @@ void VT220SoftReset(VT220* vt);
 void VT220HardReset(VT220* vt);
 void VT220ClearUDK(VT220* vt, unsigned int key);
 void VT220ClearAllUDK(VT220* vt);
+void VT220ClearDRCS(VT220* vt);
 int  VT220GetCharset(VT220* vt, unsigned char c);
 void VT220ProcessChar(VT220* vt, unsigned char c);
 void VT220ProcessKey(VT220* vt, u16 key);

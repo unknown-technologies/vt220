@@ -52,6 +52,7 @@ const int cell_height = 10;
 uniform uvec2 text_size;
 
 uniform usampler2D font;
+uniform usampler2D drcs;
 uniform usampler2D text;
 uniform usampler2D line_attributes;
 uniform usampler2D setup_text;
@@ -71,13 +72,19 @@ out vec4 color;
 
 bool get_font_pixel(uint glyph, uvec2 pos)
 {
-	ivec2 fontpos = ivec2(int(pos.y), int(glyph));
+	int glyphid = glyph < 288u ? int(glyph) : (int(glyph) - 288);
+	ivec2 fontpos = ivec2(int(pos.y), glyphid);
 
-	if(fontpos.x >= 10 || fontpos.y >= 288) {
+	if(fontpos.x >= 10 || glyph >= (288u + 94u)) {
 		return false;
 	}
 
-	uint bits = texelFetch(font, fontpos, 0).r;
+	uint bits;
+	if(glyph < 288u) {
+		bits = texelFetch(font, fontpos, 0).r;
+	} else {
+		bits = texelFetch(drcs, fontpos, 0).r;
+	}
 
 	bool bit;
 	if(pos.x > 0u && pos.x < 9u) {

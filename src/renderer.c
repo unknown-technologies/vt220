@@ -21,6 +21,9 @@
 #define	FONT_WIDTH		10
 #define	FONT_HEIGHT		288
 
+#define	DRCS_WIDTH		10
+#define	DRCS_HEIGHT		94
+
 #define	TEXT_WIDTH		80
 #define	TEXT_HEIGHT		24
 #define	SETUP_TEXT_HEIGHT	8
@@ -87,6 +90,7 @@ void VTInitRenderer(VTRenderer* self, VT220* vt)
 
 	self->vt_shader = VTCreateShader(vt220_vert, vt220_frag);
 	self->vt_shader_font = glGetUniformLocation(self->vt_shader, "font");
+	self->vt_shader_drcs = glGetUniformLocation(self->vt_shader, "drcs");
 	self->vt_shader_text = glGetUniformLocation(self->vt_shader, "text");
 	self->vt_shader_line_attributes = glGetUniformLocation(self->vt_shader, "line_attributes");
 	self->vt_shader_setup_text = glGetUniformLocation(self->vt_shader, "setup_text");
@@ -118,6 +122,7 @@ void VTInitRenderer(VTRenderer* self, VT220* vt)
 	VTCreateBuffers(self);
 	VTCreateFrameBuffer(self);
 	VTCreateFontTexture(self);
+	VTCreateDRCSTexture(self);
 	VTCreateTextTexture(self);
 
 	VTCreateBlurFrameBuffer(self);
@@ -220,24 +225,31 @@ void VTRenderTerminal(VTRenderer* self)
 	glUniform1i(self->vt_shader_font, 0);
 
 	glActiveTexture(GL_TEXTURE1);
-	glBindTexture(GL_TEXTURE_2D, self->text_tex);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RG16UI, self->vt->columns, TEXT_HEIGHT, 0, GL_RG_INTEGER, GL_UNSIGNED_SHORT, (GLvoid*) self->vt->text);
-	glUniform1i(self->vt_shader_text, 1);
+	glBindTexture(GL_TEXTURE_2D, self->drcs_tex);
+	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_R8UI, DRCS_WIDTH, DRCS_HEIGHT, 0, GL_RED_INTEGER, GL_UNSIGNED_BYTE, self->vt->drcs);
+	glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
+	glUniform1i(self->vt_shader_drcs, 1);
 
 	glActiveTexture(GL_TEXTURE2);
-	glBindTexture(GL_TEXTURE_2D, self->line_attrib_tex);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_R8UI, TEXT_HEIGHT, 1, 0, GL_RED_INTEGER, GL_UNSIGNED_BYTE, (GLvoid*) self->vt->line_attributes);
-	glUniform1i(self->vt_shader_line_attributes, 2);
+	glBindTexture(GL_TEXTURE_2D, self->text_tex);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RG16UI, self->vt->columns, TEXT_HEIGHT, 0, GL_RG_INTEGER, GL_UNSIGNED_SHORT, (GLvoid*) self->vt->text);
+	glUniform1i(self->vt_shader_text, 2);
 
 	glActiveTexture(GL_TEXTURE3);
-	glBindTexture(GL_TEXTURE_2D, self->setup_text_tex);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RG16UI, self->vt->columns, SETUP_TEXT_HEIGHT, 0, GL_RG_INTEGER, GL_UNSIGNED_SHORT, (GLvoid*) self->vt->setup.text);
-	glUniform1i(self->vt_shader_setup_text, 3);
+	glBindTexture(GL_TEXTURE_2D, self->line_attrib_tex);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_R8UI, TEXT_HEIGHT, 1, 0, GL_RED_INTEGER, GL_UNSIGNED_BYTE, (GLvoid*) self->vt->line_attributes);
+	glUniform1i(self->vt_shader_line_attributes, 3);
 
 	glActiveTexture(GL_TEXTURE4);
+	glBindTexture(GL_TEXTURE_2D, self->setup_text_tex);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RG16UI, self->vt->columns, SETUP_TEXT_HEIGHT, 0, GL_RG_INTEGER, GL_UNSIGNED_SHORT, (GLvoid*) self->vt->setup.text);
+	glUniform1i(self->vt_shader_setup_text, 4);
+
+	glActiveTexture(GL_TEXTURE5);
 	glBindTexture(GL_TEXTURE_2D, self->setup_line_attrib_tex);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_R8UI, SETUP_TEXT_HEIGHT, 1, 0, GL_RED_INTEGER, GL_UNSIGNED_BYTE, (GLvoid*) self->vt->setup.line_attributes);
-	glUniform1i(self->vt_shader_setup_line_attributes, 4);
+	glUniform1i(self->vt_shader_setup_line_attributes, 5);
 
 	glUniform2ui(self->vt_shader_text_size, self->vt->columns, self->vt->lines);
 	glUniform2ui(self->vt_shader_cursor, self->vt->cursor_x, self->vt->cursor_y);
@@ -358,6 +370,18 @@ void VTCreateFontTexture(VTRenderer* self)
 	glBindTexture(GL_TEXTURE_2D, self->font_tex);
 	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_R8UI, FONT_WIDTH, FONT_HEIGHT, 0, GL_RED_INTEGER, GL_UNSIGNED_BYTE, vt220font);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	GL_ERROR();
+	glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
+}
+
+void VTCreateDRCSTexture(VTRenderer* self)
+{
+	glGenTextures(1, &self->drcs_tex);
+	glBindTexture(GL_TEXTURE_2D, self->drcs_tex);
+	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_R8UI, DRCS_WIDTH, DRCS_HEIGHT, 0, GL_RED_INTEGER, GL_UNSIGNED_BYTE, self->vt->drcs);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	GL_ERROR();
