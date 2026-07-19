@@ -323,12 +323,8 @@ void VT220CursorLeftN(VT220* vt, int n)
 
 void VT220CursorRight(VT220* vt)
 {
-	if(vt->cursor_x == vt->columns) {
-		return;
-	}
-
-	if(vt->line_attributes[vt->cursor_y] != DECSWL && 2 * vt->cursor_x >= vt->columns) {
-		return;
+	if(VT220IsLastColumnFlag(vt)) {
+		VT220ClearLastColumnFlag(vt);
 	}
 
 	vt->cursor_x++;
@@ -447,7 +443,6 @@ void VT220SaveCursor(VT220* vt)
 	vt->saved_cursor_x = vt->cursor_x;
 	vt->saved_cursor_y = vt->cursor_y;
 	vt->saved_sgr = vt->sgr;
-	vt->saved_awm = vt->mode & DECAWM;
 	vt->saved_om = vt->mode & DECOM;
 	vt->saved_gl = vt->gl;
 	vt->saved_gr = vt->gr;
@@ -464,11 +459,6 @@ void VT220RestoreCursor(VT220* vt)
 	vt->cursor_x = vt->saved_cursor_x;
 	vt->cursor_y = vt->saved_cursor_y;
 	vt->sgr = vt->saved_sgr;
-	if(vt->saved_awm) {
-		vt->mode |= DECAWM;
-	} else {
-		vt->mode &= ~DECAWM;
-	}
 	if(vt->saved_om) {
 		vt->mode |= DECOM;
 	} else {
@@ -489,6 +479,7 @@ void VT220RestoreCursor(VT220* vt)
 void VT220Tabstop(VT220* vt)
 {
 	if(VT220IsLastColumnFlag(vt)) {
+		VT220ClearLastColumnFlag(vt);
 		return;
 	}
 
@@ -541,6 +532,10 @@ void VT220CarriageReturn(VT220* vt)
 void VT220Linefeed(VT220* vt)
 {
 	VT220Index(vt);
+
+	if(VT220IsLastColumnFlag(vt)) {
+		VT220ClearLastColumnFlag(vt);
+	}
 }
 
 void VT220ReverseLinefeed(VT220* vt)
@@ -1152,7 +1147,6 @@ void VT220SoftReset(VT220* vt)
 	vt->saved_cursor_x = 0;
 	vt->saved_cursor_y = 0;
 	vt->saved_sgr = 0;
-	vt->saved_awm = vt->mode & DECAWM;
 	vt->saved_om = vt->mode & DECOM;
 	vt->saved_gl = vt->gl;
 	vt->saved_gr = vt->gr;
@@ -1363,6 +1357,10 @@ void VT220Index(VT220* vt)
 
 void VT220ReverseIndex(VT220* vt)
 {
+	if(VT220IsLastColumnFlag(vt)) {
+		VT220ClearLastColumnFlag(vt);
+	}
+
 	if(vt->cursor_y == vt->margin_top) {
 		VT220ScrollDown(vt);
 	} else if(vt->cursor_y > 0) {

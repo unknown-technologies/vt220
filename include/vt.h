@@ -318,7 +318,6 @@ typedef struct {
 	int		saved_cursor_x;
 	int		saved_cursor_y;
 	int		saved_sgr;
-	int		saved_awm;
 	int		saved_om;
 	int		saved_gl;
 	int		saved_gr;
