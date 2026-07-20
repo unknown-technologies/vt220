@@ -131,6 +131,7 @@ void VT220SetupWrite(VT220* vt, const u16 c, const int sgr, int display_controls
 
 	vt->setup.write_x++;
 	if(vt->setup.write_x >= vt->columns) {
+		vt->setup.write_x = 0;
 		vt->setup.write_y++;
 		if(vt->setup.write_y >= 8) {
 			vt->setup.write_y = 7;
