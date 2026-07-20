@@ -110,8 +110,8 @@ Screenshots
 
 vim in a screen session with green phosphor:
 
-![VIM in a screen session](https://raw.githubusercontent.com/unknown-technologies/vt220/master/doc/vt220-vim.png)
+![VIM in a screen session](https://raw.githubusercontent.com/unknown-technologies/vt220/refs/heads/master/doc/vt220-vim.png)
 
 setup screen with amber phosphor:
 
-![Setup screen](https://raw.githubusercontent.com/unknown-technologies/vt220/master/doc/vt220-setup.png)
+![Setup screen](https://raw.githubusercontent.com/unknown-technologies/vt220/refs/heads/master/doc/vt220-setup.png)
