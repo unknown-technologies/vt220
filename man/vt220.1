@@ -1,0 +1,121 @@
+.\" vim:set tw=72 noet:
+.\" Bulleted paragraph
+.de bP
+.ie n  .IP \(bu 4
+.el    .IP \(bu 2
+..
+.
+.TH VT220 "1" "July 2026" "unknown technologies" "User Commands"
+.
+.SH NAME
+vt220 \- DEC VT220 terminal emulator
+.
+.SH SYNOPSIS
+.B vt220
+[\fI\,OPTION\/\fR]... [\fB\,\-l\fR | \fB\-s\fR \fIcommand\fR |
+\fB\-t\fR \fIhostname\fR \fIport\/\fR]
+.
+.SH DESCRIPTION
+.\" Add any additional description here
+.PP
+The \fBvt220\fR program is a GPU accelerated terminal emulator which
+emulates the DEC VT220 terminal with reasonable accuracy.
+.TP
+\fB\-h\fR
+display a short help message and exit.
+.TP
+\fB\-g\fR
+disable glow post-processing effect.
+.TP
+\fB\-cg\fR
+set monochrome screen color to green (default).
+.TP
+\fB\-cw\fR
+set monochrome screen color to white.
+.TP
+\fB\-ca\fR
+set monochrome screen color to amber.
+.TP
+\fB\-f\fR \fI0.75\fR
+set the electron beam focus. The focus has to be greater than zero. A
+focus below 1.0 makes the beam wider, a focus greater than 1.0 makes the
+beam smaller.
+.TP
+\fB\-i\fR \fI1.0\fR
+set the electron beam intensity (brightness). This value has to be
+greater than zero.
+.TP
+\fB\-r\fR
+enables raw mode, which disables all post-processing. This option also
+implies \fB\-g\fR.
+.TP
+\fB\-p\fR
+uses the simple linear phosphor simulation model instead of the more
+advanced default model.
+.TP
+\fB\-u\fR
+enables unlimited FPS mode. If this option is not set, then an automatic
+frame limiter will limit the FPS to 60 if more than 240 FPS are rendered
+otherwise. This seems to be necessary for NVIDIA T4 graphics cards.
+.TP
+\fB\-b\fR
+enables buffering with virtual XON/XOFF flow control. This limits the
+receive speed of the terminal and visibly slows down processing,
+comparable to a (pretty fast) RS232 line.
+.TP
+\fB\-l\fR
+enables local mode, which redirects all input to the screen. This is
+equivalent of connecting the RX pin to the TX pin on a real VT220
+terminal.
+.TP
+\fB\-s\fR \fI/bin/sh\fR
+execute the program \fI/bin/sh\fR in the terminal emulator.
+.TP
+\fB\-t\fR \fIhost\fR \fIport\fR
+connect to the TELNET server at \fIhost\fR:\fIport\fR.
+.
+.
+.PP
+If no option is provided, \fB\-s $(getent passwd $UID | cut \-d:
+\-f7)\fR is assumed, which means the user's default shell is started.
+.
+.PP
+When a program is run with \fB\-s\fR, the \fBTERM\fR environment
+variable is set to \fBvt220\fR. If the \fBLANG\fR environment variable
+is set to an UTF-8 locale, it is reset to \fBLANG=C\fR to avoid display
+problems.
+.
+.SH KEYBOARD
+A DEC VT220 does not have all the keys you usually find on a PC keyboard
+and some keys have a very different meaning. In particular, the function
+keys F1-F5 are \(lqlocal\(rq keys which configure the terminal and have no
+associated sequence that could be sent to the host.
+.PP
+The VT220 emulator uses the following key map for local keys:
+.bP
+F1 = hold screen (toggle)
+.bP
+F3 = setup
+.bP
+F4 = fullscreen (toggle)
+.bP
+F5 = send BREAK (TELNET) / SIGINT (PTY)
+.bP
+CTRL-F5 = send answerback message
+.
+.PP
+In addition, the VT220 has function keys F1-F20. The VT220 emulator
+interprets ALT-F1 to ALT-F10 as F11 to F20.
+.
+.SH AUTHOR
+Written by unknown.
+.
+.SH "REPORTING BUGS"
+To report rendering glitches, general bugs, and deviations from the real
+DEC VT220's behaivor, use the issue tracker at
+.UR https://github.com/unknown-technologies/vt220
+.UE
+.
+.SH "SEE ALSO"
+.MR telnet 1 ,
+.MR vt240 1
