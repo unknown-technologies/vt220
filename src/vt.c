@@ -1387,7 +1387,7 @@ void VT220Bell(VT220* vt)
 void VT220Keyclick(VT220* vt)
 {
 	if(vt->config.keyclick == VT220_KEYCLICK && vt->keyclick) {
-		vt->bell();
+		vt->keyclick();
 	}
 }
 
