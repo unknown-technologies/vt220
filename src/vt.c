@@ -651,7 +651,7 @@ void VT220SetTopBottomMargins(VT220* vt, int top, int bottom)
 	}
 
 	/* manual says: "the smallest scrolling region allowed is two lines" */
-	if(vt->margin_top == vt->margin_bottom) {
+	if(vt->margin_top >= vt->margin_bottom) {
 		vt->margin_top = 0;
 		vt->margin_bottom = vt->lines - 1;
 	}
