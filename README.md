@@ -108,6 +108,10 @@ on a Windows computer many years ago, but even this is currently untested.
 Screenshots
 -----------
 
-vim in a screen session:
+vim in a screen session with green phosphor:
 
 ![VIM in a screen session](https://raw.githubusercontent.com/unknown-technologies/vt220/master/doc/vt220-vim.png)
+
+setup screen with amber phosphor:
+
+![Setup screen](https://raw.githubusercontent.com/unknown-technologies/vt220/master/doc/vt220-setup.png)
