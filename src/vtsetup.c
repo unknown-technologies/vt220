@@ -94,7 +94,7 @@ static const unsigned int VT220GetNextBaudRate(unsigned int baud, int allow_zero
 
 const char* VT220SetupGetTitle(VT220* vt)
 {
-	if(vt->setup.screen < 0 || vt->setup.screen > 9) {
+	if(vt->setup.screen < 0 || vt->setup.screen >= SETUP_SCREEN_COUNT) {
 		return "???";
 	} else {
 		return vt220_setup_screen_names[vt->setup.screen];
