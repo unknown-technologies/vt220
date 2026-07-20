@@ -1309,8 +1309,8 @@ void VT220ClearUDK(VT220* vt, unsigned int key)
 
 		/* update pointers */
 		for(unsigned int i = 0; i < 15; i++) {
-			if(vt->udk_len[key] && vt->udk_ptr[key] > ptr) {
-				vt->udk_ptr[key] -= ptr;
+			if(vt->udk_len[i] && vt->udk_ptr[i] > ptr) {
+				vt->udk_ptr[i] -= len;
 			}
 		}
 
