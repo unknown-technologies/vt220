@@ -1214,7 +1214,7 @@ void VT220HardReset(VT220* vt)
 	if(vt->config.auto_repeat == VT220_AUTO_REPEAT) {
 		vt->mode |= DECARM;
 	} else {
-		vt->mode &= DECARM;
+		vt->mode &= ~DECARM;
 	}
 
 	vt->xoff = 0;
