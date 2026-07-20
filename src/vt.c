@@ -1,6 +1,5 @@
 #include <stdlib.h>
 #include <string.h>
-#include <assert.h>
 #include <GL/gl.h>
 #include <math.h>
 
@@ -57,6 +56,7 @@
 #define	STATE_DECDLD_GLYPH_ESC	24
 #define	STATE_DECDLD_ERR	25
 #define	STATE_DECDLD_ERR_ESC	26
+#define	STATE_MAX		STATE_DECDLD_ERR_ESC
 
 static const VT220NVR default_config = { .tx_baud_rate = 4800, 0 };
 
@@ -175,6 +175,9 @@ void VT220WriteGlyph(VT220* vt, u16 c, bool force_wrap)
 	if(vt->line_attributes[vt->cursor_y] != DECSWL && 2 * vt->cursor_x >= vt->columns) {
 		vt->cursor_x = vt->columns / 2;
 	}
+
+	ASSERT(vt->cursor_x >= 0 && vt->cursor_x <= vt->columns);
+	ASSERT(vt->cursor_y >= 0 && vt->cursor_y < vt->lines);
 }
 
 void VT220WriteControls(VT220* vt, unsigned char c)
@@ -199,6 +202,12 @@ void VT220WriteChar(VT220* vt, unsigned char c)
 {
 	unsigned char ch;
 	int cs;
+
+	ASSERT(vt->gl >= 0 && vt->gl < 4);
+	ASSERT(vt->gr >= 0 && vt->gr < 4);
+	ASSERT(vt->gl_lock >= 0 && vt->gl_lock < 4);
+	ASSERT(vt->gr_lock >= 0 && vt->gr_lock < 4);
+
 	if(c < 0x20) {
 		VT220Write(vt, (u16) c + 0x100);
 	} else if(c >= 0x80 && c < 0xA0) {
@@ -214,6 +223,7 @@ void VT220WriteChar(VT220* vt, unsigned char c)
 		cs = vt->g[vt->gr];
 		VT220WriteCS(vt, ch, cs);
 	}
+
 	vt->gl = vt->gl_lock;
 	vt->gr = vt->gr_lock;
 }
@@ -242,6 +252,9 @@ void VT220WriteCS(VT220* vt, unsigned char ch, int cs)
 			break;
 		case CHARSET_DEC_SUPPLEMENTAL_DC:
 			cs_table = vt220_cs_dec_supplemental_graphics_dc;
+			break;
+		default:
+			ASSERT(0);
 			break;
 	}
 
@@ -663,6 +676,10 @@ void VT220SetTopBottomMargins(VT220* vt, int top, int bottom)
 		}
 		vt->cursor_y = y;
 	}
+
+	ASSERT(vt->margin_top >= 0 && vt->margin_top < vt->lines);
+	ASSERT(vt->margin_bottom >= 0 && vt->margin_bottom < vt->lines);
+	ASSERT(vt->margin_top < vt->margin_bottom);
 }
 
 void VT220EraseScreen(VT220* vt)
@@ -1318,7 +1335,7 @@ void VT220ClearUDK(VT220* vt, unsigned int key)
 		vt->udk_len[key] = 0;
 		vt->udk_free += len;
 
-		assert(vt->udk_free <= 256);
+		ASSERT(vt->udk_free <= 256);
 	}
 }
 
@@ -3215,6 +3232,8 @@ void VT220ProcessCharVT52(VT220* vt, unsigned char c)
 
 void VT220ProcessChar(VT220* vt, unsigned char c)
 {
+	ASSERT(vt->state >= 0 && vt->state <= STATE_MAX);
+
 	vt->cursor_time = 0;
 
 	/* strip MSB in VT52 mode */

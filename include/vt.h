@@ -3,6 +3,13 @@
 
 #include <GL/gl.h>
 
+#ifdef	DEBUG
+#include <assert.h>
+#define	ASSERT		assert
+#else
+#define	ASSERT(x)
+#endif
+
 #define	VT220_SCREEN_COLOR_GREEN		0
 #define	VT220_SCREEN_COLOR_WHITE		1
 #define	VT220_SCREEN_COLOR_AMBER		2
