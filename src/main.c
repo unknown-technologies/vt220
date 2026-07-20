@@ -277,7 +277,7 @@ void key_handler(GLFWwindow* window, int key, int scancode, int action, int mods
 {
 	if(action == GLFW_PRESS) {
 		switch(key) {
-			case GLFW_KEY_F2:
+			case GLFW_KEY_F4:
 				if(mods & (GLFW_MOD_CONTROL | GLFW_MOD_ALT)) {
 					VT220KeyboardKeyDown(&vt, key);
 				} else {
@@ -290,7 +290,7 @@ void key_handler(GLFWwindow* window, int key, int scancode, int action, int mods
 		}
 	} else if(action == GLFW_RELEASE) {
 		switch(key) {
-			case GLFW_KEY_F2:
+			case GLFW_KEY_F4:
 				if(mods & (GLFW_MOD_CONTROL | GLFW_MOD_ALT)) {
 					VT220KeyboardKeyUp(&vt, key);
 				}
