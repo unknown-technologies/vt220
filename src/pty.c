@@ -129,6 +129,9 @@ void PTYOpen(PTY* pty, char** argv, char** envp)
 	if(pid) {
 		// parent
 		pty->pid = pid;
+	} else if(pid == -1) {
+		printf("[PTY] failed to fork: %s\n", strerror(errno));
+		exit(1);
 	} else {
 		// child
 		if(setsid() == (pid_t) -1) {
@@ -286,7 +289,7 @@ void PTYPoll(PTY* pty)
 		.events = POLLIN | POLLHUP
 	};
 
-	if(pty->master == -1) {
+	if(pty->master == -1 || pty->pid == -1) {
 		return;
 	}
 
@@ -345,6 +348,10 @@ void PTYResize(PTY* pty, unsigned int width, unsigned int height)
 		.ws_col = width,
 		.ws_row = height
 	};
+
+	if(pty->master == -1 || pty->pid == -1) {
+		return;
+	}
 
 	if(ioctl(pty->master, TIOCSWINSZ, &ws) == -1) {
 		printf("[PTY] failed to set console window size: %s\n", strerror(errno));
