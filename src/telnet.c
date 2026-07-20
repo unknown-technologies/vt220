@@ -166,7 +166,8 @@ void TELNETInit(TELNET* telnet)
 	telnet->read_ptr = 0;
 	telnet->write_ptr = 0;
 
-	telnet->sb_buf = (unsigned char*) malloc(BUFFER_SIZE);
+	/* this buffer is one larger than BUFFER_SIZE for a NUL terminator */
+	telnet->sb_buf = (unsigned char*) malloc(BUFFER_SIZE + 1);
 	telnet->sb_write_ptr = 0;
 
 	telnet->rxbuf = (unsigned char*) malloc(TELNET_BUFFER_SIZE);
@@ -445,10 +446,13 @@ void TELNETProcessSB(TELNET* telnet)
 							break;
 					}
 				}
+
+#ifdef DEBUG
 				if(state == 1) {
 					telnet->sb_buf[i] = 0;
 					LOG("[TELNET] VAR [%d]: %s\n", var_type, &telnet->sb_buf[var_start]);
 				}
+#endif
 
 				TELNETSendRaw(telnet, IAC);
 				TELNETSendRaw(telnet, SB);
