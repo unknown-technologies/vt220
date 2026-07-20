@@ -196,11 +196,16 @@ void VT220SetupWriteNumber(VT220* vt, int val, const int width, const int align,
 {
 	char buf[8];
 	int i, j;
-	for(i = 7; i > 0 && val > 0; i--) {
-		buf[i] = val % 10;
-		val /= 10;
+	if(val == 0) {
+		buf[7] = 0;
+		i = 7;
+	} else {
+		for(i = 7; i > 0 && val > 0; i--) {
+			buf[i] = val % 10;
+			val /= 10;
+		}
+		i++;
 	}
-	i++;
 	j = (7 - i);
 
 	if(align) {
