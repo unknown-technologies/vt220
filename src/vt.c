@@ -1469,7 +1469,12 @@ void VT220SendInput(VT220* vt, unsigned char c)
 
 void VT220SendAnswerback(VT220* vt)
 {
-	VT220SendText(vt, vt->answerback);
+	if(!vt->config.local) {
+		/* The VT220 does NOT respond to ENQ in local mode, since this
+		 * would cause a potential infinite loop if the anserback
+		 * message contains an ENQ character */
+		VT220SendText(vt, vt->answerback);
+	}
 }
 
 void VT220SendPrimaryDA(VT220* vt)
