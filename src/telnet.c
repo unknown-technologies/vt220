@@ -61,9 +61,9 @@
 #define	BUFFER_SIZE	256
 
 #ifdef DEBUG
-#define	LOG(x, ...)	printf(x, __VA_ARGS__)
+#define	LOG(...)	printf(__VA_ARGS__)
 #else
-#define LOG(x, ...)
+#define LOG(...)
 #endif
 
 static const char* telnet_option_names[50] = {
@@ -440,6 +440,11 @@ void TELNETSendRawString(TELNET* telnet, const char* s)
 
 void TELNETProcessSB(TELNET* telnet)
 {
+	if(telnet->sb_write_ptr < 2) {
+		LOG("[TELNET] SB failed: no option name / command received\n");
+		return;
+	}
+
 	LOG("[TELNET] SB %s [%d]\n", TELNETGetOptionName(telnet->sb_buf[0]), telnet->sb_buf[0]);
 	switch(telnet->sb_buf[0]) {
 		case TERMINAL_TYPE:
