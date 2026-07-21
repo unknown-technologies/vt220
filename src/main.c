@@ -289,16 +289,12 @@ void key_handler(GLFWwindow* window, int key, int scancode, int action, int mods
 				break;
 		}
 	} else if(action == GLFW_RELEASE) {
-		switch(key) {
-			case GLFW_KEY_F4:
-				if(mods & (GLFW_MOD_CONTROL | GLFW_MOD_ALT)) {
-					VT220KeyboardKeyUp(&vt, key);
-				}
-				break;
-			default:
-				VT220KeyboardKeyUp(&vt, key);
-				break;
-		}
+		/* One might wonder why F4 has no special handling here: since
+		 * only F4 without modifiers is intercepted, this could result
+		 * in a situation where the modifier is released before F4 is
+		 * released. This would casue a stuck F4 key. Therefore, all
+		 * keys are always released here. */
+		VT220KeyboardKeyUp(&vt, key);
 	}
 }
 
