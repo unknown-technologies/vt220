@@ -680,6 +680,7 @@ void TELNETPoll(TELNET* telnet)
 		telnet->socket = -1;
 		TELNETRxError(telnet, "recv", str);
 	} else if(n == 0) {
+		close(telnet->socket);
 		telnet->socket = -1;
 		TELNETRxError(telnet, "recv", "Disconnected");
 	} else if(telnet->rxe && telnet->rx) {
