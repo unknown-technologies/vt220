@@ -347,6 +347,49 @@ void TELNETBreak(TELNET* telnet)
 	TELNETSendRaw(telnet, BRK);
 }
 
+void TELNETEnqueueTX(TELNET* telnet, unsigned char c)
+{
+	if(telnet->count > BUFFER_SIZE) {
+		/* the TX buffer is full; drop this byte */
+		return;
+	}
+
+	telnet->count++;
+	telnet->buf[telnet->write_ptr++] = c;
+	telnet->write_ptr %= BUFFER_SIZE;
+}
+
+int TELNETDrainTX(TELNET* telnet)
+{
+	if(telnet->socket == -1) {
+		return 0;
+	}
+
+	while(telnet->count > 0) {
+		unsigned char ch = telnet->buf[telnet->read_ptr++];
+		telnet->read_ptr %= BUFFER_SIZE;
+		telnet->count--;
+
+		if(send(telnet->socket, WINCAST &ch, 1, MSG_NOSIGNAL) == -1) {
+#ifdef _WIN32
+			if(WSAGetLastError() == WSAEWOULDBLOCK) {
+#else
+			if(errno == EWOULDBLOCK) {
+#endif
+				return 0;
+			}
+
+			const char* str = geterror();
+			close(telnet->socket);
+			telnet->socket = -1;
+			TELNETRxError(telnet, "send", str);
+			return 0;
+		}
+	}
+
+	return 1;
+}
+
 void TELNETSendRaw(TELNET* telnet, unsigned char c)
 {
 	if(telnet->socket == -1) {
@@ -360,28 +403,27 @@ void TELNETSendRaw(TELNET* telnet, unsigned char c)
 		}
 
 		if(!telnet->connected) {
-			telnet->count++;
-			telnet->buf[telnet->write_ptr++] = c;
-			telnet->write_ptr %= BUFFER_SIZE;
+			TELNETEnqueueTX(telnet, c);
 			return;
 		}
 	} else if(telnet->count > 0) {
-		while(telnet->count > 0) {
-			unsigned char ch = telnet->buf[telnet->read_ptr++];
-			telnet->read_ptr %= BUFFER_SIZE;
-			telnet->count--;
-
-			if(send(telnet->socket, WINCAST &ch, 1, MSG_NOSIGNAL) == -1) {
-				const char* str = geterror();
-				close(telnet->socket);
-				telnet->socket = -1;
-				TELNETRxError(telnet, "send", str);
-				return;
-			}
+		if(!TELNETDrainTX(telnet)) {
+			TELNETEnqueueTX(telnet, c);
+			return;
 		}
 	}
 
 	if(send(telnet->socket, WINCAST &c, 1, MSG_NOSIGNAL) == -1) {
+#ifdef _WIN32
+		if(WSAGetLastError() == WSAEWOULDBLOCK) {
+#else
+		if(errno == EWOULDBLOCK) {
+#endif
+			/* the socket's TX queue is full, put this byte into our own queue */
+			TELNETEnqueueTX(telnet, c);
+			return;
+		}
+
 		const char* str = geterror();
 		close(telnet->socket);
 		telnet->socket = -1;
@@ -615,6 +657,8 @@ void TELNETPoll(TELNET* telnet)
 			return;
 		}
 	}
+
+	TELNETDrainTX(telnet);
 
 	int n = recv(telnet->socket, WINCAST telnet->rxbuf, TELNET_BUFFER_SIZE, 0);
 	if(n == -1) {
