@@ -609,7 +609,8 @@ int main(int argc, char** argv, char** envp)
 		use_telnet = true;
 
 		VT220ReceiveText(&vt, "\x9b" "2J\x9bH\x9b" "12h\x9b?7h");
-		sprintf(buf, "Connecting to %s on port %d\r\n", hostname, port);
+		snprintf(buf, 256, "Connecting to %s on port %d\r\n", hostname, port);
+		buf[255] = 0;
 		VT220ReceiveText(&vt, buf);
 
 		TELNETInit(&telnet);
