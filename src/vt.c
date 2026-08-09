@@ -329,6 +329,11 @@ void VT220CursorLeft(VT220* vt)
 
 void VT220CursorLeftN(VT220* vt, int n)
 {
+	/* more than vt->columns has no visible effect */
+	if(n > vt->columns) {
+		n = vt->columns;
+	}
+
 	for(int i = 0; i < n; i++) {
 		VT220CursorLeft(vt);
 	}
@@ -350,6 +355,11 @@ void VT220CursorRight(VT220* vt)
 
 void VT220CursorRightN(VT220* vt, int n)
 {
+	/* more than vt->columns has no visible effect */
+	if(n > vt->columns) {
+		n = vt->columns;
+	}
+
 	for(int i = 0; i < n; i++) {
 		VT220CursorRight(vt);
 	}
@@ -373,6 +383,11 @@ void VT220CursorDown(VT220* vt)
 
 void VT220CursorDownN(VT220* vt, int n)
 {
+	/* more than vt->lines has no visible effect */
+	if(n > vt->lines) {
+		n = vt->lines;
+	}
+
 	for(int i = 0; i < n; i++) {
 		VT220CursorDown(vt);
 	}
@@ -395,6 +410,11 @@ void VT220CursorUp(VT220* vt)
 
 void VT220CursorUpN(VT220* vt, int n)
 {
+	/* more than vt->lines has no visible effect */
+	if(n > vt->lines) {
+		n = vt->lines;
+	}
+
 	for(int i = 0; i < n; i++) {
 		VT220CursorUp(vt);
 	}
@@ -719,6 +739,11 @@ void VT220InsertLineN(VT220* vt, int n)
 		n = 1;
 	}
 
+	/* more than vt->lines has no visible effect */
+	if(n > vt->lines) {
+		n = vt->lines;
+	}
+
 	for(i = 0; i < n; i++) {
 		VT220InsertLine(vt);
 	}
@@ -753,6 +778,11 @@ void VT220DeleteLineN(VT220* vt, int n)
 
 	if(n == 0) {
 		n = 1;
+	}
+
+	/* more than vt->lines has no visible effect */
+	if(n > vt->lines) {
+		n = vt->lines;
 	}
 
 	for(i = 0; i < n; i++) {
@@ -791,6 +821,11 @@ void VT220InsertCharacterN(VT220* vt, int n)
 		n = 1;
 	}
 
+	/* there are no visual changes beyond vt->columns */
+	if(n > vt->columns) {
+		n = vt->columns;
+	}
+
 	for(i = 0; i < n; i++) {
 		VT220InsertCharacter(vt);
 	}
@@ -825,6 +860,11 @@ void VT220DeleteCharacterN(VT220* vt, int n)
 
 	if(n == 0) {
 		n = 1;
+	}
+
+	/* there are no visual changes beyond vt->columns */
+	if(n > vt->columns) {
+		n = vt->columns;
 	}
 
 	for(i = 0; i < n; i++) {
