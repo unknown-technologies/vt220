@@ -158,6 +158,8 @@ const char* TELNETGetOptionName(unsigned char c)
 
 void TELNETInit(TELNET* telnet)
 {
+	memset(telnet, 0, sizeof(TELNET));
+
 	telnet->socket = -1;
 	telnet->connected = 0;
 	telnet->state = 0;
@@ -165,6 +167,7 @@ void TELNETInit(TELNET* telnet)
 	telnet->buf = (unsigned char*) malloc(BUFFER_SIZE);
 	telnet->read_ptr = 0;
 	telnet->write_ptr = 0;
+	telnet->count = 0;
 
 	/* this buffer is one larger than BUFFER_SIZE for a NUL terminator */
 	telnet->sb_buf = (unsigned char*) malloc(BUFFER_SIZE + 1);
