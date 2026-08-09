@@ -48,7 +48,7 @@ static const char* vt220_keyboard_languages[16] = {
 	"Spanish Keyboard"
 };
 
-static const unsigned int VT220GetNextBaudRate(unsigned int baud, int allow_zero)
+static unsigned int VT220GetNextBaudRate(unsigned int baud, int allow_zero)
 {
 	switch(baud) {
 		case 0:
@@ -249,7 +249,7 @@ void VT220SetupShowStatus(VT220* vt)
 	if(vt->setup.in_enq >= 0) {
 		VT220SetupGoto(vt, 8, 15);
 		VT220SetupWriteString(vt, "Enter Answerback=", 0);
-		for(unsigned int i = 0; i < 30; i++) {
+		for(int i = 0; i < 30; i++) {
 			if(vt->setup.enq[i]) {
 				int bold = i == vt->setup.in_enq || (i == 29 && vt->setup.in_enq == 30);
 				int sgr = bold ? (SGR_REVERSE | SGR_BOLD) : SGR_REVERSE;
@@ -1470,8 +1470,6 @@ void VT220SetupKeyboardEnter(VT220* vt)
 
 void VT220SetupTabEnter(VT220* vt)
 {
-	unsigned int i;
-
 	switch(vt->setup.cursor_y) {
 		case 0:
 			switch(vt->setup.cursor_x) {
@@ -1486,7 +1484,7 @@ void VT220SetupTabEnter(VT220* vt)
 					VT220SetupShowScreen(vt);
 					break;
 				case 3:
-					for(i = 0; i < vt->columns; i++) {
+					for(int i = 0; i < vt->columns; i++) {
 						vt->tabstops[i] = i % 8 == 7;
 					}
 					VT220SetupShowScreen(vt);

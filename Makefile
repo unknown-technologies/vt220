@@ -35,7 +35,7 @@ else
 ASANFLG		:=
 endif
 
-CFLAGS		+=	$(OPT) -Wall -std=gnu99 \
+CFLAGS		+=	$(OPT) -Wall -Wextra -std=gnu99 \
 			-ffunction-sections -fdata-sections \
 			$(INCLUDE) -DUNIX \
 			-D_XOPEN_SOURCE=600 -D_DEFAULT_SOURCE \

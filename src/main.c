@@ -227,7 +227,7 @@ static int get_monitor(GLFWmonitor** monitor, GLFWwindow* window)
 	}
 }
 
-static void enter_fullscreen(void)
+static void enter_fullscreen(GLFWwindow* window)
 {
 	glfwGetWindowPos(window, &window_pos_x, &window_pos_y);
 
@@ -252,7 +252,7 @@ static void enter_fullscreen(void)
 	}
 }
 
-static void exit_fullscreen(void)
+static void exit_fullscreen(GLFWwindow* window)
 {
 	glfwSetWindowAttrib(window, GLFW_RESIZABLE, GLFW_TRUE);
 	glfwSetWindowAttrib(window, GLFW_DECORATED, GLFW_TRUE);
@@ -266,12 +266,12 @@ static void exit_fullscreen(void)
 	is_fullscreen = false;
 }
 
-static void toggle_fullscreen(void)
+static void toggle_fullscreen(GLFWwindow* window)
 {
 	if(is_fullscreen) {
-		exit_fullscreen();
+		exit_fullscreen(window);
 	} else {
-		enter_fullscreen();
+		enter_fullscreen(window);
 	}
 
 	glfwSwapInterval(1);
@@ -279,13 +279,15 @@ static void toggle_fullscreen(void)
 
 void key_handler(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
+	(void) scancode; /* no need for the scancode here */
+
 	if(action == GLFW_PRESS) {
 		switch(key) {
 			case GLFW_KEY_F4:
 				if(mods & (GLFW_MOD_CONTROL | GLFW_MOD_ALT)) {
 					VT220KeyboardKeyDown(&vt, key);
 				} else {
-					toggle_fullscreen();
+					toggle_fullscreen(window);
 				}
 				break;
 			default:
@@ -304,6 +306,7 @@ void key_handler(GLFWwindow* window, int key, int scancode, int action, int mods
 
 void char_handler(GLFWwindow* window, unsigned int code)
 {
+	(void) window; /* no need for the window here */
 	VT220KeyboardChar(&vt, code);
 }
 
@@ -361,6 +364,8 @@ static void telnet_brk(void)
 
 static void resize(unsigned int width, unsigned int height)
 {
+	(void) height; /* height is not necessary here */
+
 	window_width = width == 132 ? (9 * 132) : (10 * 80);
 	if(!is_fullscreen) {
 		glfwSetWindowSize(window, window_width, SCREEN_HEIGHT);
@@ -708,7 +713,7 @@ int main(int argc, char** argv, char** envp)
 	 * If this extra handling is missing, KDE5 / Plasma will shit itself on
 	 * certain NVIDIA cards when using real fullscreen mode! */
 	if(is_fullscreen) {
-		exit_fullscreen();
+		exit_fullscreen(window);
 	}
 
 	glfwDestroyWindow(window);

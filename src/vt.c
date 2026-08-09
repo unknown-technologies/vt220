@@ -1218,7 +1218,7 @@ void VT220SoftReset(VT220* vt)
 /* RIS */
 void VT220HardReset(VT220* vt)
 {
-	unsigned int old_columns = vt->columns;
+	int old_columns = vt->columns;
 
 	vt->columns = TEXT_WIDTH;
 	vt->mode = 0;
@@ -1633,7 +1633,7 @@ void VT220ProcessCharVT220(VT220* vt, unsigned char c)
 				case ST:
 					break;
 				default:
-					if((c >= 0x20 && c < 0x80) || (c >= 0xA0 && c <= 0xFF)) {
+					if((c >= 0x20 && c < 0x80) || (c >= 0xA0 /* && c <= 0xFF */)) {
 						VT220WriteChar(vt, c);
 						break;
 					}
@@ -3261,8 +3261,8 @@ void VT220ProcessCharVT52(VT220* vt, unsigned char c)
 					 * - if the line is out of range, it is not updated
 					 * - if the column is out of range, it is not updated */
 					/* See: DEC 070 (VSRM - VT52 Emulation EL-00070-0A, page A-28) */
-					unsigned int line = vt->parameters[0];
-					unsigned int column = vt->parameters[1];
+					int line = vt->parameters[0];
+					int column = vt->parameters[1];
 					if(line < 1 || line > vt->lines) {
 						line = vt->cursor_y + 1;
 					}
