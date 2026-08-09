@@ -2320,7 +2320,6 @@ void VT220ProcessCharVT220(VT220* vt, unsigned char c)
 							case 25:
 								vt->mode &= ~DECTCEM;
 								break;
-								break;
 							case 42:
 								vt->mode &= ~DECNRCM;
 								break;
