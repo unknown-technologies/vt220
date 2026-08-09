@@ -26,7 +26,7 @@ void PTYInit(PTY* pty)
 
 void PTYOpen(PTY* pty, char** argv, char** envp)
 {
-	pty->master = posix_openpt(O_RDWR | O_NOCTTY);
+	pty->master = posix_openpt(O_RDWR | O_NOCTTY | O_CLOEXEC);
 	if(pty->master == -1) {
 		PTYError(pty, "posix_openpt");
 		exit(1);
@@ -148,7 +148,7 @@ void PTYOpen(PTY* pty, char** argv, char** envp)
 			_Exit(1);
 		}
 
-		int slave = open(slave_filename, O_RDWR);
+		int slave = open(slave_filename, O_RDWR | O_CLOEXEC);
 		if(slave == -1) {
 			perror("open");
 			fflush(stderr);
@@ -195,8 +195,7 @@ void PTYOpen(PTY* pty, char** argv, char** envp)
 		}
 
 		// close all other FDs
-		for(int i = 3; i <= slave; i++)
-			close(i);
+		closefrom(3);
 
 		// now run the final program
 		if(execve(*argv, argv, env) == -1) {
