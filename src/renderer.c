@@ -306,7 +306,7 @@ void VTRenderTerminal(VTRenderer* self)
 	glDrawArrays(GL_TRIANGLES, 0, QUAD_VTX_CNT);
 
 	// unbind textures
-	for(unsigned int i = 0; i < 4; i++) {
+	for(unsigned int i = 0; i < 7; i++) {
 		glActiveTexture(GL_TEXTURE0 + i);
 		glBindTexture(GL_TEXTURE_2D, 0);
 	}
