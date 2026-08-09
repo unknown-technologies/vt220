@@ -85,8 +85,8 @@
 
 /* TODO: make RETURN a separate key from CR */
 
-#define	VT220_KEY_CTRL				364
-#define	VT220_KEY_SHIFT				365
+#define	VT220_KEY_CTRL				366
+#define	VT220_KEY_SHIFT				367
 
 #define	VT220_MODIFIER_SHIFT_L			_BV(0)
 #define	VT220_MODIFIER_SHIFT_R			_BV(1)
