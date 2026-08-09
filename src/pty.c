@@ -105,14 +105,14 @@ void PTYOpen(PTY* pty, char** argv, char** envp)
 	memset(env, 0, envcnt * sizeof(char*));
 	char** d = env;
 	for(char** p = envp; *p; p++) {
-		if(strstr(*p, "LANG=")) {
+		if(!strncmp(*p, "LANG=", 5)) {
 			// special handling: avoid UTF-8 languages
 			if(strstr(*p, "UTF-8")) {
 				*(d++) = "LANG=C";
 			} else {
 				*(d++) = *p;
 			}
-		} else if(!strstr(*p, "TERM=")) {
+		} else if(strncmp(*p, "TERM=", 5)) {
 			*(d++) = *p;
 		}
 	}
