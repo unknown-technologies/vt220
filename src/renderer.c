@@ -234,7 +234,8 @@ void VTRenderTerminal(VTRenderer* self)
 	glBindTexture(GL_TEXTURE_2D, self->drcs_tex);
 	if(self->vt->drcs_dirty) {
 		glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_R8UI, DRCS_WIDTH, DRCS_HEIGHT, 0, GL_RED_INTEGER, GL_UNSIGNED_BYTE, self->vt->drcs);
+		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, DRCS_WIDTH, DRCS_HEIGHT, GL_RED_INTEGER, GL_UNSIGNED_BYTE,
+				(GLvoid*) self->vt->drcs);
 		glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
 		self->vt->drcs_dirty = 0;
 	}
@@ -242,27 +243,47 @@ void VTRenderTerminal(VTRenderer* self)
 
 	glActiveTexture(GL_TEXTURE2);
 	glBindTexture(GL_TEXTURE_2D, self->text_tex);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RG16UI, self->vt->columns, TEXT_HEIGHT, 0, GL_RG_INTEGER, GL_UNSIGNED_SHORT, (GLvoid*) self->vt->text);
+	if(resize) {
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RG16UI, self->vt->columns, TEXT_HEIGHT, 0, GL_RG_INTEGER, GL_UNSIGNED_SHORT,
+				(GLvoid*) self->vt->text);
+	} else {
+		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, self->vt->columns, TEXT_HEIGHT, GL_RG_INTEGER, GL_UNSIGNED_SHORT,
+				(GLvoid*) self->vt->text);
+	}
 	glUniform1i(self->vt_shader_text, 2);
 
 	glActiveTexture(GL_TEXTURE3);
 	glBindTexture(GL_TEXTURE_2D, self->line_attrib_tex);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_R8UI, TEXT_HEIGHT, 1, 0, GL_RED_INTEGER, GL_UNSIGNED_BYTE, (GLvoid*) self->vt->line_attributes);
+	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, TEXT_HEIGHT, 1, GL_RED_INTEGER, GL_UNSIGNED_BYTE,
+			(GLvoid*) self->vt->line_attributes);
 	glUniform1i(self->vt_shader_line_attributes, 3);
 
 	glActiveTexture(GL_TEXTURE4);
 	glBindTexture(GL_TEXTURE_2D, self->setup_text_tex);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RG16UI, self->vt->columns, SETUP_TEXT_HEIGHT, 0, GL_RG_INTEGER, GL_UNSIGNED_SHORT, (GLvoid*) self->vt->setup.text);
+	if(resize) {
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RG16UI, self->vt->columns, SETUP_TEXT_HEIGHT, 0, GL_RG_INTEGER,
+				GL_UNSIGNED_SHORT, (GLvoid*) self->vt->setup.text);
+	} else {
+		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, self->vt->columns, SETUP_TEXT_HEIGHT, GL_RG_INTEGER, GL_UNSIGNED_SHORT,
+				(GLvoid*) self->vt->setup.text);
+	}
 	glUniform1i(self->vt_shader_setup_text, 4);
 
 	glActiveTexture(GL_TEXTURE5);
 	glBindTexture(GL_TEXTURE_2D, self->setup_line_attrib_tex);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_R8UI, SETUP_TEXT_HEIGHT, 1, 0, GL_RED_INTEGER, GL_UNSIGNED_BYTE, (GLvoid*) self->vt->setup.line_attributes);
+	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, SETUP_TEXT_HEIGHT, 1, GL_RED_INTEGER, GL_UNSIGNED_BYTE,
+			(GLvoid*) self->vt->setup.line_attributes);
 	glUniform1i(self->vt_shader_setup_line_attributes, 5);
 
 	glActiveTexture(GL_TEXTURE6);
 	glBindTexture(GL_TEXTURE_2D, self->scroll_tex);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RG16UI, self->vt->columns, 1, 0, GL_RG_INTEGER, GL_UNSIGNED_SHORT, (GLvoid*) self->vt->scroll_text);
+	if(resize) {
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RG16UI, self->vt->columns, 1, 0, GL_RG_INTEGER, GL_UNSIGNED_SHORT,
+				(GLvoid*) self->vt->scroll_text);
+	} else {
+		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, self->vt->columns, 1, GL_RG_INTEGER, GL_UNSIGNED_SHORT,
+				(GLvoid*) self->vt->scroll_text);
+	}
 	glUniform1i(self->vt_shader_scroll_text, 6);
 
 	glUniform2ui(self->vt_shader_text_size, self->vt->columns, self->vt->lines);
