@@ -12,6 +12,7 @@
 
 #include <math.h>
 
+#include <signal.h>
 #include <unistd.h>
 #include <errno.h>
 #include <pwd.h>
@@ -457,6 +458,9 @@ int main(int argc, char** argv, char** envp)
 	bool buffering = false;
 
 	unsigned int color = VT220_SCREEN_COLOR_GREEN;
+
+	/* ignore SIGPIPE which can happen if stdout/stderr are redirected */
+	signal(SIGPIPE, SIG_IGN);
 
 	argc--;
 	argv++;
