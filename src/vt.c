@@ -3339,7 +3339,9 @@ void VT220Receive(VT220* vt, unsigned char c)
 					VT220FlowControl(vt, 0);
 				}
 			}
-		} else {
+		} else if(vt->buf_lost < (vt->lines * vt->columns)) {
+			/* cannot show more than one screen worth of lost data
+			 * markers anyway */
 			vt->buf_lost++;
 		}
 	} else {
