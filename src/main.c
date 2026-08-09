@@ -106,18 +106,22 @@ void check_error(const char* filename, unsigned int line)
 }
 #endif
 
-static unsigned long get_time(void)
+static unsigned long long get_time(void)
 {
-	struct timeval t;
-	gettimeofday(&t, NULL);
-	return t.tv_sec * 1000 + t.tv_usec / 1000;
+	struct timespec t;
+	clock_gettime(CLOCK_MONOTONIC, &t);
+	return (unsigned long long) t.tv_sec * 1000uLL + t.tv_nsec / 1000000uLL;
 }
 
 void process(void)
 {
-	unsigned long now = get_time();
+	unsigned long long now = get_time();
 
-	unsigned long dt = now - current_time;
+	unsigned long dt = (unsigned long) (now - current_time);
+	if(dt > 1000) {
+		/* more than one second? Act as if it was only one second */
+		dt = 1000;
+	}
 
 	if(use_telnet) {
 		TELNETPoll(&telnet);
@@ -636,16 +640,16 @@ int main(int argc, char** argv, char** envp)
 	current_time = get_time();
 
 #define	FRAME_TIME	((unsigned int) (1000.0 / FPS))
-	unsigned long last_time = get_time();
-	unsigned long last_frame = get_time();
-	unsigned long next = last_frame + FRAME_TIME;
+	unsigned long long last_time = get_time();
+	unsigned long long last_frame = get_time();
+	unsigned long long next = last_frame + FRAME_TIME;
 	unsigned long frames = 0;
 	unsigned long fps = 0;
 	bool fps_limit = false;
 	while(!glfwWindowShouldClose(window)) {
 		/* compute current FPS */
-		unsigned long now = get_time();
-		unsigned long dt = now - last_time;
+		unsigned long long now = get_time();
+		unsigned long long dt = now - last_time;
 		if(dt >= 1000) {
 			last_time = now;
 			fps = frames;
@@ -668,7 +672,7 @@ int main(int argc, char** argv, char** envp)
 			/* sleep between frames to roughly get the target FPS,
 			 * this is relevant on GPUs which ignore vsync like
 			 * NVIDIA T4 cards */
-			unsigned long unow = get_time();
+			unsigned long long unow = get_time();
 			if(next < unow) {
 				next = last_frame + FRAME_TIME;
 				if(next < unow) {
@@ -676,6 +680,10 @@ int main(int argc, char** argv, char** envp)
 				}
 			}
 			unsigned long udelay = next - unow;
+			if(udelay > FRAME_TIME) {
+				/* limit to a single frame time */
+				udelay = FRAME_TIME;
+			}
 			struct timespec dly = {
 				.tv_sec = udelay / 1000,
 				.tv_nsec = (udelay % 1000) * 1000000
