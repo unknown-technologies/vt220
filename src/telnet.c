@@ -349,7 +349,7 @@ void TELNETBreak(TELNET* telnet)
 
 void TELNETEnqueueTX(TELNET* telnet, unsigned char c)
 {
-	if(telnet->count > BUFFER_SIZE) {
+	if(telnet->count >= BUFFER_SIZE) {
 		/* the TX buffer is full; drop this byte */
 		return;
 	}
