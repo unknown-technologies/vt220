@@ -126,12 +126,13 @@ void PTYOpen(PTY* pty, char** argv, char** envp)
 	}
 #else
 	pid_t pid = fork();
-	if(pid) {
-		// parent
-		pty->pid = pid;
-	} else if(pid == -1) {
+	if(pid == -1) {
+		// TODO: exit on error or print it to the VT instead?
 		printf("[PTY] failed to fork: %s\n", strerror(errno));
 		exit(1);
+	} else if(pid) {
+		// parent
+		pty->pid = pid;
 	} else {
 		// child
 		if(setsid() == (pid_t) -1) {
