@@ -57,8 +57,8 @@ could be sent to the host.
 
 The VT220 emulator uses the following map for local keys:
 - F1 = hold screen
-- F2 = toggle fullscreen
 - F3 = setup
+- F4 = toggle fullscreen
 - F5 = send BREAK (TELNET) / SIGINT (PTY)
 - CTRL-F5 = send answerback message
 
