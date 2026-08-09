@@ -629,6 +629,16 @@ void TELNETProcess(TELNET* telnet, unsigned char c)
 					telnet->state = STATE_TEXT;
 					TELNETProcessSB(telnet);
 					break;
+				case IAC:
+					telnet->state = STATE_SB;
+					if(telnet->sb_write_ptr < BUFFER_SIZE) {
+						telnet->sb_buf[telnet->sb_write_ptr++] = IAC;
+					}
+					break;
+				default:
+					/* malformed data, abort subnegotiation */
+					telnet->state = STATE_TEXT;
+					break;
 			}
 			break;
 	}
