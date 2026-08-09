@@ -1295,7 +1295,7 @@ void VT220HardReset(VT220* vt)
 	vt->g[3] = CHARSET_DEC_SUPPLEMENTAL;
 
 	/* clear DRCS */
-	memset(vt->drcs_name, 0, 3);
+	memset(vt->drcs_name, 0, sizeof(vt->drcs_name));
 	vt->drcs_name[0] = ' '; /* set it to the default unregistered */
 	vt->drcs_name[1] = '@'; /* character set */
 	VT220ClearDRCS(vt);
