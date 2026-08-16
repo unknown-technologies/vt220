@@ -330,6 +330,23 @@ void TELNETPollConnect(TELNET* telnet)
 		// timeout
 		return;
 	} else if(FD_ISSET(telnet->socket, &wfds)) {
+		/* did we succeed? */
+		/* TODO: how does this work on Windows anyway? */
+		int err = 0;
+		socklen_t len = sizeof(err);
+		if(getsockopt(telnet->socket, SOL_SOCKET, SO_ERROR, &err, &len) == -1) {
+			close(telnet->socket);
+			telnet->socket = -1;
+			TELNETRxError(telnet, "connect", strerror(errno));
+			return;
+		} else if(err != 0) {
+			close(telnet->socket);
+			telnet->socket = -1;
+			TELNETRxError(telnet, "connect", strerror(err));
+			return;
+		}
+
+		/* there was no error, the socket is connected */
 		TELNETConnected(telnet);
 	}
 }
