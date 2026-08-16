@@ -19,6 +19,9 @@
 #include <spawn.h>
 #endif
 
+/* GENERAL TODO: Should a child be reparented when this PTY class exits? Or
+ * should it kill the child instead? */
+
 void PTYInit(PTY* pty)
 {
 	memset(pty, 0, sizeof(PTY));
@@ -255,12 +258,11 @@ int PTYDrainTX(PTY* pty)
 	}
 
 	while(pty->count > 0) {
-		unsigned char ch = pty->txbuf[pty->read_ptr++];
-		pty->read_ptr %= PTY_TX_BUFFER_SIZE;
-		pty->count--;
+		unsigned char ch = pty->txbuf[pty->read_ptr];
 
 		if(write(pty->master, &ch, 1) == -1) {
-			if(errno == EWOULDBLOCK) {
+			if(errno == EWOULDBLOCK || errno == EINTR) {
+				/* buffer full or we got interrupted by a signal, try again in the next tick */
 				return 0;
 			}
 
@@ -269,6 +271,9 @@ int PTYDrainTX(PTY* pty)
 			pty->master = -1;
 
 			return 0;
+		} else {
+			pty->read_ptr = (pty->read_ptr + 1) % PTY_TX_BUFFER_SIZE;
+			pty->count--;
 		}
 	}
 
@@ -290,7 +295,11 @@ void PTYSend(PTY* pty, unsigned char c)
 
 	if(write(pty->master, &c, 1) == -1) {
 		if(errno == EWOULDBLOCK) {
-			/* the socket's TX queue is full, put this byte into our own queue */
+			/* the PTY's TX queue is full, put this byte into our own queue */
+			PTYEnqueueTX(pty, c);
+			return;
+		} else if(errno == EINTR) {
+			/* write got interrupted by a signal, put this byte into the queue */
 			PTYEnqueueTX(pty, c);
 			return;
 		}
@@ -314,6 +323,37 @@ void PTYBreak(PTY* pty)
 	pid_t pid = tcgetpgrp(pty->master);
 	if(pid > 1) {
 		killpg(pid, SIGINT);
+	}
+}
+
+void PTYCheckHUP(PTY* pty)
+{
+	int status;
+	int result = waitpid(pty->pid, &status, WNOHANG);
+	if(result == -1) {
+		PTYError(pty, "waitpid");
+		close(pty->master);
+		pty->master = -1;
+	} else if(result == 0) {
+		/* process didn't exit so far */
+		return;
+	} else if(WIFEXITED(status)) {
+		char* p = (char*) pty->buf;
+		sprintf(p, "process exited with status %d\r\n", WEXITSTATUS(status));
+		PTYRxString(pty, p);
+		close(pty->master);
+		pty->master = -1;
+	} else if(WIFSIGNALED(status)) {
+		char* p = (char*) pty->buf;
+		char* signame = strsignal(WTERMSIG(status));
+		if(WCOREDUMP(status)) {
+			sprintf(p, "process terminated by signal: %s (core dumped)\r\n", signame);
+		} else {
+			sprintf(p, "process terminated by signal: %s\r\n", signame);
+		}
+		PTYRxString(pty, p);
+		close(pty->master);
+		pty->master = -1;
 	}
 }
 
@@ -346,6 +386,7 @@ void PTYPoll(PTY* pty)
 		return;
 	}
 
+	/* input has priority, only when all input was processed, we care about HUP */
 	int result = poll(&fds, 1, 0);
 	if(result == -1) {
 		PTYError(pty, "poll");
@@ -354,6 +395,17 @@ void PTYPoll(PTY* pty)
 	} else if(fds.revents & POLLIN) {
 		ssize_t n = read(pty->master, pty->buf, PTY_BUFFER_SIZE);
 		if(n == -1) {
+			if(errno == EWOULDBLOCK) {
+				/* this should never happen, but it did happen. Ignore it */
+				return;
+			} else if(errno == EINTR) {
+				/* our read got interrupted by a signal, ignore this too */
+				return;
+			} else if(errno == EIO) {
+				/* did the child die? */
+				PTYCheckHUP(pty);
+				return;
+			}
 			PTYError(pty, "read");
 			close(pty->master);
 			pty->master = -1;
@@ -375,23 +427,7 @@ void PTYPoll(PTY* pty)
 			}
 		}
 	} else if(fds.revents & POLLHUP) {
-		int status;
-		result = waitpid(pty->pid, &status, WNOHANG);
-		if(result == -1) {
-			PTYError(pty, "waitpid");
-			close(pty->master);
-			pty->master = -1;
-		}
-		if(result == 0) {
-			/* process didn't exit so far */
-			return;
-		} else {
-			char* p = (char*) pty->buf;
-			sprintf(p, "process exited with status %d\r\n", status);
-			PTYRxString(pty, p);
-			close(pty->master);
-			pty->master = -1;
-		}
+		PTYCheckHUP(pty);
 	}
 }
 
