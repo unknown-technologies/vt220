@@ -326,7 +326,7 @@ void PTYBreak(PTY* pty)
 	}
 }
 
-void PTYCheckHUP(PTY* pty)
+void PTYCheckExit(PTY* pty)
 {
 	int status;
 	int result = waitpid(pty->pid, &status, WNOHANG);
@@ -403,7 +403,7 @@ void PTYPoll(PTY* pty)
 				return;
 			} else if(errno == EIO) {
 				/* did the child die? */
-				PTYCheckHUP(pty);
+				PTYCheckExit(pty);
 				return;
 			}
 			PTYError(pty, "read");
@@ -427,7 +427,9 @@ void PTYPoll(PTY* pty)
 			}
 		}
 	} else if(fds.revents & POLLHUP) {
-		PTYCheckHUP(pty);
+		/* NOTE: PTYCheckExit does NOT clear the HUP bit, so we will
+		 * check this forever until the child exited */
+		PTYCheckExit(pty);
 	}
 }
 
