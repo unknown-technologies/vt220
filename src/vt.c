@@ -721,11 +721,12 @@ void VT220InsertLine(VT220* vt)
 		vt->text[i + vt->columns] = vt->text[i];
 	}
 
-	for(int i = vt->margin_bottom - 2; i >= vt->margin_top; i--) {
+	for(int i = vt->margin_bottom - 1; i >= vt->cursor_y; i--) {
 		vt->line_attributes[i + 1] = vt->line_attributes[i];
 	}
 
 	memset(&vt->text[start], 0, vt->columns * sizeof(VT220CELL));
+	vt->line_attributes[vt->cursor_y] = 0;
 
 	vt->cursor_x = 0;
 }
@@ -761,12 +762,13 @@ void VT220DeleteLine(VT220* vt)
 		vt->text[i - vt->columns] = vt->text[i];
 	}
 
-	for(int i = vt->margin_top + 1; i < vt->margin_bottom; i++) {
+	for(int i = vt->cursor_y + 1; i < vt->margin_bottom; i++) {
 		vt->line_attributes[i - 1] = vt->line_attributes[i];
 	}
 
 	end = vt->margin_bottom * vt->columns;
 	memset(&vt->text[end], 0, vt->columns * sizeof(VT220CELL));
+	vt->line_attributes[vt->cursor_y] = 0;
 
 	vt->cursor_x = 0;
 }
