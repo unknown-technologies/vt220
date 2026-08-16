@@ -4,6 +4,7 @@
 #include <sys/types.h>
 
 #define	PTY_BUFFER_SIZE		32768
+#define	PTY_TX_BUFFER_SIZE	256
 
 typedef struct {
 	int		master;
@@ -11,6 +12,12 @@ typedef struct {
 	unsigned char	buf[PTY_BUFFER_SIZE];
 	unsigned int	bufsz;
 	unsigned int	bufrd;
+
+	/* tx ringbuffer */
+	unsigned char	txbuf[PTY_TX_BUFFER_SIZE];
+	int		read_ptr;
+	int		write_ptr;
+	int		count;
 
 	void		(*rx)(unsigned char c);
 	int		(*rxe)(void);

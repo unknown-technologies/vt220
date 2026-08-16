@@ -236,14 +236,65 @@ void PTYError(PTY* pty, const char* what)
 	PTYRxError(pty, what, msg);
 }
 
+void PTYEnqueueTX(PTY* pty, unsigned char c)
+{
+	if(pty->count >= PTY_TX_BUFFER_SIZE) {
+		/* the TX buffer is full; drop this byte */
+		return;
+	}
+
+	pty->count++;
+	pty->txbuf[pty->write_ptr++] = c;
+	pty->write_ptr %= PTY_TX_BUFFER_SIZE;
+}
+
+int PTYDrainTX(PTY* pty)
+{
+	if(pty->master == -1) {
+		return 0;
+	}
+
+	while(pty->count > 0) {
+		unsigned char ch = pty->txbuf[pty->read_ptr++];
+		pty->read_ptr %= PTY_TX_BUFFER_SIZE;
+		pty->count--;
+
+		if(write(pty->master, &ch, 1) == -1) {
+			if(errno == EWOULDBLOCK) {
+				return 0;
+			}
+
+			PTYError(pty, "write");
+			close(pty->master);
+			pty->master = -1;
+
+			return 0;
+		}
+	}
+
+	return 1;
+}
+
 void PTYSend(PTY* pty, unsigned char c)
 {
 	if(pty->master == -1) {
 		return;
 	}
 
-	ssize_t n = write(pty->master, &c, 1);
-	if(n == -1) {
+	if(pty->count > 0) {
+		if(!PTYDrainTX(pty)) {
+			PTYEnqueueTX(pty, c);
+			return;
+		}
+	}
+
+	if(write(pty->master, &c, 1) == -1) {
+		if(errno == EWOULDBLOCK) {
+			/* the socket's TX queue is full, put this byte into our own queue */
+			PTYEnqueueTX(pty, c);
+			return;
+		}
+
 		PTYError(pty, "write");
 		close(pty->master);
 		pty->master = -1;
@@ -268,6 +319,8 @@ void PTYBreak(PTY* pty)
 
 void PTYPoll(PTY* pty)
 {
+	PTYDrainTX(pty);
+
 	if(pty->rxe && pty->rx) {
 		while(pty->bufrd < pty->bufsz) {
 			if(pty->rxe()) {
