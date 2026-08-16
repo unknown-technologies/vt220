@@ -369,15 +369,13 @@ int TELNETDrainTX(TELNET* telnet)
 	}
 
 	while(telnet->count > 0) {
-		unsigned char ch = telnet->buf[telnet->read_ptr++];
-		telnet->read_ptr %= BUFFER_SIZE;
-		telnet->count--;
+		unsigned char ch = telnet->buf[telnet->read_ptr];
 
 		if(send(telnet->socket, WINCAST &ch, 1, MSG_NOSIGNAL) == -1) {
 #ifdef _WIN32
 			if(WSAGetLastError() == WSAEWOULDBLOCK) {
 #else
-			if(errno == EWOULDBLOCK) {
+			if(errno == EWOULDBLOCK || errno == EINTR) {
 #endif
 				return 0;
 			}
@@ -387,6 +385,9 @@ int TELNETDrainTX(TELNET* telnet)
 			telnet->socket = -1;
 			TELNETRxError(telnet, "send", str);
 			return 0;
+		} else {
+			telnet->read_ptr = (telnet->read_ptr + 1) % BUFFER_SIZE;
+			telnet->count--;
 		}
 	}
 
@@ -420,9 +421,9 @@ void TELNETSendRaw(TELNET* telnet, unsigned char c)
 #ifdef _WIN32
 		if(WSAGetLastError() == WSAEWOULDBLOCK) {
 #else
-		if(errno == EWOULDBLOCK) {
+		if(errno == EWOULDBLOCK || errno == EINTR) {
 #endif
-			/* the socket's TX queue is full, put this byte into our own queue */
+			/* the socket's TX queue is full or we got interrupted, put this byte into our own queue */
 			TELNETEnqueueTX(telnet, c);
 			return;
 		}
@@ -683,7 +684,7 @@ void TELNETPoll(TELNET* telnet)
 #ifdef _WIN32
 		if(WSAGetLastError() == WSAEWOULDBLOCK) {
 #else
-		if(errno == EWOULDBLOCK) {
+		if(errno == EWOULDBLOCK || errno == EINTR) {
 #endif
 			return;
 		}
