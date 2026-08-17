@@ -15,7 +15,9 @@
 #include <signal.h>
 #include <unistd.h>
 #include <errno.h>
+#ifndef _WIN32
 #include <pwd.h>
+#endif
 #include <sys/types.h>
 #include <sys/time.h>
 #include <time.h>
@@ -24,7 +26,9 @@
 #include "vt.h"
 #include "renderer.h"
 #include "telnet.h"
+#ifndef _WIN32
 #include "pty.h"
+#endif
 
 #define	FPS			60
 
@@ -33,7 +37,9 @@
 
 static bool enable_glow = true;
 static bool use_telnet = false;
+#ifndef _WIN32
 static bool use_pty = false;
+#endif
 static bool is_fullscreen = false;
 
 static int screen_width;
@@ -49,7 +55,9 @@ static GLFWwindow* window;
 static VT220 vt;
 static VTRenderer renderer;
 static TELNET telnet;
+#ifndef _WIN32
 static PTY pty;
+#endif
 
 static unsigned long current_time = 0;
 
@@ -58,6 +66,37 @@ PFNGLGENFRAMEBUFFERSPROC	glGenFramebuffers;
 PFNGLBINDFRAMEBUFFERPROC	glBindFramebuffer;
 PFNGLFRAMEBUFFERTEXTURE2DPROC	glFramebufferTexture2D;
 PFNGLCHECKFRAMEBUFFERSTATUSPROC	glCheckFramebufferStatus;
+PFNGLGETSTRINGIPROC		glGetStringi;
+PFNGLGETUNIFORMLOCATIONPROC	glGetUniformLocation;
+PFNGLUSEPROGRAMPROC		glUseProgram;
+PFNGLACTIVETEXTUREPROC		glActiveTexture;
+PFNGLUNIFORM1IPROC		glUniform1i;
+PFNGLUNIFORM1UIPROC		glUniform1ui;
+PFNGLUNIFORM2UIPROC		glUniform2ui;
+PFNGLUNIFORM1FPROC		glUniform1f;
+PFNGLUNIFORM2FPROC		glUniform2f;
+PFNGLUNIFORM3FVPROC		glUniform3fv;
+PFNGLGENBUFFERSPROC		glGenBuffers;
+PFNGLBINDBUFFERPROC		glBindBuffer;
+PFNGLBUFFERDATAPROC		glBufferData;
+PFNGLGENVERTEXARRAYSPROC	glGenVertexArrays;
+PFNGLBINDVERTEXARRAYPROC	glBindVertexArray;
+PFNGLENABLEVERTEXATTRIBARRAYPROC glEnableVertexAttribArray;
+PFNGLVERTEXATTRIBPOINTERPROC	glVertexAttribPointer;
+PFNGLCREATESHADERPROC		glCreateShader;
+PFNGLSHADERSOURCEPROC		glShaderSource;
+PFNGLCOMPILESHADERPROC		glCompileShader;
+PFNGLGETSHADERIVPROC		glGetShaderiv;
+PFNGLGETSHADERINFOLOGPROC	glGetShaderInfoLog;
+PFNGLDELETESHADERPROC		glDeleteShaderProc;
+PFNGLCREATEPROGRAMPROC		glCreateProgram;
+PFNGLATTACHSHADERPROC		glAttachShader;
+PFNGLLINKPROGRAMPROC		glLinkProgram;
+PFNGLGETPROGRAMIVPROC		glGetProgramiv;
+PFNGLGETPROGRAMINFOLOGPROC	glGetProgramInfoLog;
+PFNGLDETACHSHADERPROC		glDetachShader;
+PFNGLDELETESHADERPROC		glDeleteShader;
+PFNGLDELETEPROGRAMPROC		glDeleteProgram;
 
 static void load_gl_extensions(void)
 {
@@ -65,6 +104,37 @@ static void load_gl_extensions(void)
 	glBindFramebuffer = (PFNGLBINDFRAMEBUFFERPROC)wglGetProcAddress("glBindFramebuffer");
 	glFramebufferTexture2D = (PFNGLFRAMEBUFFERTEXTURE2DPROC)wglGetProcAddress("glFramebufferTexture2D");
 	glCheckFramebufferStatus = (PFNGLCHECKFRAMEBUFFERSTATUSPROC)wglGetProcAddress("glCheckFramebufferStatus");
+	glGetStringi = (PFNGLGETSTRINGIPROC)wglGetProcAddress("glGetStringi");
+	glGetUniformLocation = (PFNGLGETUNIFORMLOCATIONPROC)wglGetProcAddress("glGetUniformLocation");
+	glUseProgram = (PFNGLUSEPROGRAMPROC)wglGetProcAddress("glUseProgram");
+	glActiveTexture = (PFNGLACTIVETEXTUREPROC)wglGetProcAddress("glActiveTexture");
+	glUniform1i = (PFNGLUNIFORM1IPROC)wglGetProcAddress("glUniform1i");
+	glUniform1ui = (PFNGLUNIFORM1UIPROC)wglGetProcAddress("glUniform1ui");
+	glUniform2ui = (PFNGLUNIFORM2UIPROC)wglGetProcAddress("glUniform2ui");
+	glUniform1f = (PFNGLUNIFORM1FPROC)wglGetProcAddress("glUniform1f");
+	glUniform2f = (PFNGLUNIFORM2FPROC)wglGetProcAddress("glUniform2f");
+	glUniform3fv = (PFNGLUNIFORM3FVPROC)wglGetProcAddress("glUniform3fv");
+	glGenBuffers = (PFNGLGENBUFFERSPROC)wglGetProcAddress("glGenBuffers");
+	glBindBuffer = (PFNGLBINDBUFFERPROC)wglGetProcAddress("glBindBuffer");
+	glBufferData = (PFNGLBUFFERDATAPROC)wglGetProcAddress("glBufferData");
+	glGenVertexArrays = (PFNGLGENVERTEXARRAYSPROC)wglGetProcAddress("glGenVertexArrays");
+	glBindVertexArray = (PFNGLBINDVERTEXARRAYPROC)wglGetProcAddress("glBindVertexArray");
+	glEnableVertexAttribArray = (PFNGLENABLEVERTEXATTRIBARRAYPROC)wglGetProcAddress("glEnableVertexAttribArray");
+	glVertexAttribPointer = (PFNGLVERTEXATTRIBPOINTERPROC)wglGetProcAddress("glVertexAttribPointer");
+	glCreateShader = (PFNGLCREATESHADERPROC)wglGetProcAddress("glCreateShader");
+	glShaderSource = (PFNGLSHADERSOURCEPROC)wglGetProcAddress("glShaderSource");
+	glCompileShader = (PFNGLCOMPILESHADERPROC)wglGetProcAddress("glCompileShader");
+	glGetShaderiv = (PFNGLGETSHADERIVPROC)wglGetProcAddress("glGetShaderiv");
+	glGetShaderInfoLog = (PFNGLGETSHADERINFOLOGPROC)wglGetProcAddress("glGetShaderInfoLog");
+	glDeleteShaderProc = (PFNGLDELETESHADERPROC)wglGetProcAddress("glDeleteShader");
+	glCreateProgram = (PFNGLCREATEPROGRAMPROC)wglGetProcAddress("glCreateProgram");
+	glAttachShader = (PFNGLATTACHSHADERPROC)wglGetProcAddress("glAttachShader");
+	glLinkProgram = (PFNGLLINKPROGRAMPROC)wglGetProcAddress("glLinkProgram");
+	glGetProgramiv = (PFNGLGETPROGRAMIVPROC)wglGetProcAddress("glGetProgramiv");
+	glGetProgramInfoLog = (PFNGLGETPROGRAMINFOLOGPROC)wglGetProcAddress("glGetProgramInfoLog");
+	glDetachShader = (PFNGLDETACHSHADERPROC)wglGetProcAddress("glDetachShader");
+	glDeleteShader = (PFNGLDELETESHADERPROC)wglGetProcAddress("glDeleteShader");
+	glDeleteProgram = (PFNGLDELETEPROGRAMPROC)wglGetProcAddress("glDeleteProgram");
 }
 #endif
 
@@ -128,9 +198,11 @@ void process(void)
 		TELNETPoll(&telnet);
 	}
 
+#ifndef _WIN32
 	if(use_pty) {
 		PTYPoll(&pty);
 	}
+#endif
 
 	VT220Process(&vt, dt);
 	VTProcess(&renderer, dt);
@@ -373,6 +445,7 @@ static void resize(unsigned int width, unsigned int height)
 	}
 }
 
+#ifndef _WIN32
 static void pty_tx(unsigned char c)
 {
 	PTYSend(&pty, c);
@@ -388,10 +461,15 @@ static void pty_resize(unsigned int width, unsigned int height)
 	resize(width, height);
 	PTYResize(&pty, width, height);
 }
+#endif
 
 static void print_usage(const char* self)
 {
+#ifdef _WIN32
+	printf("Usage: %s [OPTIONS] [-l | -t hostname port]\n"
+#else
 	printf("Usage: %s [OPTIONS] [-l | -s command | -t hostname port]\n"
+#endif
 		"\n"
 		"OPTIONS\n"
 		"  -h            Show this help message\n"
@@ -404,14 +482,21 @@ static void print_usage(const char* self)
 		"  -p            Use simple linear phosphor emulation model\n"
 		"  -r            Raw mode, deactivates all post processing; implies -g\n"
 		"  -l            Loopback / local mode\n"
+#ifndef _WIN32
 		"  -s /bin/sh    Execute /bin/sh in the terminal\n"
+#endif
 		"  -t host port  Establish TELNET connection to host:port\n"
 		"  -u            Unlimited FPS\n"
 		"  -b            Enable buffering (slow processing)\n"
 		"\n"
+#ifdef _WIN32
+		"If no option is provided, -l is assumed.\n", self);
+#else
 		"If no option is provided, -s $(getent passwd $UID | cut -d: -f7) is assumed.\n", self);
+#endif
 }
 
+#ifndef _WIN32
 char** get_default_argv(void)
 {
 	struct passwd* pwd;
@@ -442,8 +527,13 @@ char** get_default_argv(void)
 	argv[1] = NULL;
 	return argv;
 }
+#endif
 
+#ifdef _WIN32
+int main(int argc, char** argv)
+#else
 int main(int argc, char** argv, char** envp)
+#endif
 {
 	const char* self = *argv;
 	char** shell = NULL;
@@ -459,8 +549,10 @@ int main(int argc, char** argv, char** envp)
 
 	unsigned int color = VT220_SCREEN_COLOR_GREEN;
 
+#ifndef _WIN32
 	/* ignore SIGPIPE which can happen if stdout/stderr are redirected */
 	signal(SIGPIPE, SIG_IGN);
+#endif
 
 	argc--;
 	argv++;
@@ -469,6 +561,10 @@ int main(int argc, char** argv, char** envp)
 		if(!strcmp(arg, "-g")) {
 			enable_glow = false;
 		} else if(!strcmp(arg, "-s")) {
+#ifdef _WIN32
+			printf("Shell not supported on Windows\n");
+			return 1;
+#else
 			if(i + 1 >= argc) {
 				// use default shell
 				shell = get_default_argv();
@@ -477,6 +573,7 @@ int main(int argc, char** argv, char** envp)
 				i = argc;
 			}
 			break;
+#endif
 		} else if(!strcmp(arg, "-t")) {
 			if(i + 2 >= argc) {
 				print_usage(self);
@@ -534,8 +631,13 @@ int main(int argc, char** argv, char** envp)
 	}
 
 	if(!loopback && !hostname && !shell) {
-		// no args => default shell
+#ifdef _WIN32
+		/* no args => loopback */
+		loopback = true;
+#else
+		/* no args => default shell */
 		shell = get_default_argv();
+#endif
 	}
 
 	glfwSetErrorCallback(error_handler);
@@ -630,6 +732,7 @@ int main(int argc, char** argv, char** envp)
 		vt.flowcontrol = vt_flowcontrol_nop;
 
 		TELNETConnect(&telnet, hostname, port);
+#ifndef _WIN32
 	} else if(shell) {
 		use_pty = true;
 
@@ -644,6 +747,7 @@ int main(int argc, char** argv, char** envp)
 		vt.brk = pty_brk;
 		vt.resize = pty_resize;
 		vt.flowcontrol = vt_flowcontrol_nop;
+#endif
 	}
 
 	current_time = get_time();

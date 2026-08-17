@@ -1,4 +1,6 @@
 *.sw?
 build
+build.win32
 vt220
+vt220.exe
 web/build

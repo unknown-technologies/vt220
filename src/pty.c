@@ -1,3 +1,4 @@
+#ifndef _WIN32
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
@@ -453,3 +454,4 @@ void PTYResize(PTY* pty, unsigned int width, unsigned int height)
 		printf("[PTY] failed to send SIGWINCH: %s\n", strerror(errno));
 	}
 }
+#endif

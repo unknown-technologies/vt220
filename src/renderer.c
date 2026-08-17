@@ -3,6 +3,9 @@
 #include <stdio.h>
 #include <assert.h>
 #include <GL/gl.h>
+#ifdef _WIN32
+#include <GL/glext.h>
+#endif
 #include <math.h>
 
 #include "types.h"
@@ -44,6 +47,45 @@ extern const char post_frag[];
 
 extern const char blur_vert[];
 extern const char blur_frag[];
+
+#ifdef _WIN32
+/* these functions are defined in main.c */
+extern PFNGLGENFRAMEBUFFERSPROC		glGenFramebuffers;
+extern PFNGLBINDFRAMEBUFFERPROC		glBindFramebuffer;
+extern PFNGLFRAMEBUFFERTEXTURE2DPROC	glFramebufferTexture2D;
+extern PFNGLCHECKFRAMEBUFFERSTATUSPROC	glCheckFramebufferStatus;
+extern PFNGLGETSTRINGIPROC		glGetStringi;
+extern PFNGLGETUNIFORMLOCATIONPROC	glGetUniformLocation;
+extern PFNGLUSEPROGRAMPROC		glUseProgram;
+extern PFNGLACTIVETEXTUREPROC		glActiveTexture;
+extern PFNGLUNIFORM1IPROC		glUniform1i;
+extern PFNGLUNIFORM1UIPROC		glUniform1ui;
+extern PFNGLUNIFORM2UIPROC		glUniform2ui;
+extern PFNGLUNIFORM1FPROC		glUniform1f;
+extern PFNGLUNIFORM2FPROC		glUniform2f;
+extern PFNGLUNIFORM3FVPROC		glUniform3fv;
+extern PFNGLGENBUFFERSPROC		glGenBuffers;
+extern PFNGLBINDBUFFERPROC		glBindBuffer;
+extern PFNGLBUFFERDATAPROC		glBufferData;
+extern PFNGLGENVERTEXARRAYSPROC		glGenVertexArrays;
+extern PFNGLBINDVERTEXARRAYPROC		glBindVertexArray;
+extern PFNGLENABLEVERTEXATTRIBARRAYPROC	glEnableVertexAttribArray;
+extern PFNGLVERTEXATTRIBPOINTERPROC	glVertexAttribPointer;
+extern PFNGLCREATESHADERPROC		glCreateShader;
+extern PFNGLSHADERSOURCEPROC		glShaderSource;
+extern PFNGLCOMPILESHADERPROC		glCompileShader;
+extern PFNGLGETSHADERIVPROC		glGetShaderiv;
+extern PFNGLGETSHADERINFOLOGPROC	glGetShaderInfoLog;
+extern PFNGLDELETESHADERPROC		glDeleteShaderProc;
+extern PFNGLCREATEPROGRAMPROC		glCreateProgram;
+extern PFNGLATTACHSHADERPROC		glAttachShader;
+extern PFNGLLINKPROGRAMPROC		glLinkProgram;
+extern PFNGLGETPROGRAMIVPROC		glGetProgramiv;
+extern PFNGLGETPROGRAMINFOLOGPROC	glGetProgramInfoLog;
+extern PFNGLDETACHSHADERPROC		glDetachShader;
+extern PFNGLDELETESHADERPROC		glDeleteShader;
+extern PFNGLDELETEPROGRAMPROC		glDeleteProgram;
+#endif
 
 #ifdef NDEBUG
 #define GL_ERROR()

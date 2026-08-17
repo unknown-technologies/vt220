@@ -331,10 +331,13 @@ void TELNETPollConnect(TELNET* telnet)
 		return;
 	} else if(FD_ISSET(telnet->socket, &wfds)) {
 		/* did we succeed? */
-		/* TODO: how does this work on Windows anyway? */
 		int err = 0;
+#ifdef _WIN32
+		int len = sizeof(err);
+#else
 		socklen_t len = sizeof(err);
-		if(getsockopt(telnet->socket, SOL_SOCKET, SO_ERROR, &err, &len) == -1) {
+#endif
+		if(getsockopt(telnet->socket, SOL_SOCKET, SO_ERROR, WINCAST &err, &len) == -1) {
 			close(telnet->socket);
 			telnet->socket = -1;
 			TELNETRxError(telnet, "connect", strerror(errno));

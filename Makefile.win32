@@ -1,0 +1,90 @@
+#!/bin/make
+export	PREFIX	:=	x86_64-w64-mingw32-
+export	CC	:=	$(PREFIX)gcc
+export	LD	:=	$(CC)
+export	OBJCOPY	:=	$(PREFIX)objcopy
+export	NM	:=	$(PREFIX)nm
+export	SIZE	:=	$(PREFIX)size
+export	GLSLANG	:=	glslang
+
+export	NDEBUG
+
+#-------------------------------------------------------------------------------
+.SUFFIXES:
+#-------------------------------------------------------------------------------
+TARGET		:=	vt220
+INCLUDES	:=	include
+SOURCES		:=	src
+GLSLSOURCES	:=	glsl
+BUILD		:=	build.win32
+
+OPT		:=	-O3 -g
+
+ifdef NDEBUG
+DEBUG		:=	-DNDEBUG
+SUBSYS		:=	-mwindows
+OPT		:=	-s
+else
+DEBUG		:=	-DDEBUG
+SUBSYS		:=	-mconsole
+endif
+
+CFLAGS		+=	$(OPT) -Wall -Wformat -Werror=format-security \
+		       	-std=gnu99 \
+			-ffunction-sections -fdata-sections \
+			$(INCLUDE) $(DEBUG)
+
+LIBS		:=	-lws2_32 -lopengl32 -lglfw3 -lgdi32
+LDFLAGS		+=	-Wl,-x -Wl,--gc-sections $(OPT) $(SUBSYS)
+
+CFILES		:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.c)))
+GLSLFILES	:=	$(foreach dir,$(GLSLSOURCES),$(notdir $(wildcard $(dir)/*.glsl)))
+
+ifneq ($(BUILD),$(notdir $(CURDIR)))
+#-------------------------------------------------------------------------------
+export	DEPSDIR	:=	$(CURDIR)/$(BUILD)
+export	OFILES	:=	$(CFILES:.c=.o) $(GLSLFILES:.glsl=.o)
+export	VPATH	:=	$(foreach dir,$(SOURCES),$(CURDIR)/$(dir)) \
+			$(foreach dir,$(GLSLSOURCES),$(CURDIR)/$(dir)) $(CURDIR)
+export	INCLUDE	:=	$(foreach dir,$(INCLUDES),-I$(CURDIR)/$(dir)) \
+				-I$(CURDIR)/$(BUILD)
+export	OUTPUT	:=	$(CURDIR)/$(TARGET).exe
+
+.PHONY: $(BUILD) clean all
+
+$(BUILD):
+	@echo compiling...
+	@[ -d $@ ] || mkdir -p $@
+	@$(MAKE) --no-print-directory -C $(BUILD) -f $(CURDIR)/Makefile.win32
+
+clean:
+	@echo "[CLEAN]"
+	@rm -rf $(BUILD) $(OFILES) $(TARGET).exe
+
+else
+
+#-------------------------------------------------------------------------------
+# main target
+#-------------------------------------------------------------------------------
+.PHONY: all
+
+all: $(OUTPUT)
+
+%.o: %.c
+	@echo "[CC]    $(notdir $@)"
+	@$(CC) -MMD -MP -MF $(DEPSDIR)/$*.d $(CFLAGS) -c $< -o $@
+
+%.o: %.glsl
+	@echo "[GLSL]  $(notdir $@)"
+	@$(GLSLANG) $<
+	@echo -e "const char $(subst .,_,$(basename $@))[] = { $(shell xxd -i < $<), 0 };" | $(CC) $(OPT) -std=c23 -c -x c -o $@ -
+
+$(OUTPUT): $(OFILES)
+	@echo "[LD]    $(notdir $@)"
+	@$(LD) $(LDFLAGS) -o $@ $(OFILES) $(LIBS)
+
+-include $(DEPSDIR)/*.d
+
+#-------------------------------------------------------------------------------
+endif
+#-------------------------------------------------------------------------------

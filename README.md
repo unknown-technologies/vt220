@@ -95,14 +95,16 @@ useful to create dedicated "VT220 appliances" without relying on X11 / Wayland.
 Windows Version
 ---------------
 
-Although there are some code fragments which look like there might be Windows
-support, there is currently no such support. This is simply caused by the fact
-that no Windows based machine with C compiler and graphics card is currently
-available to the developer. If you are bored and want to provide proper Windows
-support, feel free to open a pull request.
+There is a mostly untested Windows version which only supports loopback mode and
+the TELNET client. Since Windows lacks a sane equivalent to a PTY, you _cannot_
+run any Windows console programs within this VT220.
 
-Only the TELNET library supports Windows at the moment since it was written
-on a Windows computer many years ago, but even this is currently untested.
+To build this Windows version, you need mingw-w64 and mingw-w64-glfw. Once both
+are installed, you can run the following command to build the VT220 binary:
+
+```
+make -f Makefile.win32 NDEBUG=1
+```
 
 
 Screenshots
