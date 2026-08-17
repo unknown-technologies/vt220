@@ -18,15 +18,16 @@ SOURCES		:=	src
 GLSLSOURCES	:=	glsl
 BUILD		:=	build.win32
 
-OPT		:=	-O3 -g
+OPT		:=	-O3
 
 ifdef NDEBUG
 DEBUG		:=	-DNDEBUG
 SUBSYS		:=	-mwindows
-OPT		:=	-s
+OPT		+=	-g0 -s
 else
 DEBUG		:=	-DDEBUG
 SUBSYS		:=	-mconsole
+OPT		+=	-g
 endif
 
 CFLAGS		+=	$(OPT) -Wall -Wformat -Werror=format-security \
