@@ -35,7 +35,8 @@ else
 ASANFLG		:=
 endif
 
-CFLAGS		+=	$(OPT) -Wall -Wextra -std=gnu99 \
+CFLAGS		+=	$(OPT) -Wall -Wextra -Wformat -Werror=format-security \
+			-std=gnu99 \
 			-ffunction-sections -fdata-sections \
 			$(INCLUDE) -DUNIX \
 			-D_XOPEN_SOURCE=600 -D_DEFAULT_SOURCE \
@@ -68,8 +69,6 @@ $(BUILD):
 clean:
 	@echo "[CLEAN]"
 	@rm -rf $(BUILD) $(TFILES) $(OFILES) $(TARGET)
-
-$(TARGET): $(TFILES)
 
 else
 
