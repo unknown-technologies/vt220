@@ -5,7 +5,7 @@
 .el    .IP \(bu 2
 ..
 .
-.TH VT220 "1" "July 2026" "unknown technologies" "User Commands"
+.TH VT220 "1" "September 2026" "unknown technologies" "User Commands"
 .
 .SH NAME
 vt220 \- DEC VT220 terminal emulator
@@ -13,7 +13,8 @@ vt220 \- DEC VT220 terminal emulator
 .SH SYNOPSIS
 .B vt220
 [\fI\,OPTION\/\fR]... [\fB\,\-l\fR | \fB\-s\fR \fIcommand\fR |
-\fB\-t\fR \fIhostname\fR \fIport\/\fR]
+\fB\-t\fR \fIhostname\fR \fIport\/\fR | \fB\-y \fI/dev/tty\/\fR |
+\fIhostname\/\fR \fIport\fR | \fI/dev/tty\/\fR [\fIbaud\/\fR]]
 .
 .SH DESCRIPTION
 .\" Add any additional description here
@@ -70,6 +71,12 @@ terminal.
 .TP
 \fB\-s\fR \fI/bin/sh\fR
 execute the program \fI/bin/sh\fR in the terminal emulator.
+.TP
+\fB\-y\fR \fI/dev/ttyS0\fR
+connect the serial line \fI/dev/ttyS0\fR to the terminal emulator.
+.TP
+\fB\-yr\fR \fI9600\fR
+set the baud rate of the serial line to \fI9600\fR.
 .TP
 \fB\-t\fR \fIhost\fR \fIport\fR
 connect to the TELNET server at \fIhost\fR:\fIport\fR.

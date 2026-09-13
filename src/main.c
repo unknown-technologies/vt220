@@ -28,6 +28,7 @@
 #include "telnet.h"
 #ifndef _WIN32
 #include "pty.h"
+#include "tty.h"
 #endif
 
 #define	FPS			60
@@ -35,11 +36,13 @@
 #define	SCREEN_WIDTH		800
 #define	SCREEN_HEIGHT		480
 
+#define	MODE_LOCAL		0
+#define	MODE_TELNET		1
+#define	MODE_PTY		2
+#define	MODE_TTY		3
+
 static bool enable_glow = true;
-static bool use_telnet = false;
-#ifndef _WIN32
-static bool use_pty = false;
-#endif
+static int mode = MODE_LOCAL;
 static bool is_fullscreen = false;
 
 static int screen_width;
@@ -57,6 +60,7 @@ static VTRenderer renderer;
 static TELNET telnet;
 #ifndef _WIN32
 static PTY pty;
+static TTY tty;
 #endif
 
 static unsigned long current_time = 0;
@@ -194,15 +198,19 @@ void process(void)
 		dt = 1000;
 	}
 
-	if(use_telnet) {
-		TELNETPoll(&telnet);
-	}
-
+	switch(mode) {
+		case MODE_TELNET:
+			TELNETPoll(&telnet);
+			break;
 #ifndef _WIN32
-	if(use_pty) {
-		PTYPoll(&pty);
-	}
+		case MODE_PTY:
+			PTYPoll(&pty);
+			break;
+		case MODE_TTY:
+			TTYPoll(&tty);
+			break;
 #endif
+	}
 
 	VT220Process(&vt, dt);
 	VTProcess(&renderer, dt);
@@ -461,6 +469,93 @@ static void pty_resize(unsigned int width, unsigned int height)
 	resize(width, height);
 	PTYResize(&pty, width, height);
 }
+
+static void tty_tx(unsigned char c)
+{
+	TTYSend(&tty, c);
+}
+
+static void tty_brk(void)
+{
+	TTYBreak(&tty);
+}
+
+static void tty_resize(unsigned int width, unsigned int height)
+{
+	resize(width, height);
+	TTYResize(&tty, width, height);
+}
+
+static void tty_update_baudrate(unsigned int rx, unsigned int tx)
+{
+	TTYSetBaudRate(&tty, rx, tx);
+}
+
+static void tty_update_flowcontrol(int enable)
+{
+	TTYSetFlowControl(&tty, enable);
+}
+
+static void tty_update_format(unsigned int format, unsigned int stopbits)
+{
+	unsigned int data;
+	unsigned int stop = stopbits == VT220_COMM_2_STOP_BITS ? 2 : 1;
+	unsigned int parity;
+
+	switch(format) {
+		default:
+		case VT220_COMM_8BIT_NO_PARITY:
+			data = 8;
+			parity = TTY_PARITY_NONE;
+			break;
+		case VT220_COMM_8BIT_EVEN_PARITY:
+			data = 8;
+			parity = TTY_PARITY_EVEN;
+			break;
+		case VT220_COMM_8BIT_ODD_PARITY:
+			data = 8;
+			parity = TTY_PARITY_ODD;
+			break;
+		case VT220_COMM_7BIT_NO_PARITY:
+			data = 7;
+			parity = TTY_PARITY_NONE;
+			break;
+		case VT220_COMM_7BIT_EVEN_PARITY:
+			data = 7;
+			parity = TTY_PARITY_EVEN;
+			break;
+		case VT220_COMM_7BIT_ODD_PARITY:
+			data = 7;
+			parity = TTY_PARITY_ODD;
+			break;
+		case VT220_COMM_7BIT_MARK_PARITY:
+			data = 7;
+			parity = TTY_PARITY_MARK;
+			break;
+		case VT220_COMM_7BIT_SPACE_PARITY:
+			data = 7;
+			parity = TTY_PARITY_SPACE;
+			break;
+		case VT220_COMM_7BIT_EVEN_PARITY_NO_CHECK:
+			data = 7;
+			parity = TTY_PARITY_EVEN_NOCHK;
+			break;
+		case VT220_COMM_7BIT_ODD_PARITY_NO_CHECK:
+			data = 7;
+			parity = TTY_PARITY_ODD_NOCHK;
+			break;
+		case VT220_COMM_8BIT_EVEN_PARITY_NO_CHECK:
+			data = 8;
+			parity = TTY_PARITY_EVEN_NOCHK;
+			break;
+		case VT220_COMM_8BIT_ODD_PARITY_NO_CHECK:
+			data = 8;
+			parity = TTY_PARITY_ODD_NOCHK;
+			break;
+	}
+
+	TTYSetFormat(&tty, data, stop, parity);
+}
 #endif
 
 static void print_usage(const char* self)
@@ -484,6 +579,8 @@ static void print_usage(const char* self)
 		"  -l            Loopback / local mode\n"
 #ifndef _WIN32
 		"  -s /bin/sh    Execute /bin/sh in the terminal\n"
+		"  -y /dev/ttyS0 Connect the terminal to the serial line /dev/ttyS0\n"
+		"  -yr 9600      Set baud rate to 9600\n"
 #endif
 		"  -t host port  Establish TELNET connection to host:port\n"
 		"  -u            Unlimited FPS\n"
@@ -538,6 +635,7 @@ int main(int argc, char** argv, char** envp)
 	const char* self = *argv;
 	char** shell = NULL;
 	const char* hostname = NULL;
+	const char* serial = NULL;
 	int port;
 	bool loopback = false;
 	float focus = 0.75f;
@@ -546,6 +644,9 @@ int main(int argc, char** argv, char** envp)
 	bool simple_phosphor = false;
 	bool unlimited_fps = false;
 	bool buffering = false;
+#ifndef _WIN32
+	int baud = -1;
+#endif
 
 	unsigned int color = VT220_SCREEN_COLOR_GREEN;
 
@@ -619,18 +720,50 @@ int main(int argc, char** argv, char** envp)
 			simple_phosphor = true;
 		} else if(!strcmp(arg, "-b")) {
 			buffering = true;
-		} else {
-			if(i + 2 > argc) {
+#ifndef _WIN32
+		} else if(!strcmp(arg, "-y")) {
+			if(i + 1 >= argc) {
 				print_usage(self);
 				return 1;
 			}
-			hostname = argv[i];
-			port = atoi(argv[i + 1]);
-			break;
+			serial = argv[i + 1];
+			i++;
+		} else if(!strcmp(arg, "-yr")) {
+			if(i + 1 >= argc) {
+				print_usage(self);
+				return 1;
+			} else {
+				baud = atoi(argv[i + 1]);
+				i += 1;
+			}
+#endif
+		} else {
+			if(i + 1 == argc) {
+				serial = argv[i];
+				break;
+			} else if(i + 2 > argc) {
+				print_usage(self);
+				return 1;
+			} else {
+				hostname = argv[i];
+				port = atoi(argv[i + 1]);
+
+#ifndef _WIN32
+				/* is this a TTY? */
+				if(access(hostname, R_OK | W_OK) == 0) {
+					/* yes, treat it as TTY */
+					serial = hostname;
+					baud = port;
+					hostname = NULL;
+				}
+#endif
+
+				break;
+			}
 		}
 	}
 
-	if(!loopback && !hostname && !shell) {
+	if(!loopback && !hostname && !shell && !serial) {
 #ifdef _WIN32
 		/* no args => loopback */
 		loopback = true;
@@ -717,9 +850,8 @@ int main(int argc, char** argv, char** envp)
 
 	if(hostname) {
 		char buf[256];
-		use_telnet = true;
+		mode = MODE_TELNET;
 
-		VT220ReceiveText(&vt, "\x9b" "2J\x9bH\x9b" "12h\x9b?7h");
 		snprintf(buf, 256, "Connecting to %s on port %d\r\n", hostname, port);
 		buf[255] = 0;
 		VT220ReceiveText(&vt, buf);
@@ -734,9 +866,7 @@ int main(int argc, char** argv, char** envp)
 		TELNETConnect(&telnet, hostname, port);
 #ifndef _WIN32
 	} else if(shell) {
-		use_pty = true;
-
-		VT220ReceiveText(&vt, "\x9b" "2J\x9bH\x9b" "12h\x9b?7h");
+		mode = MODE_PTY;
 
 		PTYInit(&pty);
 		PTYOpen(&pty, shell, envp);
@@ -747,7 +877,33 @@ int main(int argc, char** argv, char** envp)
 		vt.brk = pty_brk;
 		vt.resize = pty_resize;
 		vt.flowcontrol = vt_flowcontrol_nop;
+	} else if(serial) {
+		mode = MODE_TTY;
+
+		TTYInit(&tty);
+		TTYOpen(&tty, serial);
+
+		if(baud != -1) {
+			VT220SetBaudRate(&vt, baud, baud);
+		}
+
+		tty.rx = vt_rx;
+		tty.rxe = vt_rxe;
+		vt.rx = tty_tx;
+		vt.brk = tty_brk;
+		vt.resize = tty_resize;
+		vt.flowcontrol = vt_flowcontrol_nop;
+		vt.update_baudrate = tty_update_baudrate;
+		vt.update_flowcontrol = tty_update_flowcontrol;
+		vt.update_format = tty_update_format;
 #endif
+	}
+
+	VT220InitComm(&vt);
+
+	/* set window size of connected device */
+	if(vt.resize) {
+		vt.resize(vt.columns, vt.lines);
 	}
 
 	current_time = get_time();
@@ -826,6 +982,17 @@ int main(int argc, char** argv, char** envp)
 
 	glfwDestroyWindow(window);
 	glfwTerminate();
+
+	switch(mode) {
+		case MODE_TELNET:
+			TELNETDisconnect(&telnet);
+			break;
+#ifndef _WIN32
+		case MODE_TTY:
+			TTYClose(&tty);
+			break;
+#endif
+	}
 
 	return 0;
 }

@@ -1281,9 +1281,11 @@ void VT220SetupCommEnter(VT220* vt)
 					break;
 				case 2:
 					vt->config.tx_baud_rate = VT220GetNextBaudRate(vt->config.tx_baud_rate, 0);
+					VT220iUpdateBaudRate(vt);
 					break;
 				case 3:
 					vt->config.rx_baud_rate = VT220GetNextBaudRate(vt->config.rx_baud_rate, 1);
+					VT220iUpdateBaudRate(vt);
 					break;
 			}
 			break;
@@ -1297,16 +1299,19 @@ void VT220SetupCommEnter(VT220* vt)
 						case 128:
 							vt->use_xoff = 0;
 							vt->xoff_point = 0;
+							VT220iUpdateFlowControl(vt);
 							break;
 						case 0:
 							vt->use_xoff = 1;
 							vt->xoff_point = 64;
+							VT220iUpdateFlowControl(vt);
 							break;
 					}
 					VT220SetupShowScreen(vt);
 					break;
 				case 1:
 					vt->config.format = (vt->config.format + 1) % 12;
+					VT220iUpdateFormat(vt);
 					break;
 				case 2:
 					if(vt->config.stop_bits == VT220_COMM_1_STOP_BIT) {
@@ -1314,6 +1319,7 @@ void VT220SetupCommEnter(VT220* vt)
 					} else {
 						vt->config.stop_bits = VT220_COMM_1_STOP_BIT;
 					}
+					VT220iUpdateFormat(vt);
 					break;
 				case 3:
 					vt->mode ^= SRM;

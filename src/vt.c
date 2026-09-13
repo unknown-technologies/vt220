@@ -1149,6 +1149,15 @@ void VT220SetLineMode(VT220* vt, int mode)
 	}
 }
 
+void VT220InitComm(VT220* vt)
+{
+	/* configure serial line */
+	VT220iUpdateBaudRate(vt);
+	VT220iUpdateFlowControl(vt);
+	VT220iUpdateFormat(vt);
+
+}
+
 void VT220ClearComm(VT220* vt)
 {
 	vt->state = 0;
@@ -4350,4 +4359,41 @@ void VT220SetScreenColor(VT220* vt, unsigned int color)
 void VT220SetBuffering(VT220* vt, int enable)
 {
 	vt->enable_buffering = enable;
+}
+
+void VT220iUpdateBaudRate(VT220* vt)
+{
+	if(vt->update_baudrate) {
+		unsigned int tx = vt->config.tx_baud_rate;
+		unsigned int rx = vt->config.rx_baud_rate;
+		if(rx == 0) {
+			rx = tx;
+		}
+		vt->update_baudrate(rx, tx);
+	}
+}
+
+void VT220iUpdateFlowControl(VT220* vt)
+{
+	if(vt->update_flowcontrol) {
+		vt->update_flowcontrol(vt->use_xoff);
+	}
+}
+
+void VT220iUpdateFormat(VT220* vt)
+{
+	if(vt->update_format) {
+		vt->update_format(vt->config.format, vt->config.stop_bits);
+	}
+}
+
+void VT220SetBaudRate(VT220* vt, unsigned int rx, unsigned int tx)
+{
+	if(rx == tx) {
+		vt->config.rx_baud_rate = 0;
+		vt->config.tx_baud_rate = tx;
+	} else {
+		vt->config.rx_baud_rate = rx;
+		vt->config.tx_baud_rate = tx;
+	}
 }

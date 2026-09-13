@@ -388,6 +388,10 @@ typedef struct {
 	void		(*brk)(void);
 	void		(*flowcontrol)(int);
 	void		(*resize)(unsigned int width, unsigned int height);
+
+	void		(*update_baudrate)(unsigned int rx, unsigned int tx);
+	void		(*update_flowcontrol)(int enable);
+	void		(*update_format)(unsigned int format, unsigned int stop);
 } VT220;
 
 #define	CHARSET_ASCII			0
@@ -571,6 +575,8 @@ void VT220FlowControl(VT220* vt, int start);
 void VT220PauseInput(VT220* vt, int pause);
 int  VT220CanReceive(VT220* vt);
 void VT220SetBuffering(VT220* vt, int enable);
+void VT220InitComm(VT220* vt);
+void VT220SetBaudRate(VT220* vt, unsigned int rx, unsigned int tx);
 
 /* keyboard */
 void VT220InitKeyboard(VT220* vt);
@@ -583,5 +589,10 @@ void VT220KeyboardProcess(VT220* vt, unsigned long dt);
 void VT220EnterSetup(VT220* vt);
 void VT220LeaveSetup(VT220* vt);
 void VT220SetupProcessKey(VT220* vt, u16 key);
+
+/* internal comm configuration functions */
+void VT220iUpdateBaudRate(VT220* vt);
+void VT220iUpdateFlowControl(VT220* vt);
+void VT220iUpdateFormat(VT220* vt);
 
 #endif
