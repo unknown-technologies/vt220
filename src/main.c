@@ -24,6 +24,7 @@
 
 #include "types.h"
 #include "vt.h"
+#include "config.h"
 #include "renderer.h"
 #include "telnet.h"
 #ifndef _WIN32
@@ -831,8 +832,12 @@ int main(int argc, char** argv, char** envp)
 	VT220SetBuffering(&vt, buffering);
 	vt.rx = print_ch;
 	vt.resize = resize;
+	vt.save_config = CFGSaveState;
 
 	VTInitRenderer(&renderer, &vt);
+
+	CFGLoadState(&vt);
+
 	VTEnableGlow(&renderer, enable_glow);
 	VTSetRaw(&renderer, rawmode);
 	VTSetSimplePhosphor(&renderer, simple_phosphor);

@@ -1104,6 +1104,10 @@ void VT220SetupDirectoryEnter(VT220* vt)
 					VT220SetupShow(vt);
 					VT220SetupShowDone(vt);
 					break;
+				case 5: /* Save */
+					VT220SaveConfig(vt);
+					VT220SetupShowDone(vt);
+					break;
 			}
 			break;
 		case 2:
@@ -1111,6 +1115,11 @@ void VT220SetupDirectoryEnter(VT220* vt)
 				case 1: /* Keyboard language */
 					vt->config.keyboard = (vt->config.keyboard + 1) % VT220_KEYBOARD_COUNT;
 					VT220SetupShow(vt);
+					break;
+				case 2: /* Defaults */
+					VT220LoadDefaults(vt);
+					VT220SetupShow(vt);
+					VT220SetupShowDone(vt);
 					break;
 				case 3: /* Exit */
 					VT220LeaveSetup(vt);

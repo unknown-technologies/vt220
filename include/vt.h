@@ -10,6 +10,8 @@
 #define	ASSERT(x)
 #endif
 
+#include "types.h"
+
 #define	VT220_SCREEN_COLOR_GREEN		0
 #define	VT220_SCREEN_COLOR_WHITE		1
 #define	VT220_SCREEN_COLOR_AMBER		2
@@ -119,12 +121,14 @@
 #define	VT220_KEYBOARD_SPANISH			15
 #define	VT220_KEYBOARD_COUNT			16
 
+#define	VT220_COLUMNS_80			0
+#define	VT220_COLUMNS_132			1
+
 #define	VT220_CONTROLS_INTERPRET_CONTROLS	0
 #define	VT220_CONTROLS_DISPLAY_CONTROLS		1
 
-#define	VT220_SCROLL_SMOOTH_SCROLL		0
-#define	VT220_SCROLL_JUMP_SCROLL		1
-#define	VT220_SCROLL_NO_SCROLL			2
+#define	VT220_SCROLL_JUMP_SCROLL		0
+#define	VT220_SCROLL_SMOOTH_SCROLL		1
 
 #define	VT220_TEXT_LIGHT_TEXT			0
 #define	VT220_TEXT_DARK_TEXT			1
@@ -221,42 +225,52 @@
 #define	VT220_ANSWERBACK_CONCEALED		1
 
 typedef struct {
-	unsigned int	rx_baud_rate;
-	unsigned int	tx_baud_rate;
-	char		stop_bits;
-	char		format;
-	char		port;
-	char		delay;
+	u32		rx_baud_rate;
+	u32		tx_baud_rate;
 
-	char		local;
-	char		language;
-	char		keyboard;
-	char		columns;
-	char		controls;
-	char		auto_wrap;
-	char		scroll;
-	char		text;
-	char		display;
-	char		text_cursor;
-	char		cursor_style;
-	char		mode;
-	char		vt100_terminal_id;
-	char		user_features;
-	char		character_set_mode;
-	char		keypad;
-	char		cursor_keys;
-	char		new_line;
-	char		xoff;
-	char		local_echo;
-	char		transmit;
-	char		keys;
-	char		lock;
-	char		auto_repeat;
-	char		keyclick;
-	char		margin_bell;
-	char		bell;
-	char		brk;
-	char		concealed;
+	unsigned char	format:4;
+	unsigned char	port:2;
+	unsigned char	stop_bits:1;
+	unsigned char	delay:1;
+
+	unsigned char	language:2;
+	unsigned char	keyboard:4;
+	unsigned char	local:1;
+	unsigned char	columns:1;
+
+	unsigned char	controls:1;
+	unsigned char	auto_wrap:1;
+	unsigned char	scroll:1;
+	unsigned char	text:1;
+	unsigned char	text_cursor:1;
+	unsigned char	cursor_style:1;
+	unsigned char	vt100_terminal_id:2;
+
+	unsigned char	mode:4;
+	unsigned char	user_features:1;
+	unsigned char	character_set_mode:1;
+	unsigned char	keypad:1;
+	unsigned char	cursor_keys:1;
+
+	unsigned char	new_line:1;
+	unsigned char	xoff:2;
+	unsigned char	local_echo:1;
+	unsigned char	transmit:1;
+	unsigned char	keys:1;
+	unsigned char	lock:1;
+	unsigned char	auto_repeat:1;
+
+	unsigned char	keyclick:1;
+	unsigned char	margin_bell:1;
+	unsigned char	bell:1;
+	unsigned char	brk:1;
+	unsigned char	concealed:1;
+
+	unsigned char	magic[3];
+
+	unsigned char	tabstops[17];	/* 132 / 8 = 16.5 */
+
+	char		answerback[30];
 } VT220NVR;
 
 typedef struct {
@@ -375,6 +389,7 @@ typedef struct {
 
 	/* configuration */
 	VT220NVR	config;
+	VT220NVR	config_nvr;
 	unsigned int	screen_color;
 
 	/* setup screens  */
@@ -392,6 +407,8 @@ typedef struct {
 	void		(*update_baudrate)(unsigned int rx, unsigned int tx);
 	void		(*update_flowcontrol)(int enable);
 	void		(*update_format)(unsigned int format, unsigned int stop);
+
+	void		(*save_config)(const VT220NVR* nvr);
 } VT220;
 
 #define	CHARSET_ASCII			0
@@ -577,6 +594,9 @@ int  VT220CanReceive(VT220* vt);
 void VT220SetBuffering(VT220* vt, int enable);
 void VT220InitComm(VT220* vt);
 void VT220SetBaudRate(VT220* vt, unsigned int rx, unsigned int tx);
+void VT220LoadDefaults(VT220* vt);
+void VT220SaveConfig(VT220* vt);
+int  VT220LoadConfig(VT220* vt, const VT220NVR* nvr);
 
 /* keyboard */
 void VT220InitKeyboard(VT220* vt);

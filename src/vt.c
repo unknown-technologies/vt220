@@ -58,12 +58,13 @@
 #define	STATE_DECDLD_ERR_ESC	26
 #define	STATE_MAX		STATE_DECDLD_ERR_ESC
 
-static const VT220NVR default_config = { .tx_baud_rate = 4800, 0 };
+static const VT220NVR default_config = { .magic = { 'N', 'V', 'R' }, .tx_baud_rate = 4800, 0 };
+
+static void VT220iSaveConfig(const VT220* vt, VT220NVR* nvr);
 
 void VT220Init(VT220* vt)
 {
 	vt->cursor_time = 0;
-	vt->config = default_config;
 	vt->screen_color = VT220_SCREEN_COLOR_GREEN;
 
 	vt->scroll_time = 0;
@@ -104,17 +105,11 @@ void VT220Init(VT220* vt)
 	memset(vt->setup.text, 0, 8 * TEXT_WIDTH_MAX * sizeof(VT220CELL));
 	memset(vt->setup.line_attributes, 0, 8);
 
-	/* reset config */
-	vt->config.user_features = VT220_USER_FEATURES_UNLOCKED;
-	vt->config.mode = VT220_MODE_VT200_MODE_7BIT_CONTROLS;
-	vt->config.auto_wrap = true;
-	vt->config.text_cursor = VT220_TEXT_CURSOR;
-	vt->config.new_line = VT220_NO_NEW_LINE;
-	vt->config.local_echo = VT220_NO_LOCAL_ECHO;
-	vt->config.auto_repeat = VT220_AUTO_REPEAT;
-
 	VT220InitKeyboard(vt);
-	VT220HardReset(vt);
+
+	/* reset config */
+	VT220LoadDefaults(vt);
+	VT220iSaveConfig(vt, &vt->config_nvr);
 }
 
 static inline unsigned int VT220GetCellWidth(VT220* vt)
@@ -1185,8 +1180,7 @@ void VT220ClearComm(VT220* vt)
 /* DECSTR: page 129 */
 void VT220SoftReset(VT220* vt)
 {
-	int i;
-	for(i = 0; i < TEXT_WIDTH_MAX; i++) {
+	for(int i = 0; i < TEXT_WIDTH_MAX; i++) {
 		vt->tabstops[i] = i % 8 == 7;
 	}
 
@@ -1227,24 +1221,33 @@ void VT220SoftReset(VT220* vt)
 }
 
 /* RIS */
-void VT220HardReset(VT220* vt)
+static void VT220iHardReset(VT220* vt, const VT220NVR* nvr)
 {
+	if(nvr != &vt->config) {
+		memcpy(&vt->config, nvr, sizeof(VT220NVR));
+	}
+
 	int old_columns = vt->columns;
 
-	vt->columns = TEXT_WIDTH;
-	vt->mode = 0;
+	if(nvr->columns == VT220_COLUMNS_132) {
+		vt->mode = DECCOLM;
+		vt->columns = TEXT_WIDTH_MAX;
+	} else {
+		vt->columns = TEXT_WIDTH;
+		vt->mode = 0;
+	}
 
 	VT220SoftReset(vt);
 
 	vt->state = 0;
-	vt->mode = 0;
-	vt->ct_7bit = vt->config.mode != VT220_MODE_VT200_MODE_8BIT_CONTROLS;
+	vt->mode = nvr->columns == VT220_COLUMNS_132 ? DECCOLM : 0;
+	vt->ct_7bit = nvr->mode != VT220_MODE_VT200_MODE_8BIT_CONTROLS;
 
-	if(vt->config.mode != VT220_MODE_VT52_MODE) {
+	if(nvr->mode != VT220_MODE_VT52_MODE) {
 		vt->mode |= DECANM;
 	}
 
-	switch(vt->config.mode) {
+	switch(nvr->mode) {
 		case VT220_MODE_VT200_MODE_7BIT_CONTROLS:
 		case VT220_MODE_VT200_MODE_8BIT_CONTROLS:
 		case VT220_MODE_VT52_MODE:
@@ -1255,40 +1258,79 @@ void VT220HardReset(VT220* vt)
 			break;
 	}
 
-	if(vt->config.auto_wrap) {
+	if(nvr->auto_wrap) {
 		vt->mode |= DECAWM;
 	} else {
 		vt->mode &= ~DECAWM;
 	}
 
-	if(vt->config.text_cursor == VT220_TEXT_CURSOR) {
+	if(nvr->text_cursor == VT220_TEXT_CURSOR) {
 		vt->mode |= DECTCEM;
 	} else {
 		vt->mode &= ~DECTCEM;
 	}
 
-	if(vt->config.new_line == VT220_NEW_LINE) {
+	if(nvr->new_line == VT220_NEW_LINE) {
 		vt->mode |= LNM;
 	} else {
 		vt->mode &= ~LNM;
 	}
 
-	if(vt->config.local_echo == VT220_NO_LOCAL_ECHO) {
+	if(nvr->local_echo == VT220_NO_LOCAL_ECHO) {
 		vt->mode |= SRM;
 	} else {
 		vt->mode &= ~SRM;
 	}
 
-	if(vt->config.auto_repeat == VT220_AUTO_REPEAT) {
+	if(nvr->auto_repeat == VT220_AUTO_REPEAT) {
 		vt->mode |= DECARM;
 	} else {
 		vt->mode &= ~DECARM;
+	}
+
+	if(nvr->text == VT220_TEXT_DARK_TEXT) {
+		vt->mode |= DECSCNM;
+	} else {
+		vt->mode &= ~DECSCNM;
+	}
+
+	if(nvr->scroll == VT220_SCROLL_SMOOTH_SCROLL) {
+		vt->mode |= DECSCLM;
+	} else {
+		vt->mode &= ~DECSCLM;
+	}
+
+	if(nvr->keypad == VT220_KEYPAD_APPLICATION) {
+		vt->mode |= KAM;
+	} else {
+		vt->mode &= ~KAM;
+	}
+
+	if(nvr->cursor_keys == VT220_CURSOR_KEYS_APPLICATION) {
+		vt->mode |= DECCKM;
+	} else {
+		vt->mode &= ~DECCKM;
 	}
 
 	vt->xoff = 0;
 	vt->xoff_point = 64;
 	vt->xon_point = 32;
 	vt->use_xoff = 1;
+
+	switch(nvr->xoff) {
+		case VT220_XOFF_OFF:
+			vt->use_xoff = 0;
+			vt->xoff_point = 0;
+			break;
+		case VT220_XOFF_64:
+			vt->use_xoff = 1;
+			vt->xoff_point = 64;
+			break;
+		case VT220_XOFF_128:
+			vt->use_xoff = 1;
+			vt->xoff_point = 128;
+			break;
+	}
 
 	vt->margin_top = 0;
 	vt->margin_bottom = TEXT_HEIGHT - 1;
@@ -1315,12 +1357,26 @@ void VT220HardReset(VT220* vt)
 	VT220EraseScreen(vt);
 	VT220SaveCursor(vt);
 
-	/* TODO: implement properly */
-	memset(vt->answerback, 0, 31);
+	memcpy(vt->answerback, nvr->answerback, 30);
+	vt->answerback[30] = 0;
+
+	memset(vt->tabstops, 0, TEXT_WIDTH_MAX);
+	for(int i = 0; i < TEXT_WIDTH_MAX; i++) {
+		int byte = i / 8;
+		int bit = i % 8;
+		if(nvr->tabstops[byte] & (1 << bit)) {
+			vt->tabstops[i] = 1;
+		}
+	}
 
 	if(vt->resize && vt->columns != old_columns) {
 		vt->resize(vt->columns, vt->lines);
 	}
+}
+
+void VT220HardReset(VT220* vt)
+{
+	VT220iHardReset(vt, &vt->config_nvr);
 }
 
 unsigned int VT220GetUDKNumber(unsigned int key)
@@ -4396,4 +4452,91 @@ void VT220SetBaudRate(VT220* vt, unsigned int rx, unsigned int tx)
 		vt->config.rx_baud_rate = rx;
 		vt->config.tx_baud_rate = tx;
 	}
+}
+
+static void VT220iSaveConfig(const VT220* vt, VT220NVR* nvr)
+{
+	*nvr = vt->config;
+
+	if(!(vt->mode & DECANM)) {
+		nvr->mode = VT220_MODE_VT52_MODE;
+	} else if(vt->vt100_mode) {
+		nvr->mode = VT220_MODE_VT100_MODE;
+	} else if(vt->ct_7bit) {
+		nvr->mode = VT220_MODE_VT200_MODE_7BIT_CONTROLS;
+	} else {
+		nvr->mode = VT220_MODE_VT200_MODE_8BIT_CONTROLS;
+	}
+
+	nvr->auto_wrap = !!(vt->mode & DECAWM);
+	nvr->text_cursor = (vt->mode & DECTCEM) ? VT220_TEXT_CURSOR : VT220_NO_TEXT_CURSOR;
+	nvr->new_line = (vt->mode & LNM) ? VT220_NEW_LINE : VT220_NO_NEW_LINE;
+	nvr->local_echo = (vt->mode & SRM) ? VT220_NO_LOCAL_ECHO : VT220_LOCAL_ECHO;
+	nvr->auto_repeat = (vt->mode & DECARM) ? VT220_AUTO_REPEAT : VT220_NO_AUTO_REPEAT;
+	nvr->scroll = (vt->mode & DECSCLM) ? VT220_SCROLL_SMOOTH_SCROLL : VT220_SCROLL_JUMP_SCROLL;
+	nvr->text = (vt->mode & DECSCNM) ? VT220_TEXT_DARK_TEXT : VT220_TEXT_LIGHT_TEXT;
+	nvr->columns = (vt->mode & DECCOLM) ? VT220_COLUMNS_132 : VT220_COLUMNS_80;
+	nvr->keypad = (vt->mode & KAM) ? VT220_KEYPAD_APPLICATION : VT220_KEYPAD_NUMERIC;
+	nvr->cursor_keys = (vt->mode & DECCKM) ? VT220_CURSOR_KEYS_APPLICATION : VT220_CURSOR_KEYS_NORMAL;
+
+	switch(vt->xoff_point) {
+		case 0:
+			nvr->xoff = VT220_XOFF_OFF;
+			break;
+		case 64:
+			nvr->xoff = VT220_XOFF_64;
+			break;
+		case 128:
+			nvr->xoff = VT220_XOFF_128;
+			break;
+	}
+
+	memset(nvr->tabstops, 0, sizeof(nvr->tabstops));
+	for(int i = 0; i < TEXT_WIDTH_MAX; i++) {
+		if(vt->tabstops[i]) {
+			int byte = i / 8;
+			int bit = i % 8;
+			nvr->tabstops[byte] |= 1 << bit;
+		}
+	}
+
+	memcpy(nvr->answerback, vt->answerback, 30);
+}
+
+void VT220LoadDefaults(VT220* vt)
+{
+	vt->config = default_config;
+
+	vt->config.user_features = VT220_USER_FEATURES_UNLOCKED;
+	vt->config.mode = VT220_MODE_VT200_MODE_7BIT_CONTROLS;
+	vt->config.auto_wrap = true;
+	vt->config.text_cursor = VT220_TEXT_CURSOR;
+	vt->config.new_line = VT220_NO_NEW_LINE;
+	vt->config.local_echo = VT220_NO_LOCAL_ECHO;
+	vt->config.auto_repeat = VT220_AUTO_REPEAT;
+
+	memset(vt->config.tabstops, 0x80, sizeof(vt->config.tabstops));
+
+	VT220iHardReset(vt, &vt->config);
+}
+
+void VT220SaveConfig(VT220* vt)
+{
+	VT220iSaveConfig(vt, &vt->config_nvr);
+
+	if(vt->save_config) {
+		vt->save_config(&vt->config_nvr);
+	}
+}
+
+int VT220LoadConfig(VT220* vt, const VT220NVR* nvr)
+{
+	if(memcmp(nvr->magic, default_config.magic, 3)) {
+		return false;
+	}
+
+	memcpy(&vt->config_nvr, nvr, sizeof(VT220NVR));
+	VT220HardReset(vt);
+
+	return true;
 }
