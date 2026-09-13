@@ -260,11 +260,13 @@ void VTRenderTerminal(VTRenderer* self)
 		glBindTexture(GL_TEXTURE_2D, self->vt_tex);
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, SCREEN_HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
 	}
+	GL_ERROR();
 
 	// PASS 0: render VT220 screen to texture
 	glBindFramebuffer(GL_FRAMEBUFFER, self->vt_fb);
 	glClear(GL_COLOR_BUFFER_BIT);
 	glViewport(0, 0, width, SCREEN_HEIGHT);
+	GL_ERROR();
 
 	glUseProgram(self->vt_shader);
 
@@ -299,6 +301,7 @@ void VTRenderTerminal(VTRenderer* self)
 	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, TEXT_HEIGHT, 1, GL_RED_INTEGER, GL_UNSIGNED_BYTE,
 			(GLvoid*) self->vt->line_attributes);
 	glUniform1i(self->vt_shader_line_attributes, 3);
+	GL_ERROR();
 
 	glActiveTexture(GL_TEXTURE4);
 	glBindTexture(GL_TEXTURE_2D, self->setup_text_tex);
@@ -310,12 +313,14 @@ void VTRenderTerminal(VTRenderer* self)
 				(GLvoid*) self->vt->setup.text);
 	}
 	glUniform1i(self->vt_shader_setup_text, 4);
+	GL_ERROR();
 
 	glActiveTexture(GL_TEXTURE5);
 	glBindTexture(GL_TEXTURE_2D, self->setup_line_attrib_tex);
 	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, SETUP_TEXT_HEIGHT, 1, GL_RED_INTEGER, GL_UNSIGNED_BYTE,
 			(GLvoid*) self->vt->setup.line_attributes);
 	glUniform1i(self->vt_shader_setup_line_attributes, 5);
+	GL_ERROR();
 
 	glActiveTexture(GL_TEXTURE6);
 	glBindTexture(GL_TEXTURE_2D, self->scroll_tex);
@@ -327,6 +332,7 @@ void VTRenderTerminal(VTRenderer* self)
 				(GLvoid*) self->vt->scroll_text);
 	}
 	glUniform1i(self->vt_shader_scroll_text, 6);
+	GL_ERROR();
 
 	glUniform2ui(self->vt_shader_text_size, self->vt->columns, self->vt->lines);
 	glUniform2ui(self->vt_shader_cursor, self->vt->cursor_x, self->vt->cursor_y);
@@ -343,9 +349,11 @@ void VTRenderTerminal(VTRenderer* self)
 	glUniform1f(self->vt_shader_scroll_time, self->vt->scroll_time / 1000.0f);
 	glUniform1ui(self->vt_shader_margin_top, self->vt->margin_top);
 	glUniform1ui(self->vt_shader_margin_bottom, self->vt->margin_bottom);
+	GL_ERROR();
 
 	glBindVertexArray(self->quad_vao);
 	glDrawArrays(GL_TRIANGLES, 0, QUAD_VTX_CNT);
+	GL_ERROR();
 
 	// unbind textures
 	for(unsigned int i = 0; i < 7; i++) {
