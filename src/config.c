@@ -12,6 +12,7 @@
 /* TODO: on Windows, the state should probably be stored somewhere in the registry */
 
 #ifndef _WIN32
+/* on Linux we try /var/lib/vt220/nvr, $XDG_STATE_HOME/vt220.nvr, $HOME/.vt220.nvr */
 static char* get_state_path(void)
 {
 	if(!access("/var/lib/vt220/nvr", R_OK | W_OK)) {
@@ -31,9 +32,24 @@ static char* get_state_path(void)
 		}
 
 		if(access(xdg_state_home, F_OK)) {
-			/* XDG_CONFIG_HOME does not exist; TODO: create it? */
+			/* XDG_CONFIG_HOME does not exist */
 			free(xdg_state_home);
-			return NULL;
+
+			/* use a dot file in $HOME instead, if $HOME is set */
+			const char* home = getenv("HOME");
+			if(!home) {
+				return NULL;
+			} else {
+				char* state_path = (char*) malloc(strlen(home) + strlen("/.vt220.nvr") + 1);
+				sprintf(state_path, "%s/.vt220.nvr", home);
+				if(access(home, R_OK | W_OK) && access(state_path, R_OK | W_OK)) {
+					/* cannot read/write $HOME nor the file, give up */
+					free(state_path);
+					return NULL;
+				} else {
+					return state_path;
+				}
+			}
 		}
 
 		char* state_path = (char*) malloc(strlen(xdg_state_home) + strlen("/vt220.nvr") + 1);
