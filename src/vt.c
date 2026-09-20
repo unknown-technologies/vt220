@@ -2468,11 +2468,13 @@ void VT220ProcessCharVT220(VT220* vt, unsigned char c)
 					vt->state = STATE_TEXT;
 					VT220Substitute(vt);
 					break;
-				case 'p':
+				case 'p': /* DECSCL */
+					/* NOTE: DECSCL performs a soft reset */
 					switch(vt->parameters[0]) {
 						case 61: /* terminal level 1 */
 							vt->ct_7bit = 1;
 							vt->vt100_mode = 1;
+							VT220SoftReset(vt);
 							break;
 						case 62: /* terminal level 2 */
 							vt->vt100_mode = 0;
@@ -2480,11 +2482,13 @@ void VT220ProcessCharVT220(VT220* vt, unsigned char c)
 								case 0:
 								case 2:
 									vt->ct_7bit = 0;
+									VT220SoftReset(vt);
 									break;
 								default:
 								case 1:
 									/* VT200, 7bit */
 									vt->ct_7bit = 1;
+									VT220SoftReset(vt);
 									break;
 							}
 							break;
@@ -3347,8 +3351,8 @@ void VT220ProcessChar(VT220* vt, unsigned char c)
 
 	vt->cursor_time = 0;
 
-	/* strip MSB in VT52 mode */
-	if(!(vt->mode & DECANM)) {
+	/* strip MSB in VT52/VT100 mode */
+	if(!(vt->mode & DECANM) || vt->vt100_mode) {
 		c &= 0x7F;
 	}
 
@@ -4315,7 +4319,7 @@ void VT220ProcessKey(VT220* vt, u16 key)
 
 	if(vt->in_setup) {
 		VT220SetupProcessKey(vt, key);
-	} else if(vt->mode & DECANM) {
+	} else {
 		switch(key) {
 			/* local function keys */
 			case VT220_KEY_HOLD_SCREEN:
@@ -4323,7 +4327,7 @@ void VT220ProcessKey(VT220* vt, u16 key)
 					vt->hold_screen = !vt->hold_screen;
 					VT220FlowControl(vt, !vt->hold_screen);
 				}
-				break;
+				return;
 			case VT220_KEY_PRINT_SCREEN:
 			case VT220_KEY_DATA_TALK:
 				/* TODO: implement */
@@ -4353,13 +4357,15 @@ void VT220ProcessKey(VT220* vt, u16 key)
 				break;
 		}
 
-		if(vt->vt100_mode) {
-			VT220ProcessKeyVT100(vt, key);
+		if(vt->mode & DECANM) {
+			if(vt->vt100_mode) {
+				VT220ProcessKeyVT100(vt, key);
+			} else {
+				VT220ProcessKeyVT220(vt, key);
+			}
 		} else {
-			VT220ProcessKeyVT220(vt, key);
+			VT220ProcessKeyVT52(vt, key);
 		}
-	} else {
-		VT220ProcessKeyVT52(vt, key);
 	}
 }
 
