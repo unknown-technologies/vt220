@@ -12,9 +12,9 @@ vt220 \- DEC VT220 terminal emulator
 .
 .SH SYNOPSIS
 .B vt220
-[\fI\,OPTION\/\fR]... [\fB\,\-l\fR | \fB\-s\fR \fIcommand\fR |
-\fB\-t\fR \fIhostname\fR \fIport\/\fR | \fB\-y \fI/dev/tty\/\fR |
-\fIhostname\/\fR \fIport\fR | \fI/dev/tty\/\fR [\fIbaud\/\fR]]
+[\fI\,OPTION\/\fR]... [\fB\-l\fR | \fB\-s\fR \fIcommand\fR |
+\fB\-t\fR \fIhostname\fR \fIport\/\fR | \fB\-y \fI\,/dev/tty\/\fR |
+\fIhostname\/\fR \fIport\fR | \fI/dev/tty\/\fR [\fI\,baud\/\fR]]
 .
 .SH DESCRIPTION
 .\" Add any additional description here
@@ -106,7 +106,7 @@ F3 = setup
 .bP
 F4 = fullscreen (toggle)
 .bP
-F5 = send BREAK (TELNET) / SIGINT (PTY)
+F5 = send BREAK (TELNET/TTY) / SIGINT (PTY)
 .bP
 CTRL-F5 = send answerback message
 .
@@ -125,6 +125,17 @@ The X11 display server address.
 .B XDG_STATE_HOME
 The state directory where the NVR image (\(lqsettings\(rq) is stored.
 .
+.SH ADDITIONAL DOCUMENTATION
+The Owner's Manual (available at
+.MR vt220ug 7 )
+describes how to configure and use the terminal. The VT220 Programmer
+Reference Manual (available at
+.MR vt220rm 7 )
+describes the terminal's features and implemented control sequences.
+The Programmer Pocket Guide (available at
+.MR vt220pg 7 )
+provides a brief summary of the Programmer Reference Manual.
+.
 .SH AUTHOR
 Written by unknown.
 .
@@ -136,4 +147,6 @@ DEC VT220's behaivor, use the issue tracker at
 .
 .SH "SEE ALSO"
 .MR telnet 1 ,
-.MR vt240 1
+.MR vt220ug 7 ,
+.MR vt220pg 7 ,
+.MR vt220rm 7

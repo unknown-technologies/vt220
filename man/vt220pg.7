@@ -1,0 +1,2349 @@
+.\" vim:set tw=72 cc=72 spell spelllang=en:
+.\"
+.TH VT220PG 7 "September 2026" "unknown technologies"
+.\"
+.\" FIXME: This is an ugly hack to avoid strange space in tables caused
+.\" by invisible page breaks.
+.\" The hack sets the page size to "very large"
+.\".if n .pl 32767u
+.if n .pl 262144u
+.
+.\" Bulleted paragraph
+.de bP
+.  ie n  .IP \(bu 4
+.  el    .IP \(bu 2
+..
+.
+.\" Numbered paragraph
+.de nP
+.  ie n  .IP \\$1. 4
+.  el    .IP \\$1. 2
+..
+.
+.de nI
+.  ie n  .IP "" 4
+.  el    .IP "" 2
+..
+.
+.\" Bold and italic simultaneously
+.de1 Bi
+.  nop \\f(BI\\$*\\fR \\c
+..
+.
+.\" Sub-subsection, typeset it like a subsection for now
+.de1 SSS
+.  SS \\$*
+..
+.
+.\" Numbered table
+.de1 TBL
+.  SS "Table \\$1  \\$2"
+..
+.
+.\" Numbered figure
+.de1 FIG
+.  SS "Figure \\$1  \\$2"
+..
+.
+.\" Sub-sub-subsection, typeset it like a section with no break
+.de1 SSU
+.  P
+.  B "\\$1" \(em
+..
+.
+.\" various symbols, properly typeset on TTY and UTF-8
+.ie !'\*[.T]'utf8' \{\
+.  ds mu u
+.  ds dg +
+.  ds d2 \(Do
+.  ds oct (8)
+.  ds dec (10)
+.  ds bin (2)
+.  ds hl -
+.  ds vl |
+.  ds elb +
+.  ds erb +
+.  ds elt +
+.  ds ert +
+.  ds xl +
+.  ds lt +
+.  ds rt +
+.  ds tt +
+.  ds bt +
+.  ds -> >
+.  ds <- <
+.  ds ua ^
+.  ds da v
+.  ds error ?
+.\}
+.el \{\
+.  ds mu \(*m
+.  ds dg \[u253C]
+.  ds d2 \[u256A]
+.  ds oct \[u2088]
+.  ds dec \[u2081]\[u2080]
+.  ds bin \[u2082]
+.  ds hl \[u2500]
+.  ds vl \[u2502]
+.  ds elb \[u2514]
+.  ds erb \[u2518]
+.  ds elt \[u250C]
+.  ds ert \[u2510]
+.  ds xl \[u253C]
+.  ds lt \[u251C]
+.  ds rt \[u2524]
+.  ds tt \[u252C]
+.  ds bt \[u2534]
+.  ds -> \[u25BA]
+.  ds <- \[u25C4]
+.  ds ua \[u25B2]
+.  ds da \[u25BC]
+.  ds error \[u2E2E]
+.\}
+..
+.
+.\" TODO: this is ultra hacky, but it works ... at least for now
+.\" The TL/IL/BPC macros are used for tagged/indented lines instead of
+.\" paragraphs. This means there is *no* paragraph break between such
+.\" lines. It is intended for bullet point lists without empty lines
+.\" in-between.
+.\" Since groff updates broke this at some point, there is an if/else
+.\" as well as a fallback which should always work although this
+.\" fallback will not indent wrapped lines.
+.ie d an*break-paragraph \{\
+.  de1 TL
+.  \"  an*break-paragraph
+.    if \\n[.$] .nr an-prevailing-indent (n;\\$1)
+.    if '\\n[.z]'an*paragraph-tag' \{\
+.      an-warn cannot nest .\\$0 or .TQ inside .\\$0; supply a tag
+.      return
+.    \}
+.    nr an*have-paragraph-tag 1
+.    itc 1 an*input-trap
+.    in 0
+.    ll -\\n[an-margin]u
+.    nr an*saved-adjustment-mode \\n[.j]
+.    di an*paragraph-tag
+.    na
+.  .
+.
+.  de1 IL
+.    nr an*enforce-tag-separation 0
+.  \"  an*break-paragraph
+.    ie !\\n[.$] \{\
+.      ne (1v + 1u)
+.      in (\\n[an-margin]u + \\n[an-prevailing-indent]u)
+.    \}
+.    el \{\
+.      ie (\\n[.$] > 1) .TL "\\$2"
+.      el               .TL
+.      nop \&\\$1
+.    \}
+.    nr an*enforce-tag-separation 1
+.  .
+.\}
+.el \{\
+.  ie d an-break-paragraph \{\
+.    de1 TL
+.    \"  an-break-paragraph
+.      if \\n[.$] .nr an-prevailing-indent (n;\\$1)
+.      itc 1 an-input-trap
+.      in 0
+.      if !\\n[an-is-in-diversion] \{\
+.        ll -\\n[an-margin]u
+.        di an-div
+.        na
+.      \}
+.      nr an-is-in-diversion 1
+.    .
+.    de1 IL
+.    \"  an-break-paragraph
+.      ie !\\n[.$] \{\
+.        ne (1v + 1u)
+.        in (\\n[an-margin]u + \\n[an-prevailing-indent]u)
+.      \}
+.      el \{\
+.        ie (\\n[.$] > 1) .TL "\\$2"
+.        el               .TL
+.        nop \&\\$1
+.      \}
+.    .
+.  \}
+.  el \{\
+.    de1 TL
+.      nop \\$*
+.    .
+.    de1 IL
+.      nop \\$1
+.    .
+.  \}
+.\}
+.de BPC
+.IL \(bu 2
+.na
+\\$1
+.br
+.ad
+..
+.
+.SH NAME
+VT220 Programmer Pocket Guide, 2nd Edition (July 1984)
+.
+.
+.\""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+.SH "INTRODUCTION"
+This pocket guide provides a summary of the information contained in the
+.I VT220 Programmer Reference Manual
+(EK-VT220-RM) which you can order from Digital. The guide provides a
+quick reference tool for people with a knowledge of computer programming
+to access the VT220 features.
+.
+.
+.\""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+.SH "CHARACTER ENCODING"
+.SS "7-Bit Code"
+.EX
+
+  BIT   BIT   BIT   BIT   BIT   BIT   BIT
+   7     6     5     4     3     2     1
+\*[elt]\*[hl]\*[hl]\*[hl]\*[hl]\*[hl]\*[tt]\*[hl]\*[hl]\*[hl]\*[hl]\*[hl]\*[tt]\*[hl]\*[hl]\*[hl]\*[hl]\*[hl]\*[tt]\*[hl]\*[hl]\*[hl]\*[hl]\*[hl]\*[tt]\*[hl]\*[hl]\*[hl]\*[hl]\*[hl]\*[tt]\*[hl]\*[hl]\*[hl]\*[hl]\*[hl]\*[tt]\*[hl]\*[hl]\*[hl]\*[hl]\*[hl]\*[ert]
+\*[vl]     \*[vl]     \*[vl]     \*[vl]     \*[vl]     \*[vl]     \*[vl]     \*[vl]
+\*[elb]\*[hl]\*[hl]\*[hl]\*[hl]\*[hl]\*[bt]\*[hl]\*[hl]\*[hl]\*[hl]\*[hl]\*[bt]\*[hl]\*[hl]\*[hl]\*[hl]\*[hl]\*[bt]\*[hl]\*[hl]\*[hl]\*[hl]\*[hl]\*[bt]\*[hl]\*[hl]\*[hl]\*[hl]\*[hl]\*[bt]\*[hl]\*[hl]\*[hl]\*[hl]\*[hl]\*[bt]\*[hl]\*[hl]\*[hl]\*[hl]\*[hl]\*[erb]
+\*[vl]\*[<-]\*[hl]\*[hl]\*[hl]\*[hl]\*[hl]\*[hl]\*[hl]\*[hl]\*[hl]\*[hl]\*[hl]\*[hl]\*[hl]\*[hl]\*[hl]\*[->]\*[vl]\*[<-]\*[hl]\*[hl]\*[hl]\*[hl]\*[hl]\*[hl]\*[hl]\*[hl]\*[hl]\*[hl]\*[hl]\*[hl]\*[hl]\*[hl]\*[hl]\*[hl]\*[hl]\*[hl]\*[hl]\*[hl]\*[hl]\*[->]\*[vl]
+      3 MOST               4 LEAST
+ SIGNIFICANT BITS      SIGNIFICANT BITS
+
+(DECIMAL VALUE IS      (DECIMAL VALUE IS
+COLUMN IN CODE TABLE)  ROW IN CODE TABLE)
+.EE
+.
+.SS "7-Bit ASCII Code Table"
+.TS
+c c cB cB cB cB cB cB cB cB
+c cB c c c c c c c c.
+	COLUMN	0	1	2	3	4	5	6	7
+ROW	BITS	000	001	010	011	100	101	110	111
+_
+.T&
+cB c c c c c c c c c.
+0	0000	NUL	DLE	SP	0	@	P	\`	p
+1	0001	SOH	DC1	!	1	A	Q	a	q
+2	0010	STX	DC2	\(dq	2	B	R	b	r
+3	0011	ETX	DC3	\(sh	3	C	S	c	s
+4	0100	EOT	DC4	\(Do	4	D	T	d	t
+5	0101	ENQ	NAK	%	5	E	U	e	u
+6	0110	ACK	SYN	&	6	F	V	f	v
+7	0111	BEL	ETB	\(aq	7	G	W	g	w
+8	1000	BS	CAN	(	8	H	X	h	x
+9	1001	HT	EM	)	9	I	Y	i	y
+10	1010	LF	SUB	*	:	J	Z	j	z
+11	1011	VT	ESC	+	;	K	[	k	{
+12	1100	FF	FS	,	<	L	\(rs	l	|
+13	1101	CR	GS	\-	\&=	M	]	m	}
+14	1110	SO	RS	.	>	N	\(ha	n	\(ti
+15	1111	SI	US	/	?	O	\&_	o	DEL
+.TE
+.
+.SS "8-Bit Code"
+.EX
+
+  BIT   BIT   BIT   BIT   BIT   BIT   BIT   BIT
+   8     7     6     5     4     3     2     1
+\*[elt]\*[hl]\*[hl]\*[hl]\*[hl]\*[hl]\*[tt]\*[hl]\*[hl]\*[hl]\*[hl]\*[hl]\*[tt]\*[hl]\*[hl]\*[hl]\*[hl]\*[hl]\*[tt]\*[hl]\*[hl]\*[hl]\*[hl]\*[hl]\*[tt]\*[hl]\*[hl]\*[hl]\*[hl]\*[hl]\*[tt]\*[hl]\*[hl]\*[hl]\*[hl]\*[hl]\*[tt]\*[hl]\*[hl]\*[hl]\*[hl]\*[hl]\*[tt]\*[hl]\*[hl]\*[hl]\*[hl]\*[hl]\*[ert]
+\*[vl]     \*[vl]     \*[vl]     \*[vl]     \*[vl]     \*[vl]     \*[vl]     \*[vl]     \*[vl]
+\*[elb]\*[hl]\*[hl]\*[hl]\*[hl]\*[hl]\*[bt]\*[hl]\*[hl]\*[hl]\*[hl]\*[hl]\*[bt]\*[hl]\*[hl]\*[hl]\*[hl]\*[hl]\*[bt]\*[hl]\*[hl]\*[hl]\*[hl]\*[hl]\*[bt]\*[hl]\*[hl]\*[hl]\*[hl]\*[hl]\*[bt]\*[hl]\*[hl]\*[hl]\*[hl]\*[hl]\*[bt]\*[hl]\*[hl]\*[hl]\*[hl]\*[hl]\*[bt]\*[hl]\*[hl]\*[hl]\*[hl]\*[hl]\*[erb]
+\*[vl]\*[<-]\*[hl]\*[hl]\*[hl]\*[hl]\*[hl]\*[hl]\*[hl]\*[hl]\*[hl]\*[hl]\*[hl]\*[hl]\*[hl]\*[hl]\*[hl]\*[hl]\*[hl]\*[hl]\*[hl]\*[hl]\*[hl]\*[->]\*[vl]\*[<-]\*[hl]\*[hl]\*[hl]\*[hl]\*[hl]\*[hl]\*[hl]\*[hl]\*[hl]\*[hl]\*[hl]\*[hl]\*[hl]\*[hl]\*[hl]\*[hl]\*[hl]\*[hl]\*[hl]\*[hl]\*[hl]\*[->]\*[vl]
+         4 MOST                  4 LEAST
+    SIGNIFICANT BITS         SIGNIFICANT BITS
+   
+  (DECIMAL VALUE IS         (DECIMAL VALUE IS
+  COLUMN IN CODE TABLE)     ROW IN CODE TABLE)
+.EE
+.
+.SS "8-Bit Code Table"
+.TS
+tab(@);
+c cB cB cB cB cB cB cB cB cB cB cB cB cB cB cB cB
+cB2 c2 c2 c2 c2 c2 c2 c2 c2 c2 c2 c2 c2 c2 c2 c2 c2.
+@00@01@02@03@04@05@06@07@08@09@10@11@12@13@14@15
+00@NUL@DLE@SP@@@@@@@DCS@///@@@@@
+01@SOH@DC1@@@@@@@@PU1@@@@@@
+02@STX@DC2@@@@@@@@PU2@@@@@@
+03@ETX@DC3@@@@@@@@STS@@@@@@
+04@EOT@DC4@@@@@@@IND@CCH@@@@@@
+05@ENQ@NAK@@@@@@@NEL@MW@@@@@@
+06@ACK@SYN@@@@@@@SSA@SPA@@@@@@
+07@BEL@ETB@@@@@@@ESA@EPA@@@@@@
+08@BS@CAN@@@@@@@HTS@@@@@@@
+09@HT@EM@@@@@@@HTJ@@@@@@@
+10@LF@SUB@@@@@@@VTS@@@@@@@
+11@VT@ESC@@@@@@@PLD@CSI@@@@@@
+12@FF@FS@@@@@@@PLU@ST@@@@@@
+13@CR@GS@@@@@@@RI@OSC@@@@@@
+14@SO@RS@@@@@@@SS2@PM@@@@@@
+15@SI@US@@@@@@DEL@SS3@APC@@@@@@///
+.TE
+.
+.SS "DEC Multinational Character Set (C0 and GL Codes)"
+.TS
+c c cB cB cB cB cB cB cB cB
+c cB c c c c c c c c.
+	COLUMN	0	1	2	3	4	5	6	7
+ROW	BITS	0000	0001	0010	0011	0100	0101	0110	0111
+_
+.T&
+cB c c c c c c c c c.
+0	0000	NUL	DLE	SP	0	@	P	\`	p
+1	0001	SOH	DC1	!	1	A	Q	a	q
+2	0010	STX	DC2	\(dq	2	B	R	b	r
+3	0011	ETX	DC3	\(sh	3	C	S	c	s
+4	0100	EOT	DC4	\(Do	4	D	T	d	t
+5	0101	ENQ	NAK	%	5	E	U	e	u
+6	0110	ACK	SYN	&	6	F	V	f	v
+7	0111	BEL	ETB	\(aq	7	G	W	g	w
+8	1000	BS	CAN	(	8	H	X	h	x
+9	1001	HT	EM	)	9	I	Y	i	y
+10	1010	LF	SUB	*	:	J	Z	j	z
+11	1011	VT	ESC	+	;	K	[	k	{
+12	1100	FF	FS	,	<	L	\(rs	l	|
+13	1101	CR	GS	\-	\&=	M	]	m	}
+14	1110	SO	RS	.	>	N	\(ha	n	\(ti
+15	1111	SI	US	/	?	O	\&_	o	DEL
+.TE
+.
+.SS "DEC Multinational Character Set (C1 and GR Codes)"
+.TS
+c c cB cB cB cB cB cB cB cB
+c cB c c c c c c c c.
+	COLUMN	8	9	10	11	12	13	14	15
+ROW	BITS	1000	1001	1010	1011	1100	1101	1110	1111
+_
+.T&
+cB c c c c c c c c c.
+0	0000		DCS	///	\(de	\(`A		\(`a
+1	0001		PU1	\(r!	\(+-	\('A	\(~N	\('a	\(~n
+2	0010		PU2	\(ct	\(S2	\(^A	\(`O	\(^a	\(`o
+3	0011		STS	\(Po	\(S3	\(~A	\('O	\(~a	\('o
+4	0100	IND	CCH		 	\(:A	\(^O	\(:a	\(^o
+5	0101	NEL	MW	\(Ye 	\(mc	\(oA	\(~O	\(oa	\(~o
+6	0110	SSA	SPA	 	\(ps	\(AE	\(:O	\(ae	\(:o
+7	0111	ESA	EPA	\(sc	\(pc	\(,C	\(OE	\(,c	\(oe
+8	1000	HTS		\(Cs	 	\(`E	\(/O	\(`e	\(/o
+9	1001	HTJ		\(co	\(S1	\('E	\(`U	\('e	\(`u
+10	1010	VTS		\(Of	\(Om	\(^E	\('U	\(^e	\('u
+11	1011	PLD	CSI	\(Fo	\(Fc	\(:E	\(^U	\(:e	\(^u
+12	1100	PLU	ST	 	\(14	\(`I	\(:U	\(`i	\(:u
+13	1101	RI	OSC		\(12	\('I	\(:Y	\('i	\(:y
+14	1110	SS2	PM			\(^I		\(^i
+15	1111	SS3	APC		\(r?	\(:I	\(ss	\(:i	///
+.TE
+.
+.SS "DEC Special Graphics"
+.TS
+c c cB cB cB cB cB cB cB cB
+c cB c c c c c c c c.
+	COLUMN	0	1	2	3	4	5	6	7
+ROW	BITS	000	001	010	011	100	101	110	111
+_
+.T&
+cB c c c c c c c c c.
+0	0000	NUL	DLE	SP	0	@	P	\[u25C6]	\[u23BB]
+1	0001	SOH	DC1	!	1	A	Q	\[u2592]	\[u2500]
+2	0010	STX	DC2	\(dq	2	B	R	\[u2409]	\[u23BC]
+3	0011	ETX	DC3	\(sh	3	C	S	\[u240C]	\[u23BD]
+4	0100	EOT	DC4	\(Do	4	D	T	\[u240D]	\[u251C]
+5	0101	ENQ	NAK	%	5	E	U	\[u240A]	\[u2524]
+6	0110	ACK	SYN	&	6	F	V	\(de	\[u2534]
+7	0111	BEL	ETB	\(aq	7	G	W	\(+-	\[u252C]
+8	1000	BS	CAN	(	8	H	X	\[u2424]	\[u2502]
+9	1001	HT	EM	)	9	I	Y	\[u240B]	\(<=
+10	1010	LF	SUB	*	:	J	Z	\[u2518]	\(>=
+11	1011	VT	ESC	+	;	K	[	\[u2510]	\(*p
+12	1100	FF	FS	,	<	L	\(rs	\[u250C]	\(!=
+13	1101	CR	GS	\-	\&=	M	]	\[u2514]	\(Po
+14	1110	SO	RS	.	>	N	\(ha	\[u253C]	\(pc
+15	1111	SI	US	/	?	O		\[u23BA]	DEL
+.TE
+.
+.SS "British Character Set"
+.TS
+c c cB cB cB cB cB cB cB cB
+c cB c c c c c c c c.
+	COLUMN	0	1	2	3	4	5	6	7
+ROW	BITS	000	001	010	011	100	101	110	111
+_
+.T&
+cB c c c c c c c c c.
+0	0000	NUL	DLE	SP	0	@	P	\`	p
+1	0001	SOH	DC1	!	1	A	Q	a	q
+2	0010	STX	DC2	\(dq	2	B	R	b	r
+3	0011	ETX	DC3	\(Po	3	C	S	c	s
+4	0100	EOT	DC4	\(Do	4	D	T	d	t
+5	0101	ENQ	NAK	%	5	E	U	e	u
+6	0110	ACK	SYN	&	6	F	V	f	v
+7	0111	BEL	ETB	\(aq	7	G	W	g	w
+8	1000	BS	CAN	(	8	H	X	h	x
+9	1001	HT	EM	)	9	I	Y	i	y
+10	1010	LF	SUB	*	:	J	Z	j	z
+11	1011	VT	ESC	+	;	K	[	k	{
+12	1100	FF	FS	,	<	L	\(rs	l	|
+13	1101	CR	GS	\-	\&=	M	]	m	}
+14	1110	SO	RS	.	>	N	\(ha	n	\(ti
+15	1111	SI	US	/	?	O	\&_	o	DEL
+.TE
+.
+.SS "Dutch NRC Set (Dutch Keyboard Selection)"
+.TS
+c c cB cB cB cB cB cB cB cB
+c cB c c c c c c c c.
+	COLUMN	0	1	2	3	4	5	6	7
+ROW	BITS	000	001	010	011	100	101	110	111
+_
+.T&
+cB c c c c c c c c c.
+0	0000	NUL	DLE	SP	0	\(34	P	\`	p
+1	0001	SOH	DC1	!	1	A	Q	a	q
+2	0010	STX	DC2	\(dq	2	B	R	b	r
+3	0011	ETX	DC3	\(Po	3	C	S	c	s
+4	0100	EOT	DC4	\(Do	4	D	T	d	t
+5	0101	ENQ	NAK	%	5	E	U	e	u
+6	0110	ACK	SYN	&	6	F	V	f	v
+7	0111	BEL	ETB	\(aq	7	G	W	g	w
+8	1000	BS	CAN	(	8	H	X	h	x
+9	1001	HT	EM	)	9	I	Y	i	y
+10	1010	LF	SUB	*	:	J	Z	j	z
+11	1011	VT	ESC	+	;	K	\(ij	k	\(ad
+12	1100	FF	FS	,	<	L	\(12	l	\(Fn
+13	1101	CR	GS	\-	\&=	M	|	m	\(14
+14	1110	SO	RS	.	>	N	\(ha	n	'
+15	1111	SI	US	/	?	O	\&_	o	DEL
+.TE
+.
+.SS "Finnish NRC Set (Finnish Keyboard Layout)"
+.TS
+c c cB cB cB cB cB cB cB cB
+c cB c c c c c c c c.
+	COLUMN	0	1	2	3	4	5	6	7
+ROW	BITS	000	001	010	011	100	101	110	111
+_
+.T&
+cB c c c c c c c c c.
+0	0000	NUL	DLE	SP	0	@	P	\('e	p
+1	0001	SOH	DC1	!	1	A	Q	a	q
+2	0010	STX	DC2	\(dq	2	B	R	b	r
+3	0011	ETX	DC3	\(sh	3	C	S	c	s
+4	0100	EOT	DC4	\(Do	4	D	T	d	t
+5	0101	ENQ	NAK	%	5	E	U	e	u
+6	0110	ACK	SYN	&	6	F	V	f	v
+7	0111	BEL	ETB	\(aq	7	G	W	g	w
+8	1000	BS	CAN	(	8	H	X	h	x
+9	1001	HT	EM	)	9	I	Y	i	y
+10	1010	LF	SUB	*	:	J	Z	j	z
+11	1011	VT	ESC	+	;	K	\(:A	k	\(:a
+12	1100	FF	FS	,	<	L	\(:O	l	\(:o
+13	1101	CR	GS	\-	\&=	M	\(oA	m	\(oa
+14	1110	SO	RS	.	>	N	\(:U	n	\(:u
+15	1111	SI	US	/	?	O	\&_	o	DEL
+.TE
+.
+.SS "French NRC Set (Flemish and French/Belgian Keyboard Selections)"
+.TS
+c c cB cB cB cB cB cB cB cB
+c cB c c c c c c c c.
+	COLUMN	0	1	2	3	4	5	6	7
+ROW	BITS	000	001	010	011	100	101	110	111
+_
+.T&
+cB c c c c c c c c c.
+0	0000	NUL	DLE	SP	0	\(`a	P	\`	p
+1	0001	SOH	DC1	!	1	A	Q	a	q
+2	0010	STX	DC2	\(dq	2	B	R	b	r
+3	0011	ETX	DC3	\(Po	3	C	S	c	s
+4	0100	EOT	DC4	\(Do	4	D	T	d	t
+5	0101	ENQ	NAK	%	5	E	U	e	u
+6	0110	ACK	SYN	&	6	F	V	f	v
+7	0111	BEL	ETB	\(aq	7	G	W	g	w
+8	1000	BS	CAN	(	8	H	X	h	x
+9	1001	HT	EM	)	9	I	Y	i	y
+10	1010	LF	SUB	*	:	J	Z	j	z
+11	1011	VT	ESC	+	;	K	\(de	k	\('e
+12	1100	FF	FS	,	<	L	\(,c	l	\(`u
+13	1101	CR	GS	\-	\&=	M	\(sc	m	\(`e
+14	1110	SO	RS	.	>	N	\(ha	n	\(ad
+15	1111	SI	US	/	?	O	\&_	o	DEL
+.TE
+.
+.SS "French Canadian NRC Set (French Canadian Keyboard Selection)"
+.TS
+c c cB cB cB cB cB cB cB cB
+c cB c c c c c c c c.
+	COLUMN	0	1	2	3	4	5	6	7
+ROW	BITS	000	001	010	011	100	101	110	111
+_
+.T&
+cB c c c c c c c c c.
+0	0000	NUL	DLE	SP	0	\(`a	P	\(^o	p
+1	0001	SOH	DC1	!	1	A	Q	a	q
+2	0010	STX	DC2	\(dq	2	B	R	b	r
+3	0011	ETX	DC3	\(sh	3	C	S	c	s
+4	0100	EOT	DC4	\(Do	4	D	T	d	t
+5	0101	ENQ	NAK	%	5	E	U	e	u
+6	0110	ACK	SYN	&	6	F	V	f	v
+7	0111	BEL	ETB	\(aq	7	G	W	g	w
+8	1000	BS	CAN	(	8	H	X	h	x
+9	1001	HT	EM	)	9	I	Y	i	y
+10	1010	LF	SUB	*	:	J	Z	j	z
+11	1011	VT	ESC	+	;	K	\(^a	k	\('e
+12	1100	FF	FS	,	<	L	\(,c	l	\(`u
+13	1101	CR	GS	\-	\&=	M	\(^e	m	\(`e
+14	1110	SO	RS	.	>	N	\(^i	n	\(^u
+15	1111	SI	US	/	?	O	\&_	o	DEL
+.TE
+.
+.SS "German NRC Set (German Keyboard Selection)"
+.TS
+c c cB cB cB cB cB cB cB cB
+c cB c c c c c c c c.
+	COLUMN	0	1	2	3	4	5	6	7
+ROW	BITS	000	001	010	011	100	101	110	111
+_
+.T&
+cB c c c c c c c c c.
+0	0000	NUL	DLE	SP	0	\(sc	P	\`	p
+1	0001	SOH	DC1	!	1	A	Q	a	q
+2	0010	STX	DC2	\(dq	2	B	R	b	r
+3	0011	ETX	DC3	\(sh	3	C	S	c	s
+4	0100	EOT	DC4	\(Do	4	D	T	d	t
+5	0101	ENQ	NAK	%	5	E	U	e	u
+6	0110	ACK	SYN	&	6	F	V	f	v
+7	0111	BEL	ETB	\(aq	7	G	W	g	w
+8	1000	BS	CAN	(	8	H	X	h	x
+9	1001	HT	EM	)	9	I	Y	i	y
+10	1010	LF	SUB	*	:	J	Z	j	z
+11	1011	VT	ESC	+	;	K	\(:A	k	\(:a
+12	1100	FF	FS	,	<	L	\(:O	l	\(:o
+13	1101	CR	GS	\-	\&=	M	\(:U	m	\(:u
+14	1110	SO	RS	.	>	N	\(ha	n	\(ss
+15	1111	SI	US	/	?	O	\&_	o	DEL
+.TE
+.
+.SS "Italian NRC Set (Italian Keyboard Selection)"
+.TS
+c c cB cB cB cB cB cB cB cB
+c cB c c c c c c c c.
+	COLUMN	0	1	2	3	4	5	6	7
+ROW	BITS	000	001	010	011	100	101	110	111
+_
+.T&
+cB c c c c c c c c c.
+0	0000	NUL	DLE	SP	0	\(sc	P	\(`u	p
+1	0001	SOH	DC1	!	1	A	Q	a	q
+2	0010	STX	DC2	\(dq	2	B	R	b	r
+3	0011	ETX	DC3	\(Po	3	C	S	c	s
+4	0100	EOT	DC4	\(Do	4	D	T	d	t
+5	0101	ENQ	NAK	%	5	E	U	e	u
+6	0110	ACK	SYN	&	6	F	V	f	v
+7	0111	BEL	ETB	\(aq	7	G	W	g	w
+8	1000	BS	CAN	(	8	H	X	h	x
+9	1001	HT	EM	)	9	I	Y	i	y
+10	1010	LF	SUB	*	:	J	Z	j	z
+11	1011	VT	ESC	+	;	K	\(de	k	\(`a
+12	1100	FF	FS	,	<	L	\(,c	l	\(`o
+13	1101	CR	GS	\-	\&=	M	\('e	m	\(`e
+14	1110	SO	RS	.	>	N	\(ha	n	\(`i
+15	1111	SI	US	/	?	O	\&_	o	DEL
+.TE
+.
+.SS "Norwegian/Danish NRC Set (Danish and Norwegian Keyboard Selections)"
+.TS
+c c cB cB cB cB cB cB cB cB
+c cB c c c c c c c c.
+	COLUMN	0	1	2	3	4	5	6	7
+ROW	BITS	000	001	010	011	100	101	110	111
+_
+.T&
+cB c c c c c c c c c.
+0	0000	NUL	DLE	SP	0	\(:A	P	\(:a	p
+1	0001	SOH	DC1	!	1	A	Q	a	q
+2	0010	STX	DC2	\(dq	2	B	R	b	r
+3	0011	ETX	DC3	\(sh	3	C	S	c	s
+4	0100	EOT	DC4	\(Do	4	D	T	d	t
+5	0101	ENQ	NAK	%	5	E	U	e	u
+6	0110	ACK	SYN	&	6	F	V	f	v
+7	0111	BEL	ETB	\(aq	7	G	W	g	w
+8	1000	BS	CAN	(	8	H	X	h	x
+9	1001	HT	EM	)	9	I	Y	i	y
+10	1010	LF	SUB	*	:	J	Z	j	z
+11	1011	VT	ESC	+	;	K	\(AE	k	\(ae
+12	1100	FF	FS	,	<	L	\(/O	l	\(/o
+13	1101	CR	GS	\-	\&=	M	\(oA	m	\(oa
+14	1110	SO	RS	.	>	N	\(:U	n	\(:u
+15	1111	SI	US	/	?	O	\&_	o	DEL
+.TE
+.
+.SS "Spanish NRC Set (Spanish Keyboard Selection)"
+.TS
+c c cB cB cB cB cB cB cB cB
+c cB c c c c c c c c.
+	COLUMN	0	1	2	3	4	5	6	7
+ROW	BITS	000	001	010	011	100	101	110	111
+_
+.T&
+cB c c c c c c c c c.
+0	0000	NUL	DLE	SP	0	\(sc	P	\`	p
+1	0001	SOH	DC1	!	1	A	Q	a	q
+2	0010	STX	DC2	\(dq	2	B	R	b	r
+3	0011	ETX	DC3	\(Po	3	C	S	c	s
+4	0100	EOT	DC4	\(Do	4	D	T	d	t
+5	0101	ENQ	NAK	%	5	E	U	e	u
+6	0110	ACK	SYN	&	6	F	V	f	v
+7	0111	BEL	ETB	\(aq	7	G	W	g	w
+8	1000	BS	CAN	(	8	H	X	h	x
+9	1001	HT	EM	)	9	I	Y	i	y
+10	1010	LF	SUB	*	:	J	Z	j	z
+11	1011	VT	ESC	+	;	K	\(r!	k	\(de
+12	1100	FF	FS	,	<	L	\(~N	l	\(~n
+13	1101	CR	GS	\-	\&=	M	\(r?	m	\(,c
+14	1110	SO	RS	.	>	N	\(ha	n	\(ti
+15	1111	SI	US	/	?	O	\&_	o	DEL
+.TE
+.
+.SS "Swedish NRC Set (Swedish Keyboard Selection)"
+.TS
+c c cB cB cB cB cB cB cB cB
+c cB c c c c c c c c.
+	COLUMN	0	1	2	3	4	5	6	7
+ROW	BITS	000	001	010	011	100	101	110	111
+_
+.T&
+cB c c c c c c c c c.
+0	0000	NUL	DLE	SP	0	\('E	P	\('e	p
+1	0001	SOH	DC1	!	1	A	Q	a	q
+2	0010	STX	DC2	\(dq	2	B	R	b	r
+3	0011	ETX	DC3	\(sh	3	C	S	c	s
+4	0100	EOT	DC4	\(Do	4	D	T	d	t
+5	0101	ENQ	NAK	%	5	E	U	e	u
+6	0110	ACK	SYN	&	6	F	V	f	v
+7	0111	BEL	ETB	\(aq	7	G	W	g	w
+8	1000	BS	CAN	(	8	H	X	h	x
+9	1001	HT	EM	)	9	I	Y	i	y
+10	1010	LF	SUB	*	:	J	Z	j	z
+11	1011	VT	ESC	+	;	K	\(:A	k	\(:a
+12	1100	FF	FS	,	<	L	\(:O	l	\(:o
+13	1101	CR	GS	\-	\&=	M	\(oA	m	\(oa
+14	1110	SO	RS	.	>	N	\(:U	n	\(:u
+15	1111	SI	US	/	?	O	\&_	o	DEL
+.TE
+.
+.SS "Swiss NRC Set (Swiss/French and Swiss/German Keyboard Selections)"
+.TS
+c c cB cB cB cB cB cB cB cB
+c cB c c c c c c c c.
+	COLUMN	0	1	2	3	4	5	6	7
+ROW	BITS	000	001	010	011	100	101	110	111
+_
+.T&
+cB c c c c c c c c c.
+0	0000	NUL	DLE	SP	0	\(`a	P	\(^o	p
+1	0001	SOH	DC1	!	1	A	Q	a	q
+2	0010	STX	DC2	\(dq	2	B	R	b	r
+3	0011	ETX	DC3	\(`u	3	C	S	c	s
+4	0100	EOT	DC4	\(Do	4	D	T	d	t
+5	0101	ENQ	NAK	%	5	E	U	e	u
+6	0110	ACK	SYN	&	6	F	V	f	v
+7	0111	BEL	ETB	\(aq	7	G	W	g	w
+8	1000	BS	CAN	(	8	H	X	h	x
+9	1001	HT	EM	)	9	I	Y	i	y
+10	1010	LF	SUB	*	:	J	Z	j	z
+11	1011	VT	ESC	+	;	K	\('e	k	\(:a
+12	1100	FF	FS	,	<	L	\(,c	l	\(:o
+13	1101	CR	GS	\-	\&=	M	\(^e	m	\(:u
+14	1110	SO	RS	.	>	N	\(^i	n	\(^u
+15	1111	SI	US	/	?	O	\(`e	o	DEL
+.TE
+.
+.SS "Display Controls Font (Left Half)"
+.TS
+c c cB cB cB cB cB cB cB cB
+c cB c c c c c c c c.
+	COLUMN	0	1	2	3	4	5	6	7
+ROW	BITS	0000	0001	0010	0011	0100	0101	0110	0111
+_
+.T&
+cB c c c c c c c c c.
+0	0000	\[u2400]	\[u2410]		0	@	P	\`	p
+1	0001	\[u2401]	\[u2411]	!	1	A	Q	a	q
+2	0010	\[u2402]	\[u2412]	\(dq	2	B	R	b	r
+3	0011	\[u2403]	\[u2413]	\(sh	3	C	S	c	s
+4	0100	\[u2404]	\[u2414]	\(Do	4	D	T	d	t
+5	0101	\[u2405]	\[u2415]	%	5	E	U	e	u
+6	0110	\[u2406]	\[u2416]	&	6	F	V	f	v
+7	0111	\[u2407]	\[u2417]	\(aq	7	G	W	g	w
+8	1000	\[u2408]	\[u2418]	(	8	H	X	h	x
+9	1001	\[u2409]	\[u2419]	)	9	I	Y	i	y
+10	1010	\[u240A]	\[u241A]	*	:	J	Z	j	z
+11	1011	\[u240B]	\[u241B]	+	;	K	[	k	{
+12	1100	\[u240C]	\[u241C]	,	<	L	\(rs	l	|
+13	1101	\[u240D]	\[u241D]	\-	\&=	M	]	m	}
+14	1110	\[u240E]	\[u241E]	.	>	N	\(ha	n	\(ti
+15	1111	\[u240F]	\[u241F]	/	?	O	\&_	o	\[u2421]
+.TE
+.
+.SS "Display Controls Font (Right Half)"
+.TS
+c c cB cB cB cB cB cB cB cB
+c cB c c c c c c c c.
+	COLUMN	8	9	10	11	12	13	14	15
+ROW	BITS	1000	1001	1010	1011	1100	1101	1110	1111
+_
+.T&
+cB c c c c c c c c c.
+0	0000	80	90	A0	\(de	\(`A	D0	\(`a	F0
+1	0001	81	91	\(r!	\(+-	\('A	\(~N	\('a	\(~n
+2	0010	82	92	\(ct	\(S2	\(^A	\(`O	\(^a	\(`o
+3	0011	83	93	\(Po	\(S3	\(~A	\('O	\(~a	\('o
+4	0100	84	94	A4	B4	\(:A	\(^O	\(:a	\(^o
+5	0101	85	95	\(Ye 	\(mc	\(oA	\(~O	\(oa	\(~o
+6	0110	86	96	A6	\(ps	\(AE	\(:O	\(ae	\(:o
+7	0111	87	97	\(sc	\(pc	\(,C	\(OE	\(,c	\(oe
+8	1000	88	98	\(Cs	B8	\(`E	\(/O	\(`e	\(/o
+9	1001	89	99	\(co	\(S1	\('E	\(`U	\('e	\(`u
+10	1010	8A	9A	\(Of	\(Om	\(^E	\('U	\(^e	\('u
+11	1011	8B	9B	\(Fo	\(Fc	\(:E	\(^U	\(:e	\(^u
+12	1100	8C	9C	AC	\(14	\(`I	\(:U	\(`i	\(:u
+13	1101	8D	9D	AD	\(12	\('I	\(:Y	\('i	\(:y
+14	1110	8E	9E	AE	BE	\(^I	DE	\(^i	FE
+15	1111	8F	9F	AF	\(r?	\(:I	\(ss	\(:i	\[u25A1]
+.TE
+.
+.SS "Escape Sequences"
+An escape sequence begins with the C0 character ESC, followed by one or
+more ASCII graphic characters. For example,
+.P
+.RS
+.EX
+.TS
+cB cB cB.
+ESC	#	6
+.TE
+.EE
+.RE
+.P
+is an escape sequence that changes the current line of text to
+double-width characters. Escape sequences use only 7-bit characters, and
+can be used in 7-bit or 8-bit environments.
+.
+.SS "Control Sequences"
+A control sequence begins with CSI (9/11), followed by one or more ASCII
+graphic characters. CSI can also be expressed as the 7-bit code
+extension ESC [. So you can express all control sequences as escape
+sequences whose second character code is [. For example, the following
+two sequences are equivalent sequences that perform the same function
+(they cause the display to use 132 columns per line rather than 80).
+.P
+.RS
+.EX
+.TS
+cB cB cB cB.
+CSI	?	3	h
+.TE
+.P
+.TS
+cB cB cB cB cB.
+ESC	[	?	3	h
+.TE
+.EE
+.RE
+.P
+Whenever possible, use CSI instead of ESC [ to introduce a control
+sequence. CSI can only be used in an 8-bit environment.
+.
+.SS "Device Control Strings"
+A device control string is a delimited string of characters used in a
+data stream as a logical entity for control purposes. It consists of an
+opening delimiter DCS, a command string (data), and a closing delimiter
+ST.
+.P
+DCS is an 8-bit control character that can also be expressed as ESC P
+when coding for a 7-bit environment.
+.P
+ST is an 8-bit control character that can also be expressed as ESC /
+when coding for a 7-bit environment.
+.
+.
+.\""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+.SH "TRANSMITTED CODES"
+.SS "Main Keypad Function Keys"
+.TS
+lB lBX
+lT lTX.
+Key	Code Transmitted
+
+<X	DEL character
+
+Tab	HT character
+
+Return	T{
+CR character only or a CR character and an LF character, depending on
+the set/reset state of line feed/new line mode (LNM).
+T}
+
+Ctrl	Does not send a code.
+
+Lock	Does not send a code.
+
+Shift (2 keys)	Does not send a code.
+
+Space bar	SP character
+
+Compose Character	Does not send a code.
+.TE
+.
+.SS "Editing Keys"
+.TS
+lB lB lB
+lB lB lB
+l l l.
+	Code Generated	VT100,
+Key	VT200 Mode	VT52 Modes
+
+Find	CSI 1 \(ti	None
+Insert Here	CSI 2 \(ti	None
+Remove	CSI 3 \(ti	None
+Select	CSI 4 \(ti	None
+Prev Screen	CSI 5 \(ti	None
+Next Screen	CSI 6 \(ti	None
+.TE
+.
+.SS "Cursor Control Keys"
+.TS
+lB lB s lB s
+lB lB s lB s
+lB lB lB lB lB
+lB lB lB lB lB
+l l l l l.
+	ANSI Mode*	VT52 Mode*
+	Cursor Key Mode
+	Reset	Set
+Key	Normal	Application	Normal	Application
+
+\(ua	CSI A	SS3 A	ESC A	ESC A
+\(da	CSI B	SS3 B	ESC B	ESC B
+\(->	CSI C	SS3 C	ESC C	ESC C
+\(<-	CSI D	SS3 D	ESC D	ESC D
+.TE
+.IP * 2
+ANSI mode applies to VT200 and VT100 modes. VT52 mode is an
+ANSI-incompatible mode.
+.
+.SS "Auxiliary Keypad Keys"
+.TS
+lB cB s cB s
+lB cB s cB s
+lB cB s cB s
+lB lB lB lB lB
+lB lB lB lB lB
+lB lB lB lB lB
+l l l l l.
+	VT100/VT200
+	ANSI Mode*	VT52 Mode*
+
+	Keypad	Keypad	Keypad	Keypad
+	Numeric	Application	Numeric	Application
+Key	Mode	Mode	Mode	Mode
+
+0	0	SS3 p	0	ESC ? p
+1	1	SS3 q	1	ESC ? q
+2	2	SS3 r	2	ESC ? r
+3	3	SS3 s	3	ESC ? s
+4	4	SS3 t	4	ESC ? t
+5	5	SS3 u	5	ESC ? u
+6	6	SS3 v	6	ESC ? v
+7	7	SS3 w	7	ESC ? w
+8	8	SS3 x	8	ESC ? x
+9	9	SS3 y	9	ESC ? y
+\-	\-(minus)	SS3 m	\-	ESC ? m
+,	,(comma)	SS3 l	,	ESC ? l\*[dg]
+.	.(period)	SS3 n	.	ESC ? n
+Enter	CR	SS3 M	CR	ESC ? M\*[d2]
+	or		or
+	CR LF		CR LF
+PF1	SS3 P	SS3 P	ESC P	ESC P
+PF2	SS3 Q	SS3 Q	ESC Q	ESC Q
+PF3	SS3 R	SS3 R	ESC R	ESC R
+PF4	SS3 S	SS3 S	ESC S	ESC S\*[dg]
+.TE
+.IP * 2
+ANSI mode applies to VT200 and VT100 modes. VT52 mode is an
+ANSI-incompatible mode.
+.IP \*[dg] 2
+You cannot generate these sequences on a VT52 terminal.
+.IP \*[d2] 2
+Keypad numeric mode. \fBEnter\fR generates the same code as
+\fBReturn\fR. You can change the code generated by \fBReturn\fR with the
+line feed/new line mode. When reset, line feed/new line mode causes
+\fBReturn\fR to generate a single control character (CR). When set, the
+mode causes \fBReturn\fR to generate two control characters (CR, LF).
+.
+.SS "Top Row Function Keys"
+.TS
+lB lB cB s
+lB lB lB lB
+lB lB lB lB
+lB lB lB lB
+l l l l.
+		Code Generated
+			VT100,
+Name on	Generic	VT200	VT52
+Legend Strip	Name	Mode	Modes
+
+Hold Screen	(F1)*	\(em	\(em
+Print Screen	(F2)*	\(em	\(em
+Set-Up	(F3)*	\(em	\(em
+Data/Talk	(F4)*	\(em	\(em
+Break	(F5)*	\(em	\(em
+F6	F6	CSI 1 7 \(ti	\(em
+F7	F7	CSI 1 8 \(ti	\(em
+F8	F8	CSI 1 9 \(ti	\(em
+F9	F9	CSI 2 0 \(ti	\(em
+F10	F10	CSI 2 1 \(ti	\(em
+F11 (ESC)	F11	CSI 2 3 \(ti	ESC
+F12 (BS)	F12	CSI 2 4 \(ti	BS
+F13 (LF)	F13	CSI 2 5 \(ti	LF
+F14	F14	CSI 2 6 \(ti	\(em
+Help	(F15)	CSI 2 8 \(ti	\(em
+Do	(F16)	CSI 2 9 \(ti	\(em
+F17	F17	CSI 3 1 \(ti	\(em
+F18	F18	CSI 3 2 \(ti	\(em
+F19	F19	CSI 3 3 \(ti	\(em
+F20	F20	CSI 3 4 \(ti	\(em
+.TE
+.IP * 2
+F1 through F5 are local function keys and do not generate codes.
+.
+.SS "Keys Used to Generate 7-Bit Control Characters"
+.TS
+lB lB lB
+lB lB lB
+lB lB lB
+l l l.
+Control	Key Pressed
+Character	With Ctrl	Dedicated
+Mnemonic	(All Modes)	Function Key
+
+NUL	2, space
+SOH	A
+STX	B
+ETX	C
+EOT	D
+ENQ	E
+ACK	F
+BEL	G
+BS	H	F12 (BS)*
+HT	I	Tab
+LF	J	F13 (LF)*
+VT	K
+FF	L
+CR	M	Return
+SO	N
+SI	O
+DLE	P
+DC1	Q\*[dg]
+DC2	R
+DC3	S\*[dg]
+DC4	T
+NAK	U
+SYN	V
+ETB	W
+CAN	X
+EM	Y
+SUB	Z
+ESC	3, [	F11 (ESC)*
+FS	4, /
+GS	5, ]
+RS	6, \(ti
+US	7, ?
+DEL	8	Delete
+.TE
+.IP * 2
+Keys F11, F12, and F13 generate these 7-bit control characters only when
+the terminal is in VT100 mode or VT52 mode.
+.IP \*[dg] 2
+These keystrokes are enabled only if XOFF support is disabled. If XOFF
+support is enabled, then \fBCTRL-S\fR is a \(lqhold screen\(rq local
+function and \fBCTRL-Q\fR is a \(lqrelease screen\(rq local function.
+.
+.
+.\""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+.SH "RECEIVED CODES"
+.SS "Compatibility Level (DECSCL)"
+.TS
+lB lBX
+l lX.
+Sequence	Action
+
+CSI 6 1 \(dq p	T{
+Set terminal for level 1 (VT100 mode).
+T}
+
+CSI 6 2 \(dq p	T{
+Set terminal for level 2 (VT200 mode, 8-bit controls).
+T}
+
+CSI 6 2 ; 0 \(dq p	T{
+Set terminal for level 2 (VT200 mode, 8-bit controls).
+T}
+
+CSI 6 2 ; 1 \(dq p	T{
+Set terminal for level 2 (VT200 mode, 7-bit controls).
+T}
+
+CSI 6 2 ; 2 \(dq p	T{
+Set terminal for level 2 (VT200 mode, 8-bit controls).
+T}
+.TE
+.
+.SS "C0 (ASCII) Control Characters Recognized"
+.TS lB lB lBX
+lT lT lTX.
+NUL	Null	Ignored when received.
+
+ENQ	Enquiry	T{
+Generates answerback message.
+T}
+
+BEL	Bell	T{
+Generates bell tone if bell is enabled.
+T}
+
+BS	Backspace	T{
+Moves cursor to the left one character position; if cursor is at left
+margin, no action occurs.
+T}
+
+HT	Horizontal	T{
+Moves cursor to next tab stop, or to right margin if there are no more
+tab stops. Does not cause auto wrap.
+T}
+	tabulation	\^
+
+LF	Linefeed	T{
+Causes a line feed or a new line operation, depending on the setting of
+new line mode.
+T}
+
+VT	Vertical	Processed as LF.
+	tabulation
+
+FF	Form feed	Processed as LF.
+
+CR	Carriage	T{
+Moves cursor to left margin on current line.
+T}
+	return	\^
+
+SO	Shift out	T{
+Invokes G1 character set into GL. G1 is designated by a
+select-character-set (SCS) sequence.
+T}
+(LS1)	(lock shift G1)	\^
+
+SI	Shift in	T{
+Invokes G0 character set into GL. G0 is designated by a
+select-character-set (SCS) sequence.
+T}
+(LS0)	(lock shift G0)	\^
+
+DC1	Device	T{
+Also referred to as XON. If XOFF support is enabled, DC1 clears DC3
+(XOFF), causing the terminal to continue sending characters (keyboard
+unlocks) unless KAM mode is currently set.
+T}
+	control 1	\^
+
+DC3	Device	T{
+Also referred to as XOFF. If XOFF support is enabled, DC3 causes the
+terminal to stop sending characters until a DC1 control character is
+received.
+T}
+	control 3	\^
+
+CAN	Cancel	T{
+If received during an escape or control sequence, terminates and cancels
+the sequence. No error character is displayed. If received during a
+device control string, the DCS is terminated and no error character is
+displayed.
+T}
+
+SUB	Substitute	T{
+If received during escape or control sequence, terminates and cancels
+the sequence. Causes a reverse question mark to be displayed. If
+received during a device control sequence, the DCS is terminated and
+.\" the original manual says "DSC" instead of "DCS" but DCS is correct
+reverse question mark is displayed.
+T}
+
+ESC	Escape	T{
+Processed as escape sequence introducer. Terminates any escape, control
+or device control sequence which is in progress.
+T}
+
+DEL	Delete	T{
+Ignored when received.
+.br
+Note: May not be used as a time fill character.
+T}
+.TE
+.
+.SS "C1 Control Characters Recognized"
+.TS
+lB lB lB lBX
+lB lB lB lBX
+lB lB lB lBX
+lT lT lT lTX.
+	Equivalent
+	7-Bit Code
+Mnemonic	Extension	Name	Action
+
+IND	ESC D	Index	T{
+Moves cursor down one line in same column. If cursor is at bottom
+margin, screen performs a scroll up.
+T}
+
+NEL	ESC E	Next line	T{
+Moves cursor to first position on next line. If cursor is at bottom
+margin, screen performs a scroll up.
+T}
+
+HTS	ESC H	Horizontal	T{
+Sets one horizontal tab stop at the column where the cursor is.
+T}
+		tab set	\^
+
+RI	ESC M	Reverse	T{
+Moves cursor up one line in same column. If cursor is at top margin,
+screen performs a scroll down.
+T}
+		index	\^
+
+SS2	ESC N	Single	T{
+Temporarily invokes G2 character set into GL for the next graphic
+character. G2 is designated by a select-character-set (SCS) sequence.
+T}
+		shift G2	\^
+
+SS3	ESC O	Single	T{
+Temporarily invokes G3 character set into GL for the next graphic
+character. G3 is designated by a select-character-set (SCS) sequence.
+T}
+		shift G3	\^
+
+DCS	ESC P	Device	T{
+Processed as opening delimiter of a device control string for device
+control use.
+T}
+		control	\^
+		string	\^
+
+CSI	ESC [	Control	T{
+Processed as control sequence introducer.
+T}
+		sequence	\^
+		introducer	\^
+
+ST	ESC /	String	T{
+Processed as closing delimiter of a string opened by DCS.
+T}
+		terminator	\^
+.TE
+.
+.SS "CHARACTER SET SELECTION (SCS)"
+\&
+.SSS "Designating Hard Character Sets"
+Use the following list of escape sequence formats to designate hard
+character sets as G0 through G3.
+.P
+.TS
+lB lB
+l l.
+Escape Sequence	Designate As:
+
+ESC ( {final}	G0
+ESC ) {final}	G1
+ESC * {final}	G2
+ESC + {final}	G3
+.TE
+.P
+The following is a list of available character sets and their associated
+final character.
+.P
+.TS
+lB s lBX
+lT s lTX.
+Character Sets	Final Character
+
+ASCII	B
+
+DEC supplemental	<
+(VT200 mode only)
+
+DEC special graphics	0
+
+National replacement	\fBNOTE\fR
+character sets	T{
+.B Only one national character set is available for use at any one time
+.B (national mode).
+T}
+
+.T&
+l l lX.
+	British	A
+	Dutch	4
+	Finnish	C or 5
+	French	R
+	French Canadian	Q
+	German	K
+	Italian	Y
+	Norwegian/Danish	E or 6
+	Spanish	Z
+	Swedish	H or 7
+	Swiss	\&=
+
+.T&
+lB s lBX
+l s lX.
+Examples
+
+ASCII as G0	ESC ( B
+British as G3	ESC * A
+.TE
+.
+.SSS "Designating Soft (Down-Line-Loadable) Character Sets"
+.TS
+lB lB
+l l.
+Escape Sequence	Designate As:
+
+ESC ( Dscs	G0
+ESC ) Dscs	G1
+ESC * Dscs	G2
+ESC + Dscs	G3
+.TE
+.P
+Dscs can consist of zero, one, or two intermediate characters and a
+final character.
+.P
+Intermediate characters are int he range of 2/0 to 2/15; final
+characters are in the range of 3/0 to 7/14. (See ASCII Code Table for
+column/row notation.)
+.
+.SSS "Invoking Character Sets Using Lock Shifts"
+.TS
+lB lB lBX
+l l lX.
+Control Name	Coding	Function
+
+LS0 \(em lock shift G0	SI	T{
+Invoke G0 into GL (default).
+T}
+
+LS1 \(em lock shift G1	SO	T{
+Invoke G1 into GL.
+T}
+
+LS1R \(em lock shift G1, right	ESC \(ti	T{
+Invoke G1 into GR (VT200 mode only).
+T}
+
+LS2 \(em lock shift G2	ESC n	T{
+Invoke G2 into GL (VT200 mode only).
+T}
+
+LS2R \(em lock shift G2, right	ESC }	T{
+Invoke G2 into GR (default, VT200 mode only).
+T}
+
+LS3 \(em lock shift G3	ESC o	T{
+Invoke G3 into GL (VT200 mode only).
+T}
+
+LS3R \(em lock shift G3, right	ESC |	T{
+Invoke G3 into GR (VT200 mode only).
+T}
+
+SS2 \(em single shift G2	SS2	T{
+Invokes G2 into GL for the next graphic character.
+T}
+	ESC N	\^
+
+SS3 \(em single shift G3	SS3	T{
+Invokes G3 into GL for the next graphic character.
+T}
+	ESC O	\^
+.TE
+.
+.SS "Select C1 Control Transmission"
+.TS
+lB lB lBX
+lB lB lBX
+lT lT lTX.
+Control
+Name	Sequence*	Action
+
+7-bit C1	ESC sp F	T{
+Converts all C1 codes returned to the application to their equivalent
+7-bit code extensions.
+T}
+control		\^
+transmission		\^
+(S7C1T)		\^
+
+.T&
+cB s sX
+lT lT lTX.
+T{
+NOTE:
+The S7C1T sequence is ignored when the terminal is in VT100 or VT52
+mode.
+T}
+
+8-bit C1	ESC sp G	T{
+Returns C1 codes to the application without converting them to their
+equivalent 7-bit code extensions.
+T}
+control		\^
+transmission		\^
+(S8C1T)		\^
+.TE
+.IP * 2
+sp is a space character
+.
+.SS "Terminal Modes"
+.TS
+lB lB lB lB
+lT lT lT lT.
+Name	Mnemonic	Set Mode	Reset Mode*
+
+Keyboard	KAM	Locked	Unlocked
+action\*[dg]		CSI 2 h	CSI 2 l
+
+Insertion-	IRM	Insert	Replace
+replacement		CSI 4 h	CSI 4 l
+
+Send-	SRM	Off	On
+receive		CSI 12 h	CSI 12 l
+
+Line feed-	LNM	New line	Line feed
+new line		CSI 20 h	CSI 20 l
+
+Cursor key	DECCKM	Application	Cursor
+		CSI ? 1 h	CSI ? 1 l
+
+ANSI/VT52	DECANM	N/A	VT52
+			CSI ? 2 l
+
+Column	DECCOLM	132 column	80 column
+		CSI ? 3 h	CSI ? 3 l
+
+Scrolling\*[dg]	DECSCLM	Smooth	Jump
+		CSI ? 4 h	CSI ? 4 l
+
+Screen\*[dg]	DECSCNM	Reverse	Normal
+		CSI ? 5 h	CSI ? 5 l
+
+Auto wrap	DECAWM	On	Off
+		CSI ? 7 h	CSI ? 7 l
+
+Auto	DECARM	On	Off
+repeat\*[dg]		CSI ? 8 h	CSI ? 8 l
+
+Print form	DECPFF	On	Off
+feed		CSI ? 18 h	CSI ? 18 l
+
+Print extent	DECPEX	Full screen	Scrolling region
+		CSI ? 19 h	CSI ? 19 l
+
+Text cursor	DECTCEM	On	Off
+enable		CSI ? 25 h	CSI ? 25 l
+
+Keypad	DECKPAM	Application	Numeric
+	DECKPNM	ESC =	ESC >
+
+Character	DECNRCM	National	Multinational
+set		CSI ? 42 h	CSI ? 42 l
+.TE
+.IP * 2
+The last character of each sequence is lowercase L (6/12).
+.IP \*[dg] 2
+User preference feature
+.
+.SS "Cursor Positioning"
+.TS
+lB lB lB lBX
+lB lB lB lBX
+lT lT lT lTX.
+	Control
+Name	Character	Sequence	Action
+
+Cursor up	\(em	CSI Pn A	T{
+Moves cursor up Pn lines in the same column.
+T}
+(CUU)			\^
+
+Cursor down	\(em	CSI Pn B	T{
+Moves cursor down Pn lines in the same column.
+T}
+(CUD)			\^
+
+Cursor forward	\(em	CSI Pn C	T{
+Moves cursor right Pn columns.
+T}
+(CUF)			\^
+
+Cursor backward	\(em	CSI Pn D	T{
+Moves cursor left Pn columns.
+T}
+(CUB)			\^
+
+Cursor position	\(em	CSI Pl; Pc H	T{
+Moves cursor to line Pl, column Pc. The numbering of the lines and
+columns depends on the state (set/reset) of origin mode (DECOM).
+T}
+(CUP)			\^
+
+Horizontal and	\(em	CSI Pl ; Pc f	T{
+Moves cursor to line Pl, column Pc. The numbering of the lines and
+columns depends on the state (set/reset) of origin mode (DECOM). Digital
+recommends using CUP instead of HVP.
+T}
+vertical position			\^
+(HVP)			\^
+
+Index	IND	ESC D	T{
+Moves cursor down one line in the same column. If the cursor is at the
+bottom margin the screen performs a scroll-up.
+T}
+(IND)			\^
+
+Reverse	Index	RI	ESC M	T{
+Moves cursor up one line in the same column. If the cursor is at the top
+margin the screen performs a scroll-down.
+T}
+(RI)			\^
+
+Next line	NEL	ESC E	T{
+Moves the cursor to the first position of the next line. If the cursor
+is at the bottom margin the screen performs a scroll-up.
+T}
+(NEL)			\^
+
+Save cursor	\(em	ESC 7	T{
+Saves the following in terminal memory.
+.BPC "cursor position"
+.BPC "graphic rendition"
+.BPC "character set shift state"
+.BPC "state of wrap flag"
+.BPC "state of origin mode"
+.BPC "state of selective erase"
+T}
+(DECSC)			\^
+
+Restore cursor	\(em	ESC 8	T{
+Restores the states described for (DECSC) above. If none of these
+characteristics were saved: the cursor moves to home position, origin
+mode is reset, no character attributes are assigned, and the default
+character set mapping is established.
+T}
+(DECRC)			\^
+.TE
+.
+.SS "Tab Stops"
+.B NOTE:
+.B These sequences are affected by the user preference lock in set-up.
+.P
+.TS
+lB lB lB lBX
+lB lB lB lBX
+lT lT lT lTX.
+	Control
+Name	Character	Sequence	Action
+
+Horizontal tab set	HTS	ESC H	T{
+Sets a tab stop at the current column.
+T}
+(HTS)			\^
+
+Tabulation clear	\(em	CSI g	T{
+Clears a horizontal tab stop at cursor position.
+T}
+(TBC)			\^
+
+		CSI 0 g	T{
+Clears a horizontal tab stop at cursor position.
+T}
+
+		CSI 3 g	T{
+Clears all horizontal tab stops.
+T}
+.TE
+.
+.SS "Select Graphic Rendition (SGR)"
+You can select one or more character renditions at a time using the
+following format:
+.P
+.RS
+.EX
+.TS
+cB cB cB cB cB cB.
+CSI	Ps	;	...	Ps	m
+.TE
+.EE
+.RE
+.P
+When you use multiple parameters, they are executed in sequence. The
+effects are cumulative. For example, to change from increased intensity
+to blinking-underlined, you can use:
+.P
+.RS
+.EX
+.TS
+cB cB cB cB cB cB cB.
+CSI	0	;	4	;	5	m
+.TE
+.EE
+.RE
+.P
+When you select a single parameter, no delimiter (3/11) is used.
+.P
+.TS
+lB s lBX
+l l lX.
+Ps	Action
+
+0		All attributes off.
+1		Display at increased intensity.
+4		Display underscored.
+5		Display blinking.
+7		Display negative (reverse) image.
+2	2	Display normal intensity.
+2	4	Display not underlined.
+2	5	Display not blinking.
+2	7	Display positive image.
+.TE
+.
+.SS "Select Character Attributes (DECSCA)"
+You can select all subsequent characters to be erasable or not erasable
+using the following format. (See \(lqErasing\(rq section.)
+.P
+.B NOTE:
+.B This sequence is supported only in VT200 mode.
+.P
+.RS
+.EX
+.TS
+cB cB cB cB.
+CSI	Ps	\(dq	q
+.TE
+.EE
+.RE
+.P
+where:
+.P
+.TS
+lB lBX
+lT lTX.
+Ps	Action
+
+0	T{
+All attributes off. (Does not apply to SGR.)
+T}
+
+1	T{
+Designate character as \(lqnot erasable\(rq by DECSEL/DECSED (attribute
+on).
+T}
+
+2	T{
+Designate character as \(lqerasable\(rq by DECSEL/DECSED (attribute
+off).
+T}
+.TE
+.
+.SS "Line Attributes"
+.TS
+lB lB sX
+lB lB lBX
+lB lB lBX
+lT lT lTX
+lT lT lTX
+lT lT sX.
+Name	Sequence
+
+	Top Half	Bottom Half
+
+Double-height line	ESC # 3	ESC # 4
+(DECDHL)
+	T{
+The same character must be used on both lines to form full character. If
+the line was previously single-width, single-height, all characters to
+the right of center are lost.
+T}
+
+Single-width line	ESC # 5
+(DECSWL)
+
+Double-width line	ESC # 6
+(DECDWL)
+.TE
+.
+.SS "Editing"
+.TS
+lB lB lBX
+lT lT lTX.
+Name	Sequence	Action
+
+Insert line (IL)	CSI Pn L	T{
+Inserts Pn lines at the cursor.
+T}
+
+Delete line (DL)	CSI Pn M	T{
+Deletes Pn lines starting at the line with the cursor.
+T}
+
+Insert characters	CSI Pn @	T{
+Insert Pn blank characters at the cursor position, with the character
+attributes set to normal.
+T}
+(ICH)		\^
+(VT200 mode only)		\^
+
+Delete character	CSI Pn P	T{
+Deletes Pn characters starting with the character at the cursor
+position.
+T}
+(DCH)		\^
+.TE
+.
+.SS "Erasing"
+.TS
+lB lB lBX
+lT lT lTX.
+Name	Sequence	Action
+
+Erase character	CSI Pn X	T{
+Erases characters at the cursor position and the next n-1 character.
+T}
+(ECH)		\^
+(VT200 mode only)		\^
+
+Erase in line	CSI K	T{
+Erases from the cursor to the end of the line, including the cursor
+position.
+T}
+(EL)		\^
+
+	CSI 0 K	T{
+Same as above.
+T}
+
+	CSI 1 K	T{
+Erases from the beginning of the line to the cursor, including the
+cursor position.
+T}
+
+	CSI 2 K	T{
+Erases the complete line.
+T}
+
+Erase in display	CSI J	T{
+Erases from the cursor to the end of the screen, including the cursor
+position.
+T}
+(ED)		\^
+
+	CSI 0 J	T{
+Same as above.
+T}
+
+	CSI 1 J	T{
+Erases from the beginning of the screen to the cursor, including the
+cursor position.
+T}
+
+	CSI 2 J	T{
+Erases the complete display.
+T}
+
+Selective erase	CSI ? K	T{
+Erases all \(lqerasable\(rq characters (DECSCA) from the cursor to the
+end of the line.
+T}
+in line (DECSEL)		\^
+(VT200 mode only)		\^
+
+	CSI ? 0 K	T{
+Same as above.
+T}
+
+	CSI ? 1 K	T{
+Erases all \(lqerasable\(rq characters (DECSCA) from the beginning of
+the line to and including the cursor position.
+T}
+
+	CSI ? 2 K	T{
+Erases all \(lqerasable\(rq characters (DECSCA) on the line.
+T}
+
+Selective erase	CSI ? J	T{
+Erases all \(lqerasable\(rq characters (DECSCA) from and including the
+cursor to the end of the screen.
+T}
+in display (DECSED)		\^
+(VT200 mode only)		\^
+
+	CSI ? 0 J	T{
+Same as above.
+T}
+
+	CSI ? 1 J	T{
+Erases all \(lqerasable\(rq characters (DECSCA) from the beginning of
+the screen to and including the cursor.
+T}
+
+	CSI ? 2 J	T{
+Erases all \(lqerasable\(rq characters (DECSCA) in the entire display.
+T}
+.TE
+.
+.SS "Set Top and Bottom Margins (DECSTBM)"
+\&
+.RS
+.EX
+.TS
+cB cB cB cB cB.
+CSI	Pt	;	Pb	r
+.TE
+.EE
+.RE
+.P
+Selects top and bottom margins defining the scrolling region. Pt is the
+line number of the first line in the scrolling region. Pb is the line
+number o the bottom line. If you do not select either Pt or Pb, they
+default to top and bottom respectively. Lines are counted from 1.
+.
+.SS "Printing"
+Before you select a print operation, check printer status using the
+print status report (DSR). (See \(lqReports\(rq section.)
+.P
+.TS
+lB lB lBX
+lT lT lTX.
+Name	Sequence	Action
+
+Auto print	CSI ? 5 i	T{
+Turns on auto print mode. All following display lines print when you
+move the cursor off the line using a line feed, form feed, vertical tab,
+or auto wrap. The printed line ends with a carriage return adn the
+character (LF, FF, or VT) which moved the cursor off the previous line.
+Auto wrap lines end with a line feed.
+T}
+mode		\^
+
+	CSI ? 4 i	T{
+Turns off auto print mode.
+T}
+
+Printer	CSI 5 i	T{
+Turns on printer controller mode. The terminal sends received characters
+to the printer without displaying them on the screen. All characters and
+character sequences, except NUL, XON, XOFF, CSI 5 i, and CSI 4 i are
+sent to the printer. The terminal does not insert or delete spaces, or
+provide line delimiters, or select the correct printer character set.
+
+Printer controller mode has a higher priority than auto print mode. It
+can be selected during auto print mode.
+
+When in printer controller mode, keyboard activity continues to be
+directed to the host.
+T}
+controller		\^
+
+	CSI 4 i	T{
+Turns off printer controller mode.
+T}
+
+Print cursor	CSI ? 1 i	T{
+Prints the display line containing the cursor. The cursor position does
+not change. The print-cursor-line sequence is complete when the line
+prints.
+T}
+line		\^
+
+Print screen	CSI i	T{
+Prints the screen display (full screen or scrolling region depending on
+the print extend DECEXT selection). Printer form feed mode (DECPFF)
+selects either a form feed (FF) or nothing as the print terminator. The
+print screen sequence is complete when the screen prints.
+T}
+
+	CSI 0 i	T{
+Same as above.
+T}
+.TE
+.
+.SS "User Defined Keys (DECUDK)"
+The device control string format for down-line-loading UDK functions is:
+.P
+.RS
+.EX
+.TS
+cB cB cB cB cB.
+DCS	Pc;Pl	|	Ky1/st1;ky2/st2;...kyn/stn	ST
+.TE
+.EE
+.RE
+.P
+where:
+.P
+.TS
+lB lBX
+lT lTX.
+Pc	Meaning
+
+None	T{
+Clear all keys before loading new values.
+T}
+0	T{
+Clear all keys before loading new values.
+T}
+1	T{
+Load new key values, clear old only where defined.
+T}
+
+.T&
+lB lBX
+lT lTX.
+Pl	Meaning
+
+None	T{
+Lock the keys against future redefinition.
+T}
+0	T{
+Lock the keys against future redefinition.
+T}
+1	T{
+Do not lock the keys against future redefinition.
+T}
+.TE
+.P
+.TS
+lB lB lB lB
+l l l l.
+Key	Value (kyn)	KEy	Value (kyn)
+
+F6	17	F14	26
+F7	18
+F8	19	HELP	28
+F9	20	DO	29
+F10	21
+		F17	31
+F11	23	F18	32
+F12	24	F19	33
+F13	25	F20	34
+.TE
+.P
+Stn is a string of hex pairs of ASCII characters that define the
+specified key.
+.P
+.B NOTE:
+.B To access the programmed values of the keys, you type Shfit-(function
+.B key).
+.
+.SS "Down-Line-Loading Characters (DRCS)"
+You can down-line-load your DRCS character set using the following
+DECDLD device control string format.
+.P
+.RS
+.EX
+.TS
+cB2 cB2 cB2 cB2 cB2 cB2.
+DCS	Pfn;Pcn;Pe;Pcms;Pw;Pt	{	Dcs	Sxbp1;Sxbp2;...;Sxbpn	ST
+.TE
+.EE
+.RE
+.P
+Parameter descriptions are as follows.
+.
+.SSS "DECDLD Parameter Characters"
+.TS
+lB lB lB1 s sX
+lT lT lT1 lT1 lTX
+lT lT lT1 s sX.
+Parameter	Name	Description
+
+Pfn	Font number	0 and 1.
+
+Pcn	Starting	T{
+Selects starting character in DRCS font buffer to be loaded.
+T}
+	character	\^
+	number	\^
+
+.T&
+lT lT lT1 lT1 lTX.
+Pe	Erase control	0	\&=	erase all characters in this DRCS set
+		1	\&=	T{
+erase only the characters that are being reloaded
+T}
+		2	\&=	T{
+erase all characters in all DRCS sets (this font buffer number and other
+font buffer numbers)
+T}
+
+Pcn	Character	0	\&=	device default (7 \(mu 10)
+	Matrix size	1	\&=	(not used)
+		2	\&=	5 \(mu 10
+		3	\&=	6 \(mu 10
+		4	\&=	7 \(mu 10
+
+Pw	Width	0	\&=	device default (80 columns)
+	attribute	1	\&=	80 column
+		2	\&=	132 column
+
+Pt	Text/	0	\&=	device default (text)
+	full-cell	1	\&=	text
+		2	\&=	full-cell (not used)
+.TE
+.P
+.I Dscs
+defines the character set name for the soft font, and is used in the SCS
+(select character set) escape sequence.
+.P
+.I Sxbp1;Sxbp2;...;Sxbpn
+are sixel bit patterns (1 to 94 patterns) for characters separated by
+semicolons. Each sixel bit pattern has the form:
+.P
+.RS
+.EX
+.B S...S/...S
+.EE
+.RE
+.P
+where the first S...S represents the upper columns (sixels) of the DRCS
+character, the slash advances the sixel pattern to the lower columns of
+the DRCS character, and the second S...S represents the lower columns
+(sixels) of the DRCS.
+.
+.SSS "Clearing a Down-Line-Loaded Character Set"
+You can clear a character set that you have down-line-loaded using the
+following DECDLD control sequence.
+.P
+.RS
+.EX
+.TS
+cB2 cB2 cB2 cB2 cB2 cB2.
+DCS	1;1;2	{	sp	@	ST
+.TE
+.EE
+.RE
+.P
+Down-line-loaded character sets are also cleared by the following
+actions.
+.bP
+Performing the power-up self-test.
+.bP
+Using the set-up  \(lqRecall\(rq or \(lqDefault\(rq features.
+.bP
+Using RIS or ESC c sequences.
+.
+.SS Reports
+\&
+.SSS "Device Attributes (DA)"
+.TS
+lB lB lBX
+lT lT lTX.
+Communication	Sequence	Meaning
+
+Host to VT220	CSI c	T{
+\(lqWhat is you rservice class code and what are your attributes?\(rq
+T}
+(primary DA	or	\^
+request)	CSI 0 c	\^
+
+VT220 to host	CSI ? 62; 1; 2; 6; 7; 8; 9 c	T{
+\(lqI am a service class 2 (VT200 family) terminal (62) with 132 columns
+(1), printer port (2), selective erase (6), DRCS (7), UDK (8). I support
+7-bit national replacement character sets (9).\(rq
+T}
+(primary DA		\^
+response)		\^
+
+Host to VT220	CSI > c	T{
+\(lqWhat type of terminal are you, what is your firmware version, and
+what hardware options do you have installed?\(rq
+T}
+(secondary DA	or	\^
+request)	CSI > 0 c	\^
+
+VT220 to host	CSI > 1; Pv; Po c	T{
+\(lqI am a VT220 (identification code of  1), my firmware version is
+_____ (Pv), and I have Po options installed.\(rq
+T}
+(secondary DA		\^
+response)		\^
+.TE
+.P
+EXAMPLE: CSI>1;10;0c = VT220 version 1.0, no options
+.P
+.B NOTE:
+.B If the terminal is in VT100 mode and an ID other than VT220 ID is
+.B selected, then the following primary exchanges apply.
+.P
+.TS
+lB lB lBX
+lT lT lTX.
+Communication	Sequence	Meaning
+
+VT220 to host	ESC [ ? 1; 2 c	T{
+\(lqI am a VT100 terminal with AVO.\(rq
+T}
+(VT100 ID		\^
+selected in		\^
+set-up)		\^
+
+VT200 to host	ESC [ ? 1; 0 c	T{
+\(lqI am a VT101 terminal.\(rq
+T}
+(VT101 ID		\^
+selected in		\^
+set-up)		\^
+
+VT220 to host	ESC [ ? 6 c	T{
+\(lqI am a VT102 terminal.\(rq
+T}
+(VT102 ID		\^
+selected in		\^
+set-up)		\^
+.TE
+.
+.SSS "Device Status Report (DSR)"
+.TS
+lB lB lBX
+lT lT lTX.
+Communication	Sequence	Meaning
+
+Host to VT220	CSI 5 n	T{
+\(lqPlease report your operating status using a DSR control sequence.
+Are you in good operating condition or do you have a malfunction?\(rq
+T}
+(request for		\^
+terminal status)		\^
+
+T{
+VT220 to host
+.br
+(DA response)
+T}	CSI 0 n	T{
+\(lqI have no malfunction.\(rq
+T}
+\^
+\^	CSI 3 n	T{
+\(lqI have a malfunction.\(rq
+T}
+
+Host to VT220	CSI 6 n	T{
+\(lqPlease report your cursor position using a CPR (not DSR) control
+sequence.\(rq
+T}
+(request for		\^
+cursor position)		\^
+
+VT220 to host	CSI Pv; Ph R	T{
+\(lqMy cursor is positioned at ____ (Pv); ____ (Ph).\(rq
+
+Where:
+
+Pv = vertical position (row)
+.br
+Ph = horizontal position (column)
+T}
+(CPR response)		\^
+.TE
+.
+.SSS "DSR \(em Printer Port"
+.TS
+lB lB lBX
+lT lT lTX.
+Communication	Sequence	Meaning
+
+Host to VT220	CSI ? 15 n	T{
+\(lqWhat is the printer status?\(rq
+T}
+(request for		\^
+printer status)		\^
+
+VT220 to host	CSI ? 13 n	T{
+\(lqDTR has not been asserted on the printer port since power up or
+reset\(emin essence, I have no printer.\(rq
+T}
+
+	CSI ? 10 n	T{
+\(lqDTR is asserted on the printer port. The printer is ready.\(rq
+T}
+
+	CSI ? 11 n	T{
+\(lqDTR is not currently asserted on the printer port. The printer is
+not ready.\(rq
+T}
+.TE
+.
+.SSS "DSR \(em User Defined Keys (VT200 mode only)"
+.TS
+lB lB lBX
+lT lT lTX.
+Communication	Sequence	Meaning
+
+Host to VT220	CSI ? 25 n	T{
+\(lqAre User Defined Keys locked or unlocked?\(rq
+T}
+(request for		\^
+UDK status)		\^
+
+VT220 to host	CSI ? 20 n	T{
+\(lqUser Defined Keys are unlocked.\(rq
+T}
+
+	CSI ? 21 n	T{
+\(lqUser Defined Keys are locked.\(rq
+T}
+.TE
+.
+.SSS "DSR \(em Keyboard Language"
+.TS
+lB lB lB sX
+lT lT lT sX.
+Communication	Sequence	Meaning
+
+Host to VT220	CSI ? 26 n	T{
+\(lqWhat is the keyboard language?\(rq
+T}
+(request for		\^
+keyboard		\^
+language)		\^
+
+VT220 to host	CSI ? 27; Pn n	T{
+\(lqMy keyboard language is _____ (Pn).\(rq
+T}
+
+.T&
+lT lT lT sX
+lT lT lBT lBTX
+lT lT rT lTX.
+		where:
+		Pn	Language
+		0	Unknown*
+		1	North American
+		2	British
+		3	Flemish
+		4	French Canadian
+		5	Danish
+		6	Finnish
+		7	German
+		8	Dutch
+		9	Italian
+		10	Swiss (French)
+		11	Swiss (German)
+		12	Swedish
+		13	Norwegian
+		14	French/Belgian
+		15	Spanish
+.TE
+.IP * 2
+Sent by a terminal that for some reason cannot determine its keyboard
+language. The VT220 will never send this response.
+.
+.SSS "Identification (DECID)"
+\&
+.RS
+.EX
+.TS
+cB2 cB2.
+ESC	Z
+.TE
+.EE
+.RE
+.P
+Causes the terminal to send a primary DA response sequence. DECID,
+however, is not recommended. You should use the primary DA request for
+this purpose.
+.
+.SS "Terminal Reset"
+.TS
+lB lB lBX
+lT lT lTX.
+Name	Sequence	Action
+
+Soft terminal	CSI ! p	T{
+Sets terminal to power-up default states
+T}
+reset (DECSTR)		\^
+
+Hard terminal	ESC c	T{
+Replaces all set-up parameters with NVR values or power-up default
+values if NVR values do not exist.
+T}
+reset (RIS)		\^
+.TE
+.
+.SS "Tests (DECTST)"
+The sequence format for invoking terminal tests is as follows.
+.P
+.RS
+.EX
+.TS
+cB2 cB2 cB2 cB2 cB2 cB2 cB2.
+CSI	4	;	.....	;	Ps	y
+.TE
+.EE
+.RE
+.P
+where:
+.P
+.TS
+nB lB
+n l.
+Ps\&	Test
+
+0\&	Test 1, 2, 3, and 6
+1\&	Power-up self-test
+2\&	EIA port data loopback test
+3\&	Printer port loopback test
+4\&	(not used)
+5\&	(not used)
+6\&	EIA port modem control line loopback test
+7\&	20 mA port loopback test
+8\&	(not used)
+9\&	Repeat other test in parameter string
+10\& and up	(not used)
+.TE
+.P
+.B NOTE:
+.B DECTST causes a communications line disconnect.
+.
+.SS "Adjustments (DECALN)"
+\&
+.TS
+cBT2 cBT2 cBT lTX.
+ESC	#	8	T{
+Displays screen alignment pattern (full screen of E's).
+T}
+.TE
+.
+.SS "VT52 Escape Sequences"
+.TS
+lB lB
+l l.
+Escape Sequence	Function
+
+ESC A	Cursor up
+ESC B	Cursor down
+ESC C	Cursor right
+ESC D	Cursor left
+ESC F	Enter graphics mode
+ESC G	Exit graphics mode
+ESC H	Cursor to home
+ESC I	Reverse line feed
+ESC J	Erase to end of screen
+ESC K	Erase to end of line
+ESC Y Line Column	Direct cursor address
+ESC Z	Identify
+ESC =	Enter alternate keypad mode
+ESC >	Exit alternate keypad mode
+ESC <	Enter ANSI mode
+ESC \(ha	Enter auto print mode
+ESC _	Exit auto print mode
+ESC W	Enter printer controller mode
+ESC X	Exit printer controller mode
+ESC ]	Print screen
+ESC V	Print cursor line
+.TE
+.
+.
+.\""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+.SH "Addendum for Models D, E, and F"
+The information in this addendum applies only to models D, E, and F of
+the VT220 video terminal. You can identify your model by looking at the
+label on the rear of the terminal.
+.\" (Figure 1)
+.P
+All other information in the VT220 Programmer Pocket Guide applies to
+VT220 models A, B, C, D, E, and F.
+.
+.bP
+.B Norwegian/Danish NRC Set
+.br
+.B (Danish and Norwegian Keyboard Selections, Models D, E, and F)
+.IP
+Use the following table for VT220 models D, E, and F.
+.P
+.TS
+c c cB cB cB cB cB cB cB cB
+c cB c c c c c c c c.
+	COLUMN	0	1	2	3	4	5	6	7
+ROW	BITS	000	001	010	011	100	101	110	111
+_
+.T&
+cB c c c c c c c c c.
+0	0000	NUL	DLE	SP	0	@	P	\(rs	p
+1	0001	SOH	DC1	!	1	A	Q	a	q
+2	0010	STX	DC2	\(dq	2	B	R	b	r
+3	0011	ETX	DC3	\(sh	3	C	S	c	s
+4	0100	EOT	DC4	\(Do	4	D	T	d	t
+5	0101	ENQ	NAK	%	5	E	U	e	u
+6	0110	ACK	SYN	&	6	F	V	f	v
+7	0111	BEL	ETB	\(aq	7	G	W	g	w
+8	1000	BS	CAN	(	8	H	X	h	x
+9	1001	HT	EM	)	9	I	Y	i	y
+10	1010	LF	SUB	*	:	J	Z	j	z
+11	1011	VT	ESC	+	;	K	\(AE	k	\(ae
+12	1100	FF	FS	,	<	L	\(/O	l	\(/o
+13	1101	CR	GS	\-	\&=	M	\(oA	m	\(oa
+14	1110	SO	RS	.	>	N	\(ha	n	\(ti
+15	1111	SI	US	/	?	O	\&_	o	DEL
+.TE
+.
+.bP
+.B CHARACTER SET SELECTION (SCS)
+
+.B Designating Hard Character Sets
+.IP
+Add the following entry.
+.IP
+.TS
+lB s lB
+l l l.
+Character Set	Final Character
+
+	Norwegian/Danish	E or 6 or \`
+	(models D, E, and F)
+.TE
+.
+.
+.\""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+.SH "NOTE"
+This man-page was transferred from the hardcopy DEC manual
+EK-VT220-HR-002
+.I VT220 Programmer Pocket Guide
+(2nd Edition, July 1984).
+.P
+Minor modifications and improvements were implemented where necessary,
+especially some typesetting errors were fixed.
+.
+.SH "SEE ALSO"
+.MR vt220 1 ,
+.MR vt220ug 7 ,
+.MR vt220rm 7 ,
+.MR ascii 7
+.
+.\" Another hack to get rid of the page size in nroff mode
+.if n .pl (\n[nl]u+4)

@@ -1,0 +1,4366 @@
+.\" vim:set tw=72 cc=72 spell spelllang=en:
+.\"
+.TH VT220UG 7 "September 2026" "unknown technologies"
+.\"
+.\" FIXME: This is an ugly hack to avoid strange space in tables caused
+.\" by invisible page breaks.
+.\" The hack sets the page size to "very large"
+.\".if n .pl 32767u
+.if n .pl 262144u
+.
+.\" Bulleted paragraph
+.de bP
+.  ie n  .IP \(bu 4
+.  el    .IP \(bu 2
+..
+.
+.\" Numbered paragraph
+.de nP
+.  ie n  .IP \\$1. 4
+.  el    .IP \\$1. 2
+..
+.
+.de nI
+.  ie n  .IP "" 4
+.  el    .IP "" 2
+..
+.
+.\" Bold and italic simultaneously
+.de1 Bi
+.  nop \\f(BI\\$*\\fR \\c
+..
+.
+.\" Sub-subsection, typeset it like a subsection for now
+.de1 SSS
+.  SS \\$*
+..
+.
+.\" Numbered table
+.de1 TBL
+.  SS "Table \\$1  \\$2"
+..
+.
+.\" Numbered figure
+.de1 FIG
+.  SS "Figure \\$1  \\$2"
+..
+.
+.\" Sub-sub-subsection, typeset it like a section with no break
+.de1 SSU
+.  P
+.  B "\\$1" \(em
+..
+.
+.\" various symbols, properly typeset on TTY and UTF-8
+.ie !'\*[.T]'utf8' \{\
+.  ds mu u
+.  ds dg +
+.  ds d2 \(Do
+.  ds oct (8)
+.  ds dec (10)
+.  ds bin (2)
+.  ds hl -
+.  ds vl |
+.  ds elb +
+.  ds erb +
+.  ds elt +
+.  ds ert +
+.  ds xl +
+.  ds lt +
+.  ds rt +
+.  ds tt +
+.  ds bt +
+.  ds -> >
+.  ds <- <
+.  ds ua ^
+.  ds da v
+.  ds error ?
+.\}
+.el \{\
+.  ds mu \(*m
+.  ds dg \[u253C]
+.  ds d2 \[u256A]
+.  ds oct \[u2088]
+.  ds dec \[u2081]\[u2080]
+.  ds bin \[u2082]
+.  ds hl \[u2500]
+.  ds vl \[u2502]
+.  ds elb \[u2514]
+.  ds erb \[u2518]
+.  ds elt \[u250C]
+.  ds ert \[u2510]
+.  ds xl \[u253C]
+.  ds lt \[u251C]
+.  ds rt \[u2524]
+.  ds tt \[u252C]
+.  ds bt \[u2534]
+.  ds -> \[u25BA]
+.  ds <- \[u25C4]
+.  ds ua \[u25B2]
+.  ds da \[u25BC]
+.  ds error \[u2E2E]
+.\}
+..
+.
+.\" TODO: this is ultra hacky, but it works ... at least for now
+.\" The TL/IL/BPC macros are used for tagged/indented lines instead of
+.\" paragraphs. This means there is *no* paragraph break between such
+.\" lines. It is intended for bullet point lists without empty lines
+.\" in-between.
+.\" Since groff updates broke this at some point, there is an if/else
+.\" as well as a fallback which should always work although this
+.\" fallback will not indent wrapped lines.
+.ie d an*break-paragraph \{\
+.  de1 TL
+.  \"  an*break-paragraph
+.    if \\n[.$] .nr an-prevailing-indent (n;\\$1)
+.    if '\\n[.z]'an*paragraph-tag' \{\
+.      an-warn cannot nest .\\$0 or .TQ inside .\\$0; supply a tag
+.      return
+.    \}
+.    nr an*have-paragraph-tag 1
+.    itc 1 an*input-trap
+.    in 0
+.    ll -\\n[an-margin]u
+.    nr an*saved-adjustment-mode \\n[.j]
+.    di an*paragraph-tag
+.    na
+.  .
+.
+.  de1 IL
+.    nr an*enforce-tag-separation 0
+.  \"  an*break-paragraph
+.    ie !\\n[.$] \{\
+.      ne (1v + 1u)
+.      in (\\n[an-margin]u + \\n[an-prevailing-indent]u)
+.    \}
+.    el \{\
+.      ie (\\n[.$] > 1) .TL "\\$2"
+.      el               .TL
+.      nop \&\\$1
+.    \}
+.    nr an*enforce-tag-separation 1
+.  .
+.\}
+.el \{\
+.  ie d an-break-paragraph \{\
+.    de1 TL
+.    \"  an-break-paragraph
+.      if \\n[.$] .nr an-prevailing-indent (n;\\$1)
+.      itc 1 an-input-trap
+.      in 0
+.      if !\\n[an-is-in-diversion] \{\
+.        ll -\\n[an-margin]u
+.        di an-div
+.        na
+.      \}
+.      nr an-is-in-diversion 1
+.    .
+.    de1 IL
+.    \"  an-break-paragraph
+.      ie !\\n[.$] \{\
+.        ne (1v + 1u)
+.        in (\\n[an-margin]u + \\n[an-prevailing-indent]u)
+.      \}
+.      el \{\
+.        ie (\\n[.$] > 1) .TL "\\$2"
+.        el               .TL
+.        nop \&\\$1
+.      \}
+.    .
+.  \}
+.  el \{\
+.    de1 TL
+.      nop \\$*
+.    .
+.    de1 IL
+.      nop \\$1
+.    .
+.  \}
+.\}
+.de BPC
+.IL \(bu 2
+.na
+\\$1
+.br
+.ad
+..
+.
+.SH NAME
+VT220 Owner's Manual, 3rd Edition (December 1984)
+.
+.\""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+.SH "INTRODUCTION"
+This manual provides the information you need to operate and maintain
+your VT220 video terminal. The manual is organized into six chapters and
+two appendices as follows.
+.\" the real one has three appendices (the last one is about keyboards)
+.bP
+Chapter\ 1, \(lqA Look at the Terminal,\(rq introduces you to the VT220
+terminal. This chapter provides an overview of what the terminal is and
+what it does, then briefly describes how it works.
+.bP
+Chapter\ 2, \(lqControls, Indicators, and Connectors,\(rq describes the
+terminal controls, indicators, and connectors, and shows their
+locations.
+.bP
+Chapter\ 3, \(lqOperating Procedures,\(rq provides information on
+specific terminal functions and operating procedures.
+.bP
+Chapter\ 4, \(lqTerminal Set-Up,\(rq describes each set-up screen feature
+in detail. This chapter shows you how to select set-up features to
+define the terminal's operating characteristics.
+.bP
+Chapter\ 5, \(lqCommunication,\(rq describes how the VT220 terminal
+communicates with a host computer and a peripheral device such as a
+printer.
+.bP
+Chapter\ 6, \(lqProblem Solving,\(rq describes the self-test used to
+find terminal hardware problems. This chapter also contains simple
+troubleshooting information to correct common operating problems.
+.bP
+Appendix\ A, \(lqSpecifications,\(rq provides all VT220 terminal
+specifications.
+.bP
+Appendix\ B, \(lqOptions, Documentation, and Supplies,\(rq describes the
+options, related documentation, and supplies mentioned in this manual
+and how to order them.
+.\" .bP
+.\" Appendix C, \(lqKeyboards,\(rq shows the various keyboards available
+.\" with the VT220 terminal.
+.
+.
+.\""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+.SH "A LOOK AT THE TERMINAL"
+.SS "GENERAL"
+This chapter introduces you to the VT220 terminal. The chapter provides
+an overview of what the terminal is and what it does, then briefly
+describes how the terminal works.
+.
+.SS "VT220 COMPONENTS"
+The two main components of the VT220 terminal are the monitor/system
+unit and the keyboard.
+.\" (Figure 1-1)
+.
+.SSS "Monitor/System Unit"
+The monitor/system unit (referred to as the \fIterminal\fR from this
+point on) consists of a monochrome cathode-ray tube (CRT), a terminal
+controller board, and a power supply/monitor board.
+.
+.SSS "Keyboard"
+The low-profile keyboard has four groups of keys and four visual
+indicators. The main keypad operates like a typewriter keyboard. A
+single coiled cable connects the keyboard to the terminal.
+.P
+There are 15 basic keyboards available with the VT220.
+.\" (See Appendix C.)
+Each keyboard is for a different language.
+.
+.SS "HOW THE VT220 WORKS"
+The VT220 is a general-purpose video display terminal that lets you
+interact with a software application program. Characters sent by the
+application program appear as text on the terminal screen. You can print
+the text you create on the terminal if the terminal is connected to a
+printer. The terminal operates by executing standard American National
+Standards Institute (ANSI) functions.
+.
+.SS "OPERATING STATES"
+The VT220 has three operating states you can select from the keyboard.
+.bP
+Set-Up
+.bP
+On-line
+.bP
+Local
+.
+.SSS "Set-Up"
+The set-up state lets you select or examine terminal operating features.
+\fITERMINAL SET-UP\fR describes these set-up features in detail. You
+also use set-up to select the on-line and local states.
+.P
+You select set-up from the keyboard by pressing the \fBSet-Up\fR key.
+.
+.SSS "On-Line"
+The on-line state lets the terminal communicate with a host computer.
+Data entered at the keyboard is sent to the host computer. Data received
+from the host computer is displayed on the monitor. You can also display
+data entered from the keyboard on the screen, if you select the local
+echo feature in set-up (\fI\,TERMINAL SET-UP\/\fR).
+.P
+You can only select on-line in set-up.
+.
+.SSS "Local"
+The local state lets you place the host computer on hold. Data entered
+at the keyboard is sent to the monitor, but not to the host computer.
+Data received from the host computer is stored; this data is sent to the
+monitor after you put the terminal back on-line.
+.P
+You can only select local in set-up.
+.
+.SS "OPERATING MODES"
+The VT220 has four major operating modes. You can select these modes in
+set-up. The default operating mode is VT220 mode, 7-bit controls. A
+\fIdefault\fR setting is a factory setting the terminal uses until you
+change that setting.
+.bP
+VT200 mode, 7-bit controls
+.bP
+VT200 mode, 8-bit controls
+.bP
+VT100 mode
+.bP
+VT52 mode
+.
+.SSS "VT200 mode, 7-Bit Controls"
+This mode executes standard ANSI functions and lets you use the full
+range of VT220 capabilities. You should use this mode with application
+programs that expect 7-bit control characters, and either DEC
+multinational characters or national replacement characters (depending
+on the character set selected in set-up).
+.P
+.B NOTE: In general, most VT100 application programs will run in VT200
+.B mode, 7-bit controls.
+.
+.SSS "VT200 Mode, 8-Bit Controls"
+This mode also executes standard ANSI functions and lets you use the
+full range of VT220 capabilities. You should use this mode with
+application programs that expect 8-bit control characters and DEC
+multinational characters.
+.
+.SSS "VT100 Mode"
+This mode executes standard ANSI functions. You should use VT100 mode
+with application programs that require strict compatibility with
+Digital's VT100 terminal.
+.
+.SSS "VT52 Mode"
+This is a text mode that executes Digital (DEC) private functions (not
+ANSI). You should use VT52 mode for compatibility with existing
+application programs designed for Digital's VT52 terminal.
+.
+.SS "CHARACTER SET MODES"
+The VT220 has two basic character set modes, multinational and national.
+.P
+.I Multinational
+mode supports the DEC multinational character set (DEC MCS). The DEC MCS
+is an 8-bit character set that contains most characters used in the
+major European languages. The ASCII character set is included in the DEC
+MCS.
+.P
+.I National
+mode supports the national replacement character (NRC) sets. The NRC
+sets are a group of eleven 7-bit character sets. You can only use one
+NRC set at a time. The NRC set available depends on the keyboard
+selected in set-up (\fI\,TERMINAL SET-UP\/\fR). National mode restricts
+compatibility to a 7-bit environment, so the DEC MCS is not available.
+.
+.SS "CRT SAVER FEATURE"
+If during normal operation the terminal is inactive for 30 minutes (no
+keyboard activity or input from a host computer), the monitor screen
+goes blank (but data is not lost). Keyboard activity or input from the
+host computer activates the monitor again. To reactivate the screen,
+press the \fBCtrl\fR key.
+.P
+.B NOTE:
+.B This manual describes the use of the North American keyboard, unless
+.B otherwise specified. When you use the North American keyboard, the
+.B terminal defaults to multinational mode. (National mode is disabled).
+.
+.
+.\""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+.SH "CONTROLS, INDICATORS, AND CONNECTORS"
+.SS "GENERAL"
+This chapter provides information about the terminal's controls,
+indicators, and connectors. The chapter also describes the keyboard,
+including the three keypads and special function keys.
+.
+.SS "TERMINAL"
+The terminal controls, indicators, and connectors are
+.\" shown in Figures 2-1 and 2-2 and
+described in Tables 2-1 and 2-2.
+.
+.SSS "Monitor"
+The monitor controls are
+.\" shown in Figure 2-2 and
+described in Table 2-2.
+.
+.TBL "2-1" "Terminal Controls, Indicators, and Connctors"
+.TS
+lB lBX
+lT lTX.
+Control/indicator/Connector	Description
+
+Power switch	Turns the terminal on or off.
+	Pressing \fB1\fR turns power on.
+	Pressing \fB0\fR turns power off.
+
+EIA host port connector	T{
+Connects the terminal to a host computer either directly or via a modem.
+T}
+
+20 mA host port connector	T{
+Connects the terminal to a nearby host computer via a 20 mA connection.
+T}
+
+T{
+Composite video output connector
+T}	T{
+Provides a complete video output signal to an additional slave monitor.
+T}
+
+Power OK indicator	T{
+Turns on to indicate power is applied to the terminal.
+T}
+
+Printer port connector	T{
+Connects a printer to the terminal.
+T}
+
+Keyboard connector	T{
+Connects the keyboard cable to the terminal.
+T}
+
+AC input connector	T{
+Connects the power cord to the terminal from the wall outlet.
+T}
+
+Fuse	T{
+Protects the system from electrical damage.
+T}
+
+Voltage select switch	T{
+This slide switch lets you match the terminal voltage to the wall outlet
+voltage. See the \fIVT220 Installation Guide\fR for the correct setting.
+T}
+
+.T&
+l sX.
+\fBCAUTION: An incorrect voltage setting can damage the terminal.\fR
+
+.T&
+l lTX.
+Cursor	T{
+Indicates where the next display character will appear on the monitor
+screen. You can select an underline cursor or block cursor in the
+Display Set-Up screen (\fI\,TERMINAL SET-UP\/\fR).
+T}
+.TE
+.
+.TBL "2-2" "Monitor Controls and Tilt Leg Relase Button"
+.TS
+lB lBX
+lT lTX.
+Control	Description
+
+Contrast control	T{
+Adjusts the degree of contrast on the monitor screen.
+T}
+
+Brightness	T{
+Adjusts the degree of brightness on the monitor screen.
+T}
+
+Tilt leg release button	T{
+Adjusts the viewing angle of the monitor. Pressing the button releases a
+tilt leg that drops to provide a -5 to +15 degree tilt range.
+T}
+.TE
+.
+.SS "KEYBOARD"
+The keyboard
+.\" (Figure 2-3)
+consists of the following parts.
+.P
+.RS
+Main keypad
+.br
+Editing keypad
+.br
+Auxiliary keypad
+.br
+Top-row function keys
+.br
+Four visual indicators
+.br
+Two audible indicators
+.RE
+.
+.SS "MAIN KEYPAD"
+This keypad
+.\" (Figure 2-4)
+operates like a standard typewriter keyboard.
+.P
+The main keypad ahs the following special function keys.
+.
+.SSS "Tab"
+Pressing the \fBTab\fR key sends a horizontal tab, which normally moves
+the cursor to the next tab stop.
+.
+.SSS "Ctrl"
+Holding down the \fBCtrl\fR key and pressing another key sends a control
+code to the system. A control code tells the system to perform a
+predefined operation.
+.P
+In this manual, keyboard control functions using \fBCtrl\fR appear as
+follows.
+.P
+.RS
+.B Ctrl-(other key)
+.RE
+.P
+For example, \fBCtrl-Z\fR means to press and hold \fBCtrl\fR while
+pressing the \fBZ\fR key.
+.
+.SSS "Lock"
+Pressing the \fBLock\fR key down makes the alphabetic keys send
+uppercase characters. Pressing \fBLock\fR again makes the alphabetic
+keys send lowercase characters. \fBLock\fR is similar to the Shift Lock
+key on a typewriter.
+.
+.SSS "Shift"
+Holding down the \fBShift\fR key and pressing another key sends
+uppercase characters, or the top symbol on two-character keys.
+.P
+In some cases, you use \fBShift\fR with another key to send a predefined
+control function. In this manual, a keyboard control function using
+\fBShift\fR is shown as follows.
+.P
+.RS
+.B Shift-(other key)
+.RE
+.P
+For example, \fBShift-Print Screen\fR means to press and hold
+\fBShift\fR while pressing the \fBPrint Screen\fR key.
+.
+.SSS "Return"
+Pressing the \fBReturn\fR key sends either a carriage return or a
+carriage return and line feed (selected in the General Set-Up screen,
+\fITERMINAL SET-UP\/\fR). In some cases, \fBReturn\fR moves the cursor
+to the next line when editing text. In others, \fBReturn\fR is a signal
+to the system that a particular operation is complete.
+.
+.SSS "<X (Delete)"
+Pressing the \fB<X\fR (delete) key sends a DEL (delete) character.
+Normally \fB<X\fR (delete) erases one character to the left of the
+cursor. Typing \fBShift-<X\fR (delete) sends a CAN (cancel) character.
+.
+.SSS "Compose Character"
+This key lets you create characters that do not exist as standard keys
+on your keyboard. See the \(lqComposing Characters\(rq section in
+\fIOPERATING PROCEDURES\fR to use this key.
+.
+.SS "EDITING KEYPAD"
+Normally, you use the editing keypad
+.\" (Figure 2-5)
+to control the cursor and edit data that you already entered.
+.P
+In a typical editing operation, the four arrow keys move the cursor in
+the direction indicated by the arrow. The six editing keys have
+functions corresponding to their legends. See your application software
+manual for specific information.
+.
+.SS "AUXILIARY KEYPAD"
+The auxiliary keypad
+.\" (Figure 2-6)
+lets you enter numeric data as you would with a standard calculator.
+Some keys
+.RB ( PF1 ,
+.BR PF2 ,
+.BR PF3 ,
+and
+.RB PF4 )
+may have functions assigned by the application software. See your
+application software manual for specific information.
+.P
+The \fBEnter\fR key can cause a carriage return or a carriage return and
+line feed, depending on the General Set-Up screen selection. You also
+use \fBEnter\fR in set-up, to activate a selected feature.
+.
+.SS "TOP-ROW FUNCTION KEYS"
+Most of the top-row function keys
+.\" (Figure 2-7)
+have functions assigned by the application software. Your application
+software manual should describe the function of these keys. The
+following paragraphs describe the predefined top-row keys.
+.
+.SSS "Hold Screen"
+Pressing the \fBHold Screen\fR key freezes the screen display and stops
+any new characters from being displayed. The Hold Screen indicator comes
+on when you press this key. Pressing \fBHold Screen\fR again returns the
+terminal to normal operation and turns off the Hold Screen indicator.
+.
+.SSS "Print Screen"
+Pressing the \fBPrint Screen\fR key sends the text on the screen to the
+printer.
+.P
+Typing \fBCtrl-Print Screen\fR sets or resets auto print mode. See the
+\(lqAuto Print Mode\(rq section in \fIOPERATING PROCEDURES\fB.
+.
+.SSS "Set-Up"
+Pressing the \fBSet-Up\fR key causes the terminal to enter or exit the
+set-up state. (See \fITERMINAL SET-UP\fR.)
+.
+.SSS "Data/Talk"
+The \fBData/Talk\fR key only operates if EIA modem controls are enabled.
+(See \fIOPERATING PROCEDURES\fR.)
+.
+.SSS "Break"
+The \fBBreak\fR key works alone or with other keys to perform an
+operation.
+.bP
+Pressing \fBBreak\fR alone sends a break if break is enabled in set-up.
+(See the \(lqKeyboard Set-Up Screen\(rq section in \fITERMINAL
+SET-UP\fR.)
+.bP
+Typing \fBShift-Break\fR starts a disconnect. (See the
+\(lqConnect/Disconnect\(rq section in \fICOMMUNICATION\fR.)
+.bP
+Typing \fBCtrl-Break\fR sends the answerback message to the host
+computer. (See the \(lqKeyboard Set-Up Screen\(rq in \fITERMINAL
+SET-UP\fR.)
+.
+.SSS "F11 (ESC)"
+\fBF11\fR is normally a function key used by application programs. In
+VT100 and VT52 mode, it sends an ESC (escape) character.
+.
+.SSS "F12 (BS)"
+\fBF12\fR is normally a function key used by application programs. In
+VT100 and VT52 modes, it sends a BS (backspace) character.
+.
+.SSS "F13 (LF)"
+\fBF13\fR is normally a function key used by application programs. In
+VT100 and VT52 modes, it sends an LF (line feed) character.
+.
+.SSS "Function Key Summary"
+The following keys are function keys used by application programs. Each
+key takes on a meaning defined by the particular application program.
+The meaning of a key may or may not correspond to the legend on the key.
+The following list shows typical uses for each key. Actual use depends
+on the application.
+.P
+.TS
+lB lB
+l l.
+Application-Defined Keys	Cursor Positioning Keys
+
+F6	(\(<-)
+F7	(\(->)
+F8	(\(ua)
+F9	(\(da)
+F10
+F11 (ESC)	\fBEditing Keys\fR
+F12 (BS)
+F13 (LF)	Find
+F14	Insert Here
+Help	Remove
+Do	Select
+F17	Prev Screen
+F18	Next Screen
+F19
+F20
+
+PF1
+PF2
+PF3
+PF4
+.TE
+.
+.SS "VISUAL INDICATORS"
+The keyboard has four visual indicators showing the current terminal
+status or operation in progress.
+.
+.SSS "Hold Screen Indicator"
+The Hold Screen indicator is on when the video monitor screen is frozen.
+See the \(lqHold Screen\(rq key description.
+.
+.SSS "Lock Indicator"
+The Lock indicator comes on to indicate that the terminal will send
+uppercase characters only. See the \(lqLock\(rq key description.
+.
+.SSS "Compose Indicator"
+The Compose indicator comes on to indicate you are performing a compose
+sequence. (See the \(lqComposing Characters\(rq section in \fIOPERATING
+PROCEDURES\fR.)
+.
+.SSS "Wait Indicator"
+The Wait indicator is on when the terminal is prevented (locked) from
+sending information. You can clear this locked condition by invoking the
+\fBClear Comm\fR feature from the Set-Up Directory screen (\fI\,TERMINAL
+SET-UP\/\fR.) See \fICOMMUNICATION\fR for the causes of the keyboard
+lock condition.
+.
+.SS "AUDIBLE INDICATORS"
+The keyboard can generate two sounds you select from the Keyboard Set-Up
+screen (\fI\,TERMINAL SET-UP\/\fR), a keyclick and a bell. You can use
+the bell as a margin bell, warning bell, or both.
+.
+.SSS "Keyclick"
+The keyclick sound occurs each time you press a key, with the following
+exceptions.
+.bP
+You press \fBShift\fR or \fBCtrl\fR. These keys do not make a keyclick,
+because they do not send a character. They modify characters sent by
+other keys.
+.bP
+When the Wait indicator is on; characters from the keyboard are lost.
+.bP
+The keyclick set-up feature is off.
+.
+.SSS "Bell"
+The bell tone sounds in each of the following cases.
+.bP
+As part of the power-up self-test
+.bP
+When the terminal receives a bell (BEL) character from the computer
+.bP
+After a compose character error
+.bP
+When the cursor approaches the right margin
+.
+.
+.\""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+.SH "OPERATING PROCEDURES"
+.SS GENERAL
+This chapter helps you to become familiar with some specific terminal
+functions and operating procedures. However, your main reference source
+is the documentation for your application software.
+.
+.SS PRINTING
+The VT220 has a built-in serial printer interface that supports the
+following optional Digital printers.
+.P
+.RS
+LA34/38
+.br
+LA35/LA36
+.br
+LA12
+.br
+LA100
+.br
+LA120
+.br
+LA50
+.br
+LQP02
+.RE
+.P
+The VT220 printing functions operate in one of four modes selected from
+set-up screens (\fI\,TERMINAL SET-UP\/\fR).
+.P
+.TS
+lB lB
+l l.
+Mode	Set-Up Screen
+
+Normal (default)	Printer Set-Up
+
+Auto print	Printer Set-Up
+
+Printer controller	Printer Set-Up
+
+Local controller	Set-Up Directory and
+	Printer Set-Up
+.TE
+.P
+These modes let the terminal perform several print operations selected
+from the keyboard and/or the computer.
+.
+.SSS "Normal Mode"
+Normal mode lets you select all local printing functions (such as
+\fBPrint Full Page\fR) from the keyboard.
+.
+.SSS "Auto Print Mode"
+Auto print mode prints the current display line when the cursor moves to
+the next line. The cursor moves to the next line when the terminal (1)
+receives a line feed, form feed, or vertical tab code, or (2)
+automatically wraps the line. When selected, \fBAuto Print Mode\fR
+appears on the status line in set-up. You can use all keyboard printing
+functions (such as \fBPrint Full Page\fR) in auto print mode.
+.P
+To invoke auto print mode, type \fBCtrl-Print Screen\fR. To exit auto
+print mode, type \fBCtrl-Print Screen\fR again.
+.
+.SSS "Printer Controller Mode"
+In printer controller mode, the host computer has direct control of the
+printer. Characters received from the host computer go directly to the
+printer, and are not displayed on the screen. (See
+\fICOMMUNICATIONS\fR.) When selected, \fBPrinter Controller Mode\fR
+appears on the status line in set-up. You cannot select this mode from
+the keyboard (except by entering set-up).
+.P
+You cannot use local printing functions in printer controller mode. For
+example, \fBPrint Full Page\fR does not work.
+.
+.SSS "Local Controller Mode"
+Local controller mode is a special mode that lets you send information
+directly from the keyboard to the printer. You may find this feature
+useful in setting up certain printer for operation, without involving
+the host computer.
+.P
+To select local controller mode, you must select two different set-up
+features.
+.nP 1
+\fBLocal\fR \(em selected in the Set-Up Directory screen.
+.nP 2
+\fBPrinter Controller Mode\fR \(em selected in the Printer Set-Up
+screen.
+.P
+When you select these two set-up features, the terminal is in local
+controller mode.
+.
+.SS "OPTIONAL MODEM"
+An optional modem lets the VT220 communicate over a telephone line with
+a remote host computer. The VT220 accepts compatible modems such as the
+AT&T 103, 113, and 212 types, in addition to Digital's DF02 and DF03.
+(See \fIOPTIONS, DOCUMENTATION, AND SUPPLIES\fR.) See
+\fICOMMUNICATION\fR for more information on communications.
+.
+.SS "COMPOSING CHARACTERS"
+You can use \fIcompose sequences\fR to create characters that do not
+exist as standard keys on your keyboard. To use a compose sequence, you
+press a series of keys. There are two types of compose sequences:
+three-stroke sequences and two-stroke sequences.
+.P
+.B NOTE:
+.B The compose sequences you can use depend on the character set mode
+.B selected (multinational or national). Table 3-1 lists the valid
+.B compose sequences for multinational mode. Table 3-2 lists the valid
+.B compose sequences for each keyboard in national mode. In national
+.B mode, the compose sequences you can use depend on the keyboard
+.B selected.
+.P
+You can use three-stroke sequences on all VT220 keyboards. First you
+press the \fBCompose Character\fR key, then you press two standard keys
+whose characters form a valid compose sequence.
+.P
+You can use two-stroke sequences on all keyboards except the North
+American keyboard. Two-stroke sequences are faster than three-stroke
+sequences, but are limited to sequences starting with the following
+nonspacing diacritical marks: grave accent, acute accent, circumflex
+accent, tilde mark, diaeresis mark (umlaut), and ring mark. Two-stroke
+sequences do not use the \fBCompose Character\fR key. Instead, you enter
+a nonspacing diacritical mark first. Then enter a standard character
+that forms a valid compose sequence with the diacritical mark.
+.P
+Diacritical marks are available on all but the North American keyboard.
+The diacritical marks vary among the keyboards, depending on relative
+use. Also, some keyboards have keys that contain both a standard
+character and a diacritical mark.
+.P
+As with standard keys, you select the character you want with the
+\fBShift\fR and \fBLock\fR keys.
+.P
+If you use a diacritical mark with a three-stroke sequence, the
+diacritical mark is treated as its equivalent character.
+.P
+.RS
+.TS
+lB lB
+l l.
+Diacritical Mark	Equivalent Character
+
+Diaeresis (umlaut) mark	Double quote \(dq
+Acute accent	Apostrophe \(aq
+Grave accent	Single quote \(ga
+Circumflex accent	Circumflex character \(ha
+Tilde mark	Tilde character \(ti
+Ring mark	Asterisk * or degree \(de
+.TE
+.RE
+.P
+Tables 3-1 and 3-2 list all valid compose sequences for multinational
+and national modes respectively. Depending on the keyboard, you can
+create characters in column 1 in one or more ways.
+.P
+.bP
+With a standard key (if available on that keyboard)
+.bP
+With a three-stroke compose sequence (always)
+.bP
+With a two-stroke compose sequence (if the diacritical mark is available
+on the keyboard)
+.
+.SSS "Using a Three-Stroke Compose Sequence"
+Create a three-stroke compose sequence as follows.
+.nP 1
+Find the character you want to create in column 1 of Table 3-1 or 3-2.
+.nP 2
+Press the \fBCompose Character\fR key. (The Compose indicator comes on,
+indicating the terminal is in compose mode.)
+.nP 3
+Type the two characters in column 2 for the character you want to
+create.
+.P
+For example, to create e with acute accent, press \fBCompose
+Character\fR, and then type e and apostrophe; or press \fBCompose
+Character\fR, and then type apostrophe and e.
+.P
+When you complete a valid sequence, the Compose indicator turns off and
+the composite character is sent to the application. If you use an
+invalid sequence, the sequence is aborted and the bell sounds (if the
+warning bell is enabled in the Keyboard Set-Up screen, \fITERMINAL
+SET-UP\/\fR).
+.P
+.B NOTE:
+.B Function keys abort a compose sequence without sounding the bell.
+.
+.SSS "Using a Two-Stroke Compose Sequence"
+Create a two-stroke compose sequence as follows.
+.\" in the original manual, the "a" is missing
+.P
+.B NOTE:
+.B You can use two-stroke compose sequences on all keyboards except the
+.B North American keyboard.
+.
+.nP 1
+Find the character you want to create in column 1 of Table 3-1 or 3-2.
+Verify in column 3 that the character can be created.
+.nP 2
+Press the key with the diacritical mark shown in column 3. (The Compose
+indicator comes on, indicating the terminal is in compose mode.)
+.nP 3
+Type the second character shown in column 3.
+.P
+For example, to create e with grave accent on a Danish keyboard, press
+the key that has the grave accent and then type e.
+.P
+When you complete a valid sequence, the Compose indicator turns off and
+the Composite character is sent to the application. If you use an
+invalid sequence, the sequence is aborted and the bell sounds (if the
+warning bell is enabled in the Keyboard Set-Up screen, \fITERMINAL
+SET-UP\/\fR).
+.P
+.B NOTE:
+.B Function keys abort a compose sequence without sounding the bell.
+.
+.SSS "Aborting or Restarting a Compose Sequence"
+If you accidentally enter compose mode (by pressing the \fBCompose
+Character\fR key or a diacritical mark key), press the \fB<X\fR (delete)
+key to immediately terminate the compose sequence and exit compose mode.
+No character is sent to the application.
+.P
+If you press \fBCompose Character\fR during a compose sequence, a new
+three-stroke sequence starts from that point. The previous sequence is
+aborted, with no effect on the application.
+.
+.TBL "3-1" "Valid Compose Sequences: Multinational Mode"
+.B In three-stroke sequences, you can enter required characters in any
+.B order unless the table says \(lqorder sensitive.\(rq You must enter
+.B all two-stroke sequences in the order shown.
+.P
+.TS
+lB s lB lB
+lB s lB lB
+lB s lB lB
+lB s lB lB
+lB s lB lB
+lB l l l.
+	Required Characters
+
+(1)	(2)	(3)
+Composite	Three-Stroke	Two-Stroke
+Character	Sequence	Sequence
+
+\(dq	(quotation mark)	\fB\(dq\fR (sp)	\fB\(ad\fR (sp)
+
+\(sh	(number sign)	\fB++\fR
+
+\(aq	(apostrophe)	\fB\(aq\fR (sp)	\fB\(aa\fR (sp)
+
+@	(commercial at)	\fBaa\fR or \fBAA\fR
+
+[	(opening bracket)	\fB((\fR
+
+\(rs	(backslash)	\fB//\fR or \fB/<\fR
+
+]	(closing bracket)	\fB))\fR
+
+\(ha	(circumflex accent)	\fB\(ha\fR (sp)	\fB\(ha\fR (sp)
+
+\(ga	(single quote)	\fB\(ga\fR (sp)	\fB\(ga\fR (sp)
+
+{	(opening brace)	\fB(\-\fR
+
+|	(vertical line)	\fB/\(ha\fR
+
+}	(closing brace)	\fB)\-\fR
+
+\(ti	(tilde)	\fB\(ti\fR (sp)	\fB\(ti\fR (sp)
+
+\(r!	(inverted !)	\fB!!\fR
+
+\(ct	(cent sign)	\fBc/\fR or \fBC/\fR or
+		\fBc|\fR or \fBC|\fR
+
+\(Po	(pound sign)	\fBl-\fR or \fBL-\fR or
+		\fBl=\fR or \fBL=\fR
+
+\(Ye	(yen sign)	\fBy-\fR or \fBY-\fR or
+		\fBy=\fR or \fBY=\fR
+
+\(sc	(section sign)	\fBso\fR or \fBSO\fR or \fBS!\fR or \fBs!\fR
+		or \fBs0\fR or \fBS0\fR
+
+\(Cs	(currency sign)	\fBxo\fR or \fBXO\fR or
+		\fBx0\fR or \fBX0\fR
+
+\(co	(copyright sign)	\fBco\fR or \fBCO\fR or
+		\fBc0\fR or \fBC0\fR
+
+\(Of	(feminine ordinal indicator)	\fBa-\fR or \fBA-\fR
+
+\(Fo	(angle quotation mark left)	\fB<<\fR
+
+\(de	(degree sign)	\fB0\(ha\fR or (sp) \fB\(sh\fR	\fB\(de\fR (sp)
+		or (sp) \fB\(de\fR
+
+\(+-	(plus/minus sign)	\fB+\-\fR
+
+\(S2	(superscript 2)	\fB2\(ha\fR
+
+\(S3	(superscript 3)	\fB3\(ha\fR
+
+\(mc	(micro sign)	\fB/u\fR or \fB/U\fR
+		(order sensitive)
+
+\(ps	(paragraph sign)	\fBp!\fR or \fBP!\fR
+
+\(pc	(middle dot)	\fB.\(ha\fR
+
+\(S1	(superscript 1)	\fB1\(ha\fR
+
+\(Om	(masculine ordinal indicator)	\fB(o\-\fR or \fBO\-\fR
+
+\(Fc	(angle quotation mark right)	\fB>>\fR
+
+\(14	(fraction one-quarter)	\fB14\fR
+		(order sensitive)
+
+\(12	(fraction one-half)	\fB12\fR
+		(order sensitive)
+
+\(r?	(inverted ?)	\fB??\fR
+
+\(`A	(A grave)	\fBA`\fR	\fB`A\fR
+
+\('A	(A acute)	\fBA'\fR	\fB\(aaA\fR
+
+\(^A	(A circumflex)	\fBA\(ha\fR	\fB\(haA\fR
+
+\(~A	(A tilde)	\fBA\(ti\fR	\fB\(tiA\fR
+
+\(:A	(A umlaut)	\fB\(dqA\fR or \fBA\(ad\fR	\fB\(adA\fR
+
+\(oA	(A ring)	\fBA*\fR or \fBA\(de\fR	\fB\(deA\fR
+
+\(AE	(A E ligature)	\fBAE\fR
+		(order sensitive)
+
+\(,C	(C cedilla)	\fBC,\fR
+
+\(`E	(E grave)	\fBE\(ga\fR	\fB\(gaE\fR
+
+\('E	(E acute)	\fBE\(aq\fR	\fB\(aaE\fR
+
+\(^E	(E circumflex)	\fBE\(ha\fR	\fB\(haE\fR
+
+\(:E	(E umlaut)	\fBE\(dq\fR or \fBE\(ad\fR	\fB\(adE\fR
+
+\(`I	(I grave)	\fBI\(ga\fR	\fB\(gaI\fR
+
+\('I	(I acute)	\fBI\(aq\fR	\fB\(aaI\fR
+
+\(^I	(I circumflex)	\fBI\(ha\fR	\fB\(haI\fR
+
+\(:I	(I umlaut)	\fBI\(dq\fR or \fBI\(ad\fR	\fB\(adI\fR
+
+\(~N	(N tilde)	\fBN\(ti\fR	\fB\(tiN\fR
+
+\(`O	(O grave)	\fBO\(ga\fR	\fB\(gaO\fR
+
+\('O	(O acute)	\fBO\(aq\fR	\fB\(aaO\fR
+
+\(^O	(O circumflex)	\fBO\(ha\fR	\fB\(haO\fR
+
+\(~O	(O tilde)	\fBO\(ti\fR	\fB\(tiO\fR
+
+\(:O	(O umlaut)	\fBO\(dq\fR or \fBO\(ad\fR	\fB\(adO\fR
+
+\(OE	(O E ligature)	\fBOE\fR
+		(order sensitive)
+
+\(`U	(U grave)	\fBU\(ga\fR	\fB\(gaU\fR
+
+\('U	(U acute)	\fBU\(aq\fR	\fB\(aaU\fR
+
+\(^U	(U circumflex)	\fBU\(ha\fR	\fB\(haU\fR
+
+\(:U	(U umlaut)	\fBU\(dq\fR or \fBU\(ad\fR	\fB\(adU\fR
+
+\(:Y	(Y umlaut)	\fBY\(dq\fR or \fBY\(ad\fR	\fB\(adY\fR
+
+\(ss	(German small sharp s)	\fBss\fR
+
+\(`a	(a grave)	\fBa\(ga\fR	\fB\(gaa\fR
+
+\('a	(a acute)	\fBa\(aq\fR	\fB\(aaa\fR
+
+\(^a	(a circumflex)	\fBa\(ha\fR	\fB\(haa\fR
+
+\(~a	(a tilde)	\fBa\(ti\fR	\fB\(tia\fR
+
+\(:a	(a umlaut)	\fBa\(dq\fR or \fBa\(ad\fR	\fB\(ada\fR
+
+\(oa	(a ring)	\fBa*\fR or \fBa\(de\fR	\fB\(dea\fR
+		(degree sign)
+
+\(ae	(a e ligature)	\fBae\fR
+		(order sensitive)
+
+\(,c	(c cedilla)	\fBc,\fR (comma)
+
+\(`e	(e grave)	\fBe\(ga\fR	\fB\(gae\fR
+
+\('e	(e acute)	\fBe\(aq\fR	\fB\(aae\fR
+
+\(^e	(e circumflex)	\fBe\(ha\fR	\fB\(hae\fR
+
+\(:e	(e umlaut)	\fBe\(dq\fR or \fBe\(ad\fR	\fB\(ade\fR
+
+\(`i	(i grave)	\fBi\(ga\fR	\fB\(gai\fR
+
+\('i	(i acute)	\fBi\(aq\fR	\fB\(aai\fR
+
+\(^i	(i circumflex)	\fBi\(ha\fR	\fB\(hai\fR
+
+\(~n	(n tilde)	\fBn\(ti\fR	\fB\(tin\fR
+
+\(`o	(o grave)	\fBo\(ga\fR	\fB\gao\fR
+
+\('o	(o acute)	\fBo\(aq\fR	\fB\(aao\fR
+
+\(^o	(o circumflex)	\fBo\(ha\fR	\fB\(hao\fR
+
+\(~o	(o tilde)	\fBo\(ti\fR	\fB\(tio\fR
+
+\(:o	(o umlaut)	\fBo\(dq\fR or \fBo\(ad\fR	\fB\(ado\fR
+
+\(oe	(o e ligature)	\fBoe\fR
+		(order sensitive)
+
+\(/o	(o slash)	\fBo/\fR
+
+\(`u	(u grave)	\fBu\(ga\fR	\fB\(gau\fR
+
+\('u	(u acute)	\fBu\(aq\fR	\fB\(aau\fR
+
+\(^u	(u circumflex)	\fBu\(ha\fR	\fB\(hau\fR
+
+\(:u	(u umlaut)	\fBu\(dq\fR or \fBu\(ad\fR	\fB\(adu\fR
+
+\(:y	(y umlaut)	\fBy\(dq\fR or \fBy\(ad\fR	\fB\(ady\fR
+.TE
+.P
+(sp) = space
+.
+.TBL "3-2" "Valid Compose Sequences: National Mode"
+.B In three-stroke sequences, you can enter required characters in any
+.B order unless the table says \(lqorder sensitive.\(rq You must enter
+.B all two-stroke sequences in the order shown.
+.P
+.TS
+lB s lB lB
+lB s lB lB
+lB s lB lB
+lB s lB lB
+lB s lB lB
+lB s lB lB
+lB s lB lB
+lB l l l.
+	Required Characters
+
+(1)	(2)	(3)
+Composite	Three-Stroke	Two-Stroke
+Character	Sequence	Sequence
+
+British Keyboard
+
+\(Po	(pound sign)	\fBl\-\fR or \fBL\-\fR or
+		\fBl=\fR or \fBL=\fR
+
+\(rs	(backslash)	\fB/<\fR
+
+.T&
+lB s lB lB
+lB l l l.
+Flemish Keyboard
+
+\(Po	(pound sign)	\fBl\-\fR or \fBL\-\fR or
+		\fBl=\fR or \fBL=\fR
+
+\(sc	(section sign)	\fB!s\fR or \fB!S\fR or
+		\fBos\fR or \fBoS\fR or
+		\fBOs\fR or \fBOS\fR or
+		\fB0s\fR or \fB0S\fR
+
+\(`u	(u grave)	\fB\(gau\fR
+
+\(`e	(e grave)	\fB\(gae\fR
+
+.T&
+lB s lB lB
+lB l l l.
+French Canadian Keyboard
+
+\(`a	(a grave)	\fB\(gaa\fR	\fB\(gaa\fR
+
+\(^a	(a circumflex)	\fB\(haa\fR	\fB\(haa\fR
+
+\(,c	(c cedilla)	\fB,c\fR
+
+\(^e	(e circumflex)	\fB\(hae\fR	\fB\(hae\fR
+
+\(`e	(e grave)	\fB\(gae\fR	\fB\(gae\fR
+
+\(^i	(i circumflex)	\fB\(hai\fR	\fB\(hai\fR
+
+\(^o	(o circumflex)	\fB\(hao\fR	\fB\(hao\fR
+
+\(`u	(u grave)	\fB\(gau\fR	\fB\(gau\fR
+
+\(^u	(u circumflex)	\fB\(hau\fR	\fB\(hau\fR
+
+.T&
+lB s lB lB
+lB l l l.
+Danish Keyboard
+
+\(sh	(number sign)	\fB++\fR
+
+\(:A	(A umlaut)	\fB\(adA\fR	\fB\(adA\fR
+
+\(oA	(A ring)	\fB*A\fR
+
+\(/O	(O slash)	\fBO/\fR
+
+\(:U	(U umlaut)	\fB\(adU\fR	\fB\(adU\fR
+
+\(:a	(a umlaut)	\fB\(ada\fR	\fB\(ada\fR
+
+\(oa	(a ring)	\fB*a\fR
+
+\(/o	(o slash)	\fBo/\fR
+
+\(:u	(u umlaut)	\fB\(adu\fR	\fB\(adu\fR
+
+.T&
+lB s lB lB
+lB l l l.
+Finnish Keyboard
+
+\(sh	(number sign)	\fB++\fR
+
+@	(commercial at)	\fBaa\fR or \fBAA\fR or \fBaA\fR
+
+\(oA	(A ring)	\fB*A\fR
+
+\(:U	(U umlaut)	\fB\(dqU\fR
+
+\('e	(e acute)	\fB\(aqe\fR
+
+\(oa	(a ring)	\fB*a\fR
+
+\(:u	(u umlaut)	\fB\(dqu\fR
+
+.T&
+lB s lB lB
+lB l l l.
+German Keyboard
+
+\(:A	(A umlaut)	\fB\(adA\fR
+
+\(:U	(U umlaut)	\fB\(adU\fR
+
+\(:a	(a umlaut)	\fB\(ada\fR
+
+\(:u	(u umlaut)	\fB\(adu\fR
+
+.T&
+lB s lB lB
+lB l l l.
+Dutch Keyboard
+
+\(Po	(pound sign)	\fB\-L\fR or \fB\-l\fR or
+		\fB=L\fR or \fB=l\fR
+
+\(34	(three quarters)	\fB34\fR
+		(order sensitive)
+
+\(ij	(i j sign)	\fBij\fR
+		(order sensitive)
+
+\(Fn	(florin)	\fBf-\fR
+		(order sensitive)
+
+.T&
+lB s lB lB
+lB l l l.
+Italian Keyboard
+
+\(Po	(pound sign)	\fBl\-\fR or \fBL\-\fR or
+		\fBl=\fR or \fBL=\fR
+
+\(sc	(section sign)	\fB!s\fR or \fB!S\fR or
+		\fBos\fR or \fBoS\fR or
+		\fBOs\fR or \fBOS\fR or
+		\fB0s\fR or \fB0S\fR
+
+\(`a	(a grave)	\fB\(gaa\fR	\fB\(gaa\fR
+
+\(,c	(c cedilla)	\fB,c\fR
+
+\('e	(e acute)	\fB\(aqe\fR
+
+.T&
+lB s lB lB
+lB l l l.
+Swiss (French) Keyboard
+
+\(:a	(a umlaut)	\fB\(ada\fR
+
+\(,c	(c cedilla)	\fB,c\fR
+
+\(^e	(e circumflex)	\fB\(hae\fR	\fB\(hae\fR
+
+\(^i	(i circumflex)	\fB\(hai\fR	\fB\(hai\fR
+
+\(^o	(o circumflex)	\fB\(hao\fR	\fB\(hao\fR
+
+\(:o	(o umlaut)	\fB\(ado\fR
+
+\(^u	(u circumflex)	\fB\(hau\fR	\fB\(hau\fR
+
+\(:u	(u umlaut)	\fB\(adu\fR
+
+\(`u	(u grave)	\fB\(gau\fR	\fB\(gau\fR
+
+.T&
+lB s lB lB
+lB l l l.
+Swiss (German) Keyboard
+
+\(`a	(a grave)	\fB\(gaa\fR	\fB\(gaa\fR
+
+\(,c	(c cedilla)	\fB,c\fR
+
+\(^e	(e circumflex)	\fB\(hae\fR	\fB\(hae\fR
+
+\('e	(e acute)	\fB\(aqe\fR
+
+\(`e	(e grave)	\fB\(gae\fR	\fB\(gae\fR
+
+\(^i	(i circumflex)	\fB\(hai\fR	\fB\(hai\fR
+
+\(^o	(o circumflex)	\fB\(hao\fR	\fB\(hao\fR
+
+\(^u	(u circumflex)	\fB\(hau\fR	\fB\(hau\fR
+
+\(`u	(u grave)	\fB\(gau\fR	\fB\(gau\fR
+
+.T&
+lB s lB lB
+lB l l l.
+Swedish Keyboard
+
+\(sh	(number sign)	\fB++\fR
+
+\(oA	(A ring)	\fB*A\fR
+
+\('E	(E acute)	\fB\(aqE\fR
+
+\(:U	(U umlaut)	\fB\(dqU\fR
+
+\(oa	(a ring)	\fB*a\fR
+
+\('e	(e acute)	\fB\(aqe\fR
+
+\(:u	(u umlaut)	\fB\(dqu\fR
+
+.T&
+lB s lB lB
+lB l l l.
+Norwegian Keyboard
+
+\(sh	(number sign)	\fB++\fR
+
+\(oA	(A ring)	\fB*A\fR
+
+\(:A	(A umlaut)	\fB\(adA\fR	\fB\(adA\fR
+
+\(AE	(A E diphthong)	\fBAE\fR
+		(order sensitive)
+
+\(:U	(U umlaut)	\fB\(adU\fR	\fB\(adU\fR
+
+\(:a	(a umlaut)	\fB\(ada\fR	\fB\(ada\fR
+
+\(ae	(a e diphthong)	\fBae\fR
+		(order sensitive)
+
+\(oa	(a ring)	\fB*a\fR
+
+\(:u	(u umlaut)	\fB\(adu\fR	\fB\(adu\fR
+
+.T&
+lB s lB lB
+lB l l l.
+French/Belgian Keyboard
+
+\(Po	(pound sign)	\fBl\-\fR or \fBL\-\fR or
+		\fBl=\fR or \fBL=\fR
+
+\(sc	(section sign)	\fB!s\fR or \fB!S\fR or
+		\fBos\fR or \fBoS\fR or
+		\fBOs\fR or \fBOS\fR or
+		\fB0s\fR or \fB0S\fR
+
+\(`e	(e grave)	\fB\(gae\fR
+
+\(`u	(u grave)	\fB\(gau\fR
+
+.T&
+lB s lB lB
+lB l l l.
+Spanish Keyboard
+
+\(Po	(pound sign)	\fBl\-\fR or \fBL\-\fR or
+		\fBl=\fR or \fBL=\fR
+
+\(sc	(section sign)	\fB!s\fR or \fB!S\fR or
+		\fBos\fR or \fBoS\fR or
+		\fBOs\fR or \fBOS\fR or
+		\fB0s\fR or \fB0S\fR
+
+\(r!	(inverted !)	\fB!!\fR
+
+\(r?	(inverted ?)	\fB??\fR
+
+\(de	(degree sign)	\fB\(haO\fR
+.TE
+.
+.
+.\""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+.SH "TERMINAL SETUP"
+.SS "GENERAL"
+This chapter describes the VT220 set-up screens, and how to use them.
+These screens let you examine or change terminal operating features such
+as transmit/receive speeds, type of cursor, and so on.
+.P
+The VT220 stores many of its operating features in an NVR (nonvolatile
+RAM) memory. NVR memory retains these features even when power is shut
+off. In addition to storing operator-selected features, the terminal
+retains the factory-default settings. You can recall these default
+settings in set-up.
+.P
+You can change all available set-up features from the keyboard. Some
+features can be changed by the host computer as described in the
+.IR "VT220 Programmer Reference Manual" .
+(See \fIOPTIONS, DOCUMENTATION, AND SUPPLIES\fR to order other
+documents.)
+.
+.SS "USING SET-UP"
+The set-up state is based on selectable displays called set-up screens.
+You can select any set-up screen from the Set-Up Directory screen
+displayed when you enter set-up.
+.\" (Figure 4-1)
+Each set-up screen displays the features for that set-up function and
+lets you change or keep those features. You can only display one set-up
+screen at a time. You can enter the Set-Up Directory screen from any
+other set-up screen.
+.
+.SS "SET-UP SCREENS"
+Each set-up screen occupies the bottom third of the monitor screen.
+(Current screen data is temporarily invisible.) Incoming data is not
+lost if the host supports XOFF and that feature is enabled. (See the
+\(lqCommunications Set-Up Screen\(rq section in this chapter.) Each
+screen contains the following information:
+.\" (Figure 4-2).
+.P
+.RS
+Screen title
+.br
+Terminal identifier
+.br
+Firmware version number
+.br
+Status line
+.br
+Fields (action, parameter, text parameter)
+.
+.\" TODO: maybe transfer the Figure 4-2 (page 47)?
+.SSS "Screen Title"
+The screen title identifies the current set-up screen. There are seven
+set-up screens.
+.nP 1
+Set-Up Directory
+.nP 2
+Display Set-Up
+.nP 3
+General Set-Up
+.nP 4
+Communications Set-Up
+.nP 5
+Printer Set-Up
+.nP 6
+Keyboard Set-Up
+.nP 7
+Tab Set-Up
+.
+.SSS "Terminal Identifier"
+The terminal identifier identifies the type of terminal you are using,
+in this case a VT220.
+.
+.SSS "Firmware Version Number"
+The firmware version number identifies the level of firmware the
+terminal is using.
+.
+.SSS "Status Line"
+The status line appears at the bottom of each set-up screen. This line
+shows you the current status of the modem (if \fBEIA Modem Control\fR is
+selected), the printer, and the terminal insert/replace mode. The status
+line is a reporting line only; you cannot change the status line from
+the keyboard. Table 4-1 describes the status line messages.
+.
+.TBL "4-1" "Status Line Messages"
+.TS
+lB lB lBX
+lBT lBT lTX.
+Report	Values	Meaning
+
+Insert/	Insert	T{
+The terminal is in insert mode. During normal text operation, all new
+display characters move old characters to the right; old characters
+moved past the right margin are lost.
+T}
+Replace:	\^	\^
+
+	Replace	T{
+The terminal is in replace mode. During normal text operation, all new
+display characters replace old characters at the cursor position.
+Replace is the normal mode of operation.
+T}
+
+Printer:	Ready	T{
+The printer is ready.
+T}
+
+	Not Ready	T{
+The printer is not ready.
+T}
+
+	None	T{
+No printer is available.
+T}
+
+	Auto	T{
+The terminal is in auto print mode.
+T}
+
+	Controller	T{
+The terminal is in printer controller mode.
+T}
+
+Modem:	DSR,Data	T{
+The modem is ready to send or receive data.
+T}
+	DSR,Talk	\^
+
+	No DSR,Data	T{
+The modem is not ready to send or receive data.
+T}
+	No DSR,Talk	\^
+.TE
+.
+.SSS "Fields"
+The fields on each screen are blocks of text describing current
+operating characteristics. There are three types of fields.
+.
+.\" technically the headings should be .I but they are changed to .B
+.\" here since this is what other headings use too
+.nP 1
+.B Action Field
+.IP
+An action field has only one value. When you select an action field and
+press the \fBEnter\fR key, the terminal performs the action.
+.IP
+For example, each screen has an action field that reads \fBTo
+Directory\fR. When you select this field and press \fBEnter\fR, the
+Set-Up Directory screen replaces the current screen.
+.nP 2
+.B Parameter Field
+.IP
+A parameter field contains a feature that has two or more values. When
+you select a parameter field and press \fBEnter\fR, the next value
+replaces the current value.
+.IP
+For example, if you select the keyclick parameter field, it may have a
+value of \fBKeyclick\fR. Pressing \fBEnter\fR changes the field to \fBNo
+Keyclick\fR.
+.nP 3
+.B Text Parameter Field
+.IP
+A text parameter field lets you enter a value from the keyboard. You can
+select a text parameter field as follows.
+.IP
+.RS
+.nP 1
+Use the arrow keys to move the field cursor to the next parameter field.
+(See the following \(lqSet-Up Controls and Cursor\(rq section.)
+.nP 2
+Press \fBEnter\fR. The terminal prompts you to enter text on the status
+line at the bottom of the screen, temporarily overwriting the status
+line.
+.nP 3
+Type the text you want entered as the new value. The value appears next
+to the prompt.
+.nP 4
+Press \fBEnter\fR to enter the new value.
+.RE
+.IP
+If you make a mistake, press the \fB<X\fR (delete) key to erase the last
+character entered. If you want to abort the entry without changing the
+original value, press an arrow key to change the field selection. (See
+the following \(lqSet-Up Controls and Cursor\(rq section.)
+.
+.SSS "Set-Up Controls and Cursor"
+The VT220 uses a field cursor while in set-up. The field cursor appears
+as a highlighted field (reverse video) that you can move from field to
+field with the arrow keys.
+.P
+Table 4-2 describes the keys used to enter and exit set-up, move the
+field cursor, and change operating characteristics.
+.
+.TBL "4-2" "Set-Up Controls and Cursor Functions"
+.TS
+lB lBX
+lT lTX.
+Control Key	Function
+
+Set-Up	T{
+Pressing the \fBSet-Up\fR key one time places the terminal in set-up.
+Pressing \fBSet-Up\fR again returns the terminal to the operating state
+(on-line or local).
+T}
+
+Arrow keys	T{
+Pressing the arrow keys moves the field cursor in the direction of the
+arrow.
+T}
+
+Enter	T{
+The \fBEnter\fR key lets you perform the function displayed at the field
+cursor position.
+
+If the cursor is on an action field, pressing \fBEnter\fR immediately
+performs the action.
+
+If the cursor is on a parameter field, pressing \fBEnter\fR changes the
+value of the field. You can use the \fBEnter\fR key to see the range of
+available field values. The value displayed is the current value
+invoked.
+T}
+.TE
+.
+.SS "SET-UP EXAMPLE: CHANGING FEATURES"
+This section provides an example of changing the terminal operating
+characteristics in set-up.
+.P
+Suppose the terminal is currently set to display its text in 80 columns,
+and the keyboard keys click each time you press them.
+.P
+You decide to change these two operating characteristics so the terminal
+displays 132 columns, and the keys do not click when pressed.
+.P
+Use the following procedure to change these two operating
+characteristics in set-up.
+.P
+.nP 1
+Press the \fBSet-Up\fR key. The terminal enters set-up and displays the
+Set-Up Directory screen.
+.\" (Figure 4-3)
+.nP 2
+Note that the cursor is on the \fBDisplay\fR field.
+.nP 3
+Press the \fBEnter\fR key. The terminal replaces the Set-Up Directory
+screen with the Display Set-Up screen.
+.\" (Figure 4-4)
+.nP 4
+Use the arrow keys to move the field cursor to the \fB80 Columns\fR
+field.
+.nP 5
+Press \fBEnter\fR. The field changes from \fB80 Columns\fR to \fB132
+Columns\fR, indicating that the feature changed.
+.P
+.B NOTE:
+.B Although many parameter changes are immediate (such as the column
+.B feature), some changes do not take effect until you exit set-up.
+.nP 6
+Use the arrow keys to move the field cursor to the \fBTo Directory\fR
+field. (You want to change another feature.)
+.nP 7
+Press \fBEnter\fR. The terminal replaces the Display Set-Up screen with
+the Set-Up Directory screen.
+.nP 8
+Use the arrow keys to move the field cursor to the \fBKeyboard\fR field.
+.nP 9
+Press \fBEnter\fR. The terminal replaces the Set-Up Directory screen
+with the Keyboard Set-Up screen.
+.\" (Figure 4-8)
+.nP 10
+Use the arrow keys to move the field cursor to the \fBKeyclick\fR field.
+.nP 11
+Press \fBEnter\fR. The field changes from \fBKeyclick\fR to \fBNo
+Keyclick\fR, indicating that the feature changed.
+.nP 12
+Press \fBSet-Up\fR to exit set-up and return to the operating mode
+(on-line or local).
+.
+.SS "SET-UP SCREEN DESCRIPTIONS"
+The following sections describe the set-up screens and their features.
+When you select the various set-up features you want to use, make sure
+to check off the box beside the parameter value selected for that
+feature. This gives you a record of the values selected, in case the
+settings are accidentally changed or lost. If repairs to the terminal
+are necessary, the technician needs this information to reset the set-up
+feature values.
+.P
+Table 4-3 summarizes the set-up screens. The table lists the features
+available on each screen.
+.
+.TBL "4-3" "Set-Up Screens Summary"
+.TS
+lB lB lB
+l l l.
+Set-Up Directory	Display Set-Up	General Set-Up
+
+Display Set-Up	To Next Set-Up	To Next Set-Up
+General Set-Up	To Directory	To Directory
+Communications Set-Up	80/132 Columns	Terminal Mode
+Printer Set-Up	Control Representation	VT100 Mode ID
+Keyboard Set-Up	Auto Wrap Mode	UDK Lock
+Tab Set-Up	Smooth/Jump Scroll	User Features Lock
+On-Line/Local	Light/Dark Screen	Character Set Mode
+Clear Display	Cursor	Keypad Mode
+Clear Communications	Cursor Style	Cursor Key Mode
+Reset Terminal		New Line
+Recall Saved Parameters
+Save Parameters
+Set-Up Language
+Keyboard Language
+Factory Defaults
+Exit Set-Up
+
+.T&
+lB lB lB
+l l l.
+Communications Set-Up	Printer Set-Up	Keyboard Set-Up
+
+To Next Set-Up	To Next Set-Up	To Next Set-Up
+To Directory	To Directory	To Directory
+Transmit Speed	Transmit/Receive Speed	Typewriter/D.P.\@ Keys
+Receive Speed	Print Mode	Caps/Shift-Lock
+XOFF	Data-Bits Parity	Auto Repeat
+Data-Bits/Parity	Stop Bits	Keyclick
+Stop Bits	Print Page/Region	Margin Bell
+Local Echo	Printed Data Type	Warning Bell
+Host Port Selection	Print Terminator	Break
+Disconnect		Auto Answerback
+Transmit Rate Limit		Answerback=
+		Conceal Answerback
+
+.T&
+lB lB lB
+l l l.
+Tab Set-Up
+
+To Next Set-Up
+To Directory
+Clear All Tabs
+Set 8 Column Tabs
+Tab Fields and Ruler
+.TE
+.
+.SS "SET-UP DIRECTORY SCREEN"
+The Set-Up Directory screen
+.\" (Figure 4-3)
+appears immediately when you enter set-up. This screen lets you access
+any other set-up screen. The Set-Up Directory screen also contains
+fields you can use to select terminal operating features.
+.P
+Table 4-4 describes all fields on this screen.
+.
+.TBL "4-4" "Set-Up Directory Screen"
+.TS
+lB s s lBX
+lT1 lT1 lT lTX
+lT s s lTX.
+Field	Function
+
+\fBDisplay\fR	T{
+Replaces the Set-Up Directory screen with the Display Set-Up screen.
+T}
+	\^
+Action field	\^
+	\^
+Value: \fBDisplay\fR	\^
+
+\fBGeneral\fR	T{
+Replaces the Set-Up Directory screen with the General Set-Up screen.
+T}
+	\^
+Action field	\^
+	\^
+Value: \fBGeneral\fR	\^
+
+\fBComm\fR	T{
+Replaces the Set-Up Directory screen with the Communications Set-Up
+screen.
+T}
+	\^
+Action field	\^
+	\^
+Value: \fBComm\fR	\^
+
+\fBPrinter\fR	T{
+Replaces the Set-Up Directory screen with the Printer Set-Up screen.
+T}
+	\^
+Action field	\^
+	\^
+Value: \fBPrinter\fR	\^
+
+\fBKeyboard\fR	T{
+Replaces the Set-Up Directory screen with the Keyboard Set-Up screen.
+T}
+	\^
+Action field	\^
+	\^
+Value: \fBKeyboard\fR	\^
+
+\fBTab\fR	T{
+Replaces the Set-Up Directory screen with the Tab Set-Up screen.
+T}
+	\^
+Action field	\^
+	\^
+Value: \fBTab\fR	\^
+
+\fBOn-Line\fR	T{
+Lets you select the mode of operation.
+T}
+or	\^
+\fBLocal\fR	\^
+	\^
+Parameter field	\^
+
+Values:
+.T&
+lT lT lT lTX.
+\(sq	\fBOn-Line\fR		T{
+Lets the terminal communicate with the host computer.
+T}
+	(default)		\^
+
+\(sq	\fBLocal\fR		T{
+Effectively puts the host computer on hold. Data entered at the keyboard
+is sent directly to the monitor screen only.
+T}
+
+.T&
+lT s s lTX.
+\fBClear Display\fR	T{
+Clears the monitor screen when you exit set-up.
+T}
+	\^
+Action field	\^
+	\^
+Value: \fBClear Display\fR	\^
+
+\fBClear Comm\fR	T{
+Clears communication as follows.
+.bP
+Aborts any print operation in progress.
+.bP
+Aborts any escape sequence, control sequence, or device control string
+(DCS) processing.
+.bP
+Clears the keyboard buffers.
+.bP
+Clears the transmit buffer.
+.bP
+Takes the terminal out of printer controller mode.
+.bP
+Sends XON to the host port.
+.bP
+Resets XOFF received flags on the printer and host ports.
+T}
+	\^
+Action field	\^
+	\^
+Value: \fBClear Comm\fR	\^
+\fB
+
+\fBReset Terminal\fR	T{
+Resets many terminal operating features to a default setting used by
+most application programs.
+T}
+	\^
+Action field	\^
+	\^
+Value: \fBReset Terminal\fR	\^
+
+\fBRecall\fR	T{
+Replaces all existing set-up features with saved values. Clears the
+monitor screen.
+T}
+	\^
+Action field	\^
+
+.T&
+lB s s sX
+lT s s lTX.
+T{
+NOTE: Recall causes a disconnect to occur.
+T}
+
+Value: \fBRecall\fR
+
+\fBSave\fR	T{
+Saves all set-up features in all set-up screens.
+T}
+	\^
+Action field	\^
+	\^
+Value: \fBSave\fR	\^
+
+\fBSet-Up=________\fR	T{
+Lets you select the language used to display set-up screens.
+T}
+	\^
+Parameter field	\^
+
+Values:
+.T&
+l lB l lX.
+\(sq	Set-Up=English
+\(sq	Set-Up=Francais
+\(sq	Set-Up=Deutsch
+
+.T&
+lT s s lTX.
+\fB________ Keyboard\fR	T{
+This field lets you select correct terminal operation for the national
+keyboard you are using.
+T}
+	\^
+Parameter field	\^
+
+Values:
+.T&
+l lB l lX.
+\(sq	North American
+\(sq	British
+\(sq	Flemish
+\(sq	Canadian (French)
+\(sq	Danish
+\(sq	Finnish
+\(sq	German
+\(sq	Dutch
+\(sq	Italian
+\(sq	Swiss (French)
+\(sq	Swiss (German)
+\(sq	Swedish
+\(sq	Norwegian
+\(sq	French/Belgian
+\(sq	Spanish
+
+.T&
+lT s s lTX.
+\fBDefault\fR	T{
+Replaces all current set-up features with factory-default settings.
+Clears the monitor screen and returns the cursor to the upper-left
+corner of the screen.
+T}
+	\^
+Action field	\^
+	\^
+Value: \fBDefault\fR	\^
+
+.T&
+lB s s sX
+lT s s lTX.
+T{
+NOTE: Default causes a disconnect to occur.
+T}
+
+\fBExit\fR	T{
+Exits set-up and returns the terminal to on-line or local.
+T}
+	\^
+Action field	\^
+	\^
+Value: \fBExit\fR	\^
+.TE
+.
+.SS "DISPLAY SET-UP SCREEN"
+The Display Set-Up screen
+.\" (Figure 4-4)
+lets you define monitor display characteristics.
+.P
+Table 4-5 describes all fields on this screen.
+.
+.TBL "4-5" "Display Set-Up Screen"
+.TS
+lB s s lBX
+lT1 lT lT lTX
+lT s s lTX.
+Field	Function
+
+\fBTo Next Set-Up\fR	T{
+Replaces the Display Set-Up screen with the General Set-Up screen.
+T}
+	\^
+Action field	\^
+	\^
+Value: \fBTo Next Set-Up\fR	\^
+
+\fBTo Directory\fR	T{
+Replaces the Display Set-Up screen with the Set-Up Directory screen.
+T}
+	\^
+Action field	\^
+	\^
+Value: \fBTo Directory\fR	\^
+
+\fB________ Columns\fR	T{
+Selects an 80 or 132-column screen display for text. A change to this
+field takes effect immediately and clears the display.
+T}
+	\^
+Parameter field	\^
+	\^
+Values:
+.T&
+lT lTB lT lTX
+lT lT lT lTX
+lT lTB lT lTX.
+\(sq	80 Columns		T{
+Selects 80-column screen.
+T}
+	(default)		\^
+
+\(sq	132 Columns		T{
+Selects 132-column screen.
+T}
+
+.T&
+lBT s s lTX
+lT s s lTX.
+________ Controls	T{
+Selects how the terminal handles control codes from the host computer.
+T}
+	\^
+Parameter field	\^
+	\^
+Values:
+.T&
+lT lBT lT lTX
+lT lT lT lTX
+lT lBT lT lTX.
+\(sq	Interpret Controls		T{
+Interprets control codes, but does not display them.
+T}
+	(default)		\^
+
+\(sq	Display Controls		T{
+Displays the control codes as characters, but does not execute them.
+T}
+
+.T&
+lT s s lTX.
+\fBAuto Wrap\fR	T{
+Selects whether or not display text automatically wraps on screen.
+T}
+	\^
+Parameter field	\^
+	\^
+Values:
+.T&
+lT lBT lT lTX
+lT lT lT lTX
+lT lBT lT lTX.
+\(sq	No Auto Wrap		T{
+Causes characters received after the right margin to be overwritten into
+the last character position of the current line.
+T}
+	(default)		\^
+
+\(sq	Auto Wrap		T{
+Causes a character received after the right margin to automatically
+appear in the first character position of the next line.
+T}
+
+.T&
+lBT s s lTX
+lT s s lTX.
+________ Scroll	T{
+Selects how fast lines appear on the screen.
+T}
+	\^
+Parameter field	\^
+	\^
+Values:
+.T&
+lT lBT lT lTX
+lT lT lT lT
+lT lBT lT lTX.
+\(sq	Smooth Scroll		T{
+Limits the speed at which new lines appear on the screen, causing a
+smooth steady scroll.
+T}
+	(default)		\^
+
+\(sq	Jump Scroll		T{
+Displays new lines as fast as they are received, causing a jump scroll.
+T}
+
+.T&
+lBT s s lTX
+lT s s lTX.
+____ Text, ____ Screen	T{
+Selects the screen display type.
+T}
+	\^
+Parameter field	\^
+	\^
+Values:
+.T&
+lT lBT lT lTX
+lT lBT lT lTX
+lT lT lT lTX
+lT lBT lT lTX.
+\(sq	Light Text,		T{
+Selects a normal screen display (light text on a dark background).
+T}
+	Dark Screen		\^
+	(default)		\^
+
+\(sq	Dark Text,		T{
+Selects reverse video screen display (dark text on a light background).
+T}
+	Light Screen		\^
+
+.T&
+lBT s s lTX
+lT s s lTX.
+Text Cursor	T{
+Selects whether or not the text cursor is displayed.
+T}
+	\^
+Parameter field	\^
+	\^
+Values:
+.T&
+lT lBT lT lTX
+lT lT lT lTX
+lT lBT lT lTX.
+\(sq	Cursor		T{
+Displays the cursor.
+T}
+	(default)		\^
+
+\(sq	No Cursor		T{
+Does not display the cursor.
+T}
+
+.T&
+lBT s s lTX
+lT s s lTX.
+________ Cursor Style	T{
+Selects the text cursor style displayed.
+T}
+	\^
+Parameter field	\^
+	\^
+Values:
+.T&
+lT lBT lT lTX
+lT lT lT lTX
+lT lBT lT lTX.
+\(sq	Block Cursor		T{
+Displays block cursor.
+T}
+	(default)		\^
+
+\(sq	Underline Cursor		T{
+Displays underline cursor.
+T}
+.TE
+.
+.SS "GENERAL SET-UP SCREEN"
+The General Set-Up screen
+.\" (Figure 4-5)
+lets you define a group of commonly used general operating features.
+.P
+Table 4-6 describes all fields on this screen.
+.TBL "4-6" "General Set-Up Screen"
+.TS
+lB s s lBX
+lT1 lT lT1 lTX
+lT s s lTX.
+Field	Function
+
+\fBTo Next Set-Up\fR	T{
+Replaces the General Set-Up screen with the Communications Set-Up
+screen.
+T}
+	\^
+Action field	\^
+	\^
+Value: \fBTo Next Set-Up\fR	\^
+
+\fBTo Directory\fR	T{
+Replaces the Display Set-Up screen with the Set-Up Directory screen.
+T}
+	\^
+Action field	\^
+	\^
+Value: \fBTo Directory\fR	\^
+
+\fB_______ Mode _______\fR	T{
+Selects the basic text operating mode.
+T}
+	\^
+Parameter field	\^
+	\^
+Values:
+.T&
+lT lBT lT lTX
+lT lBT lT lTX
+lT lT lT lTX
+lT lBT lT lTX.
+\(sq	VT200 Mode, 7-Bit		T{
+Sets the terminal to operate with a full range of capabilities, using
+8-bit graphic characters and 7-bit controls. This is the recommended
+mode for most applications.
+T}
+	Controls		\^
+	(default)		\^
+
+\(sq	VT200 Mode, 8-Bit		T{
+Sets the terminal to operate with a full range of capabilities in an
+8-bit environment with 8-bit controls. Many applications designed for
+the VT100 terminal will run in this mode.
+T}
+	Controls		\^
+
+\(sq	VT52 Mode		T{
+Sets the terminal for use with application programs designed for the
+VT52 terminal.
+T}
+
+\(sq	VT100 Mode		T{
+Sets the terminal for use with application programs designed for a VT100
+terminal and requiring strict VT100 compatibility. In general, use VT200
+mode, 7-bit controls if possible.
+T}
+
+.T&
+lT s s lTX.
+\fBVT100 Mode Terminal ID\fR	T{
+Selects the Device Attributes response (terminal ID) in VT100 mode.
+T}
+	\^
+Parameter field	\^
+
+.T&
+lBT s s sX.
+T{
+NOTE: This field is unique. It appears only when the terminal is in
+VT100 mode.
+T}
+
+.T&
+lT s s lTX
+lT lBT lT lTX
+lT lT lT lTX
+lT lBT lT lTX.
+Values:
+\(sq	VT220 ID		T{
+Causes the terminal to send the device attributes of a VT220 terminal to
+the host computer.
+T}
+	(default)		\^
+
+\(sq	VT100 ID		T{
+Causes the terminal to send the device attributes of a VT100 terminal to
+the host computer.
+T}
+
+\(sq	VT101 ID		T{
+Causes the terminal to send the device attributes of a VT101 terminal to
+the host computer.
+T}
+
+\(sq	VT102 ID		T{
+Causes the terminal to send the device attributes of a VT102 terminal to
+the host computer.
+T}
+
+.T&
+lT s s lTX.
+\fBUser Defined Keys ____\fR	T{
+Selects whether or not the host can change user-defined key (UDK)
+definitions.
+T}
+	\^
+Parameter field	\^
+	\^
+.T&
+lT s s lTX
+lT lBT lT lTX
+lT lBT lT lTX
+lT lT lT lTX
+lT lBT lT lTX.
+Values:
+\(sq	User Defined		T{
+Allows UDKs to be loaded.
+T}
+	Keys Unlocked		\^
+	(default)		\^
+
+\(sq	User Defined		T{
+Prevents UDKs from being loaded.
+T}
+	Keys Locked		\^
+
+.T&
+lT s s lTX.
+\fBUser Features _____\fR	T{
+Selects whether or not the host can change user preference features you
+have set.
+T}
+	\^
+Parameter field	\^
+	\^
+.T&
+lT s s lTX
+lT lBT lT lTX
+lT lBT lT lTX
+lT lT lT lTX
+lT lBT lT lTX.
+Values:
+\(sq	User Features		T{
+Lets the host change user features.
+T}
+	Unlocked		\^
+	(default)		\^
+
+\(sq	User Features		T{
+Prevents the host from changing features.
+
+The following user preference features are affected by this feature.
+
+.BPC "Auto Repeat"
+.BPC "Smooth/Jump Scroll"
+.BPC "Light/Dark Screen"
+.BPC "Tab Stops"
+.BPC "Keyboard Lock"
+T}
+
+.T&
+lT s s sX
+lT s s lTX.
+T{
+.B NOTE: Some software applications expect to control the above user
+.B features. If this applies to your particular software, set the value
+.B to
+.Bi User Features Unlocked
+.B to ensure predictable behavior.
+T}
+
+\fBCharacter Set Mode\fR	T{
+Selects either the national or multinational character set mode.
+T}
+	\^
+Parameter field	\^
+
+.T&
+lBT s s sX
+lT s s lTX.
+T{
+NOTE: If the North American keyboard has been selected, only
+multinational mode is available for use. National mode is disabled.
+T}
+
+.T&
+lT s s lTX
+lT lBT lT lTX
+lT lT lT lTX
+lT lBT lT lTX.
+Values:
+\(sq	Multinational		T{
+Enables the terminal to generate 8-bit multinational characters,
+including 7-bit ASCII characters.
+T}
+	(default)		\^
+
+\(sq	National		T{
+Causes the terminal to use one of eleven 7-bit national replacement
+character sets. The NRC set depends on the keyboard field selected in
+the Set-Up Directory screen.
+T}
+
+.T&
+lBT s s lTX
+lT s s lTX.
+________ Keypad	T{
+Selects whether or not the keypad sends ASCII character codes or escape
+sequences.
+T}
+	\^
+Parameter field	\^
+	\^
+.T&
+lT s s lTX
+lT lBT lT lTX
+lT lT lT lTX
+lT lBT lT lTX.
+Values:
+\(sq	Numeric Keypad		T{
+Causes the auxiliary keypad to send ASCII character codes corresponding
+to the numeric characters on the keys.
+T}
+	(default)		\^
+
+\(sq	Application Keypad		T{
+Causes the auxiliary keypad to send escape sequences used by an
+application program.
+T}
+
+.T&
+lT s s lTX.
+\fB________ Cursor Keys\fR	T{
+Selects whether or not the cursor keys send ANSI cursor control
+sequences or application control functions.
+T}
+	\^
+Parameter field	\^
+	\^
+.T&
+lT s s lTX
+lT lBT lT lTX
+lT lT lT lTX
+lT lBT lT lTX.
+Values:
+\(sq	Normal Cursor Keys		T{
+Cursor keys send ANSI cursor control sequences (up, down, left, and
+right).
+T}
+	(default)		\^
+
+\(sq	Application Cursor		T{
+Cursor keys send application program control functions.
+T}
+	Keys		\^
+
+.T&
+lT s s lTX.
+\fB________ New Line\fR	T{
+Selects whether or not the \fBReturn\fR key sends a carriage return
+only, or a carriage return and a line feed.
+T}
+	\^
+Parameter field	\^
+	\^
+.T&
+lT s s lTX
+lT lBT lT lTX
+lT lT lT lTX
+lT lBT lT lTX.
+Values:
+\(sq	No New Line		T{
+The \fBReturn\fR key sends a carriage return only.
+T}
+	(default)		\^
+
+\(sq	New Line		T{
+The \fBReturn\fR key sends a carriage return and a line feed.
+T}
+
+.T&
+lT s s sX.
+T{
+.B NOTE:
+.B When the terminal is in numeric keypad mode, this feature affects the
+.Bi Enter
+.B key in the same way it does the
+.Bi Return
+.B key.
+T}
+.TE
+.
+.SS "COMMUNICATIONS SET-UP SCREEN"
+The Communications Set-Up screen
+.\" (Figure 4-6)
+lets you define the communications environment between the terminal and
+host.
+.P
+Table 4-7 describes all fields on this screen.
+.
+.TBL "4-7" "Communications Set-Up Screen"
+.TS
+lB s s lBX
+lT1 lT lT lTX
+lT s s lTX.
+Field	Function
+
+\fBTo Next Set-Up\fR	T{
+Replaces the Communications Set-Up screen with the Printer Set-Up
+screen.
+T}
+	\^
+Action field	\^
+	\^
+Value: \fBTo Next Set-Up\fR	\^
+
+\fBTo Directory\fR	T{
+Replaces the Communications Set-Up screen with the Set-Up Directory
+screen.
+T}
+	\^
+Action field	\^
+	\^
+Value: \fBTo Directory\fR	\^
+
+\fBTransmit=________\fR	T{
+Selects the rate the terminal uses to send data to the host computer.
+T}
+	\^
+Parameter field	\^
+
+.T&
+lBT s s sX.
+T{
+NOTE: This feature does not set the format for the printer port.
+T}
+
+.T&
+lT s s lTX
+lT lBT lT lTX.
+Values:
+\(sq	Transmit=   75		T{
+The terminal transmit speed must match the computer receive speed.
+However, the terminal can transmit at one speed and receive at another.
+T}
+\(sq	Transmit=  110		\^
+\(sq	Transmit=  150		\^
+\(sq	Transmit=  300		\^
+\(sq	Transmit=  600		\^
+\(sq	Transmit= 1200		\^
+\(sq	Transmit= 2400		\^
+\(sq	Transmit= 4800		\^
+.T&
+lT lT lT lTX
+lT lBT lT lTX.
+	(default)		\^
+\(sq	Transmit= 9600		\^
+\(sq	Transmit=19200		\^
+
+.T&
+lT s s lTX.
+\fBReceive=________\fR	T{
+Selects the rate the terminal uses to receive data from the host
+computer.
+T}
+	\^
+Parameter field	\^
+	\^
+.T&
+lT s s lTX
+lT lBT lT lTX
+lT lT lT lTX
+lT lBT lT lTX.
+Values:
+\(sq	Receive=Transmit		T{
+The terminal receive speed must match the computer transmit speed.
+However, the terminal can receive at one sped and transit at another.
+T}
+	(default)		\^
+\(sq	Receive=   75		\^
+\(sq	Receive=  110		\^
+\(sq	Receive=  150		\^
+\(sq	Receive=  300		\^
+\(sq	Receive=  600		\^
+\(sq	Receive= 1200		\^
+\(sq	Receive= 2400		\^
+\(sq	Receive= 4800		\^
+\(sq	Receive= 9600		\^
+\(sq	Receive=19200		\^
+
+.T&
+lT s s lTX.
+\fB_____ XOFF _____\fR	T{
+Selects the XOFF point or disables the automatic XON/XOFF flow control.
+(See the \(lqTerminal-Host Data Flow Control\(rq section in
+\fICOMMUNICATION\/\fR.)
+
+For most applications you should set XOFF at 64 or 128.
+T}
+	\^
+Parameter field	\^
+	\^
+.T&
+lT s s lTX
+lT lBT lT lTX
+lT lT lT lTX
+lT lBT lT lTX.
+Values:
+\(sq	XOFF at 64		T{
+Selects an XOFF of 64 characters.
+T}
+	(default)		\^
+
+\(sq	XOFF at 128		T{
+Selects an XOFF of 128 characters.
+T}
+
+\(sq	No XOFF		T{
+Disables automatic XON/XOFF.
+T}
+
+.T&
+lT s s lTX.
+\fB_ Bits, ___ Parity ____\fR	T{
+Selects the character format used for communication with the host
+computer. (See the \(lqCharacter Format\(rq section in
+\fICOMMUNICATION\/\fR.)
+T}
+	\^
+Parameter field	\^
+
+.T&
+lTB s s sX
+lT s s lTX
+lT s s lTX
+lT lBT lT lTX
+lT lT lT lTX
+lT lBT lT lTX.
+T{
+NOTE: This feature does not set the format for the printer port.
+
+Select the correct character format to match the printer. For example,
+if you are using a 7-bit compatible printer, then you should select one
+of the five 7-bit parameter options.
+T}
+
+Values:
+\(sq	8 Bits, No Parity
+	(default)
+\(sq	8 Bits, Even Parity
+\(sq	8 Bits, Odd Parity
+\(sq	7 Bits, No Parity
+\(sq	7 Bits, Even Parity
+\(sq	7 Bits, Odd Parity
+\(sq	7 Bits, Mark Parity
+\(sq	7 Bits, Space Parity
+\(sq	7 Bits, Even Parity,
+	No Check
+\(sq	7 Bits, Odd Parity,
+	No Check
+\(sq	8 Bits, Even Parity,
+	No Check
+\(sq	8 Bits, Odd Parity,
+	No Check
+
+.T&
+lT s s lTX.
+\fB___ Stop Bit___\fR	T{
+Sets the number (1 or 2) of stop bits used by the host port. (See the
+\(lqCharacter Format\(rq section in \fICOMMUNICATION\/\fR.)
+T}
+	\^
+Parameter field	\^
+
+.T&
+lTB s s sX
+lT s s lTX
+lT s s lTX
+lT lBT lT lTX
+lT lT lT lTX
+lT lT lT lTX
+lT lBT lT lTX
+lT s s lTX.
+T{
+NOTE: This feature does not set the format for the printer port.
+T}
+
+Values:
+\(sq	1 Stop Bit
+	(default)
+
+\(sq	2 Stop Bits
+
+\fBLocal Echo\fR	T{
+Enables or disables the local echo feature.
+T}
+	\^
+Parameter field	\^
+	\^
+.T&
+lT s s lTX
+lT lBT lT lTX
+lT lT lT lTX
+lT lBT lT lTX.
+Values:
+\(sq	No Local Echo		T{
+Sends data from the keyboard to the host computer only. The host may or
+may not send the data back to the monitor screen.
+T}
+	(default)		\^
+
+\(sq	Local Echo		T{
+Sends data from the keyboard to monitor screen as well as the host
+computer.
+T}
+
+.T&
+lT s s lTX.
+\fB________ Port ________\fR	T{
+Selects the type of port used for communication with the host computer.
+(See the \(lqHost and Printer Port Interfaces\(rq section in
+\fICOMMUNICATION\/\fR.)
+T}
+	\^
+Parameter field	\^
+	\^
+.T&
+lT s s lTX
+lT lBT lT lTX
+lT lBT lT lTX
+lT lT lT lTX
+lT lBT lT lTX.
+Values:
+\(sq	EIA Port,		T{
+Select EIA port, data leads only if the terminal connects to the host
+computer via the EIA host port.
+T}
+	Data Leads Only		\^
+	(default)		\^
+
+\(sq	20 mA Port		T{
+Select the 20 mA port if the terminal connects to the host computer via
+the 20 mA port.
+T}
+
+\(sq	EIA Port,		T{
+Select EIA port, modem control if the terminal connects to the host via
+the EIA host port and an external modem requiring EIA modem control is
+used.
+T}
+	Modem Control		\^
+
+.T&
+lT s s lTX.
+\fBDisconnect, _____ Delay\fR	T{
+When modem control is used, the disconnect delay feature determines the
+time allowed before the terminal disconnects from the communications
+line when the received line signal detection (RLSD) is lost.
+T}
+	\^
+Parameter field	\^
+	\^
+.T&
+lT s s lTX
+lT lBT lT lTX
+lT lBT lT lTX
+lT lT lT lTX
+lT lBT lT lTX.
+Values:
+\(sq	Disconnect,		T{
+All countries except the United Kingdom should use the 2 s delay.
+T}
+	2 s Delay		\^
+	(default)		\^
+
+\(sq	Disconnect,		T{
+The 60 ms delay is for use in the United Kingdom.
+T}
+	60 ms Delay		\^
+
+.T&
+lT s s lTX.
+\fB________ Transmit\fR	T{
+Selects a limited or unlimited terminal transmit speed.
+T}
+	\^
+Parameter field	\^
+	\^
+.T&
+lT s s lTX
+lT lBT lT lTX
+lT lT lT lTX
+lT lBT lT lTX.
+Values:
+\(sq	Limited Transmit		T{
+Limits the terminal transmit speed to 150 to 180 characters per second,
+regardless of the baud rate. This places a minimal interrupt burden on
+the operating system.
+T}
+	(default)		\^
+
+\(sq	Unlimited Transmit		T{
+Selects an unlimited terminal transmit speed.
+T}
+.TE
+.
+.SS "PRINTER SET-UP SCREEN"
+The Printer Set-Up screen
+.\" (Figure 4-7)
+lets you define printer operations with the VT220.
+.P
+Table 4-8 describes all fields on this screen.
+.
+.TBL "4-8" "Printer Set-Up Screen"
+.TS
+lB s s lBX
+lT1 lT lT lTX
+lT s s lTX.
+Field	Function
+
+\fBTo Next Set-Up\fR	T{
+Replaces the Printer Set-Up screen with the Keyboard Set-Up screen.
+T}
+	\^
+Action field	\^
+	\^
+Value: \fBTo Next Set-Up\fR	\^
+
+\fBTo Directory\fR	T{
+Replaces the Printer Set-Up screen with the Set-Up Directory screen.
+T}
+	\^
+Action field	\^
+	\^
+Value: \fBTo Directory\fR	\^
+
+\fBSpeed=________\fR	T{
+Selects the rate the terminal uses to send data to a printer.
+T}
+	\^
+Parameter field	\^
+	\^
+.T&
+lT s s lTX
+lT lBT lT lTX.
+Values:
+\(sq	Speed=   75
+\(sq	Speed=  110
+\(sq	Speed=  150
+\(sq	Speed=  300
+\(sq	Speed=  600
+\(sq	Speed= 1200
+\(sq	Speed= 2400
+\(sq	Speed= 4800
+.T&
+lT lT lT lTX
+lT lBT lT lTX.
+	(default)
+\(sq	Speed= 9600
+\(sq	Speed=19200
+
+.T&
+lT s s lTX.
+\fB________ Mode\fR	T{
+Selects the operating mode for the printer.
+T}
+	\^
+Parameter field	\^
+	\^
+.T&
+lT s s lTX
+lT lBT lT lTX
+lT lT lT lTX
+lT lBT lT lTX.
+Values:
+\(sq	Normal Print Mode		T{
+Lets you invoke print functions from the keyboard.
+T}
+	(default)		\^
+
+\(sq	Auto Print Mode		T{
+Prints the current line of text when the terminal receives a line feed,
+form feed, or vertical tab code from the host computer.
+T}
+
+\(sq	Controller Mode		T{
+Causes the printer port to treat the printer as a terminal, while the
+VT220 monitors traffic. (The host computer transfers data to the
+printer, without displaying the data on the monitor screen.)
+T}
+
+.T&
+lT s s lTX.
+\fB__ Bits, _______ Parity\fR	T{
+Selects the character format used by the printer port. (See the
+\(lqCharacter Format\(rq section in \fICOMMUNICATION\/\fR.)
+T}
+	\^
+Parameter field	\^
+
+.T&
+lTB s s sX
+lT s s lTX
+lT s s lTX
+lT lBT lT lTX
+lT lT lT lTX
+lT lBT lT lTX.
+T{
+NOTE: Choose the character format to match the printer. For example, if
+you are using a 7-bit compatible printer, then you should select one of
+the five 7-bit parameter field options.
+T}
+
+Values:
+\(sq	8 Bits, No Parity
+	(default)
+\(sq	8 Bits, Even Parity
+\(sq	8 Bits, Odd Parity
+\(sq	7 Bits, No Parity
+\(sq	7 Bits, Mark Parity
+\(sq	7 Bits, Space Parity
+\(sq	7 Bits, Even Parity
+\(sq	7 Bits, Odd Parity
+
+.T&
+lT s s lTX.
+\fB___ Stop Bit___\fR	T{
+Sets the number of stop bits to match the printer.
+T}
+	\^
+Parameter field	\^
+	\^
+.T&
+lT s s lTX
+lT lBT lT lTX
+lT lT lT lTX
+lT lBT lT lTX.
+Values:
+\(sq	1 Stop Bit		T{
+Selects 1 stop bit.
+T}
+	(default)		\^
+
+\(sq	2 Stop Bits		T{
+Selects 2 stop bits.
+T}
+
+.T&
+lT s s lTX.
+\fBPrint ________\fR	T{
+Selects how much of the screen is printed during a print page operation.
+T}
+	\^
+Parameter field	\^
+	\^
+.T&
+lT s s lTX
+lT lBT lT lTX
+lT lT lT lTX
+lT lBT lT lTX.
+Values:
+\(sq	Print Full Page		T{
+Print the full screen.
+T}
+	(default)		\^
+
+\(sq	Print Scroll Region		T{
+Print only the scrolling region.
+T}
+
+.T&
+lT s s lTX.
+\fBPrinted Data Type\fR	T{
+Selects the type of characters (from the terminal's character sets) to
+send to the printer.
+T}
+	\^
+Parameter field	\^
+	\^
+
+.T&
+lT s s lTX
+lT lBT lT lTX
+lT lT lT lTX
+lT lBT lT lTX.
+Values:
+\(sq	Print National Only		T{
+Use with a printer that supports ASCII (multinational mode) or the
+current national set (national mode). (Examples: LA34, LA36, LA120,
+non-Digital printers.)
+T}
+	(default)		\^
+
+\(sq	Print National and		T{
+Use with a printer that supports ASCII and the line drawing sets
+(multinational mode), or the current national set and the line drawing
+set (national mode). (Example: LA100.)
+T}
+	Line Drawing		\^
+
+\(sq	Print Multinational		T{
+Use with a printer that supports the multinational and line drawing
+sets. (Example: LA50.)
+T}
+
+.T&
+lBT s s lTX
+lT s s lTX.
+Print Terminator	T{
+Selects whether or not a terminator (form feed) is sent at the end of a
+print page operation.
+T}
+	\^
+Parameter field	\^
+	\^
+.T&
+lT s s lTX
+lT lBT lT lTX
+lT lT lT lTX
+lT lBT lT lTX.
+Values:
+\(sq	No Terminator		T{
+Selects no terminator.
+T}
+	(default)		\^
+
+\(sq	Terminator = FF		T{
+Selects the form feed (FF) terminator.
+T}
+.TE
+.
+.SS "KEYBOARD SET-UP SCREEN"
+The Keyboard Set-Up screen
+.\" (Figure 4-8)
+lets you define keyboard operating features.
+.P
+Table 4-9 describes all fields on this screen.
+.
+.TBL "4-9" "Keyboard Set-Up Screen"
+.TS
+lB s s lBX
+lT1 lT lT lTX
+lT s s lTX.
+Field	Function
+
+\fBTo Next Set-Up\fR	T{
+Replaces the Keyboard Set-Up screen with the Tab Set-Up screen.
+T}
+	\^
+Action field	\^
+	\^
+Value: \fBTo Next Set-Up\fR	\^
+
+\fBTo Directory\fR	T{
+Replaces the Keyboard Set-Up screen with the Set-Up Directory screen.
+T}
+	\^
+Action field	\^
+	\^
+Value: \fBTo Directory\fR	\^
+
+\fB________ Keys\fR	T{
+Sets the terminal keyboard map for the type of keyboard you are using.
+T}
+	\^
+Parameter field	\^
+	\^
+.T&
+lT s s lTX
+lT lBT lT lTX
+lT lT lT lTX
+lT lBT lT lTX.
+Values:
+\(sq	Typewriter Keys		T{
+If your keyboard is North American, select \fBTypewriter Keys\fR.
+T}
+	(default)		\^
+
+\(sq	Data Processing Keys		T{
+For all other keyboards, select either \fBTypewriter Keys\fR or \fBData
+Processing Keys\fR.
+
+\fBTypewriter Keys\fR selects the characters on the left half of the
+keycaps; \fBData Processing Keys\fR selects the characters on the right
+half of the keycaps.
+
+.I Example
+.br
+The French Canadian keyboard uses a key that has a C cedilla \fB\(,C\fR
+(on the left side), and brackets \fB[]\fR (on the right side).
+
+Selecting \fBTypewriter Keys\fR makes the key respond as uppercase and
+lowercase C cedilla \fB\(,C\fR.
+
+Selecting \fBData Processing Keys\fR makes the key respond as \fB[]\fR.
+T}
+
+.T&
+lBT s s lTX
+lBT s s lTX.
+________ Lock	T{
+Selects the function of the \fBLock\fR key. Pressing \fBLock\fR key
+turns on the Lock indicator on the keyboard. To clear the lock function,
+simply press \fBLock\fR again. (The Lock indicator turns off.)
+T}
+	\^
+Parameter field	\^
+	\^
+
+.T&
+lT s s lTX
+lT lBT lT lTX
+lT lT lT lTX
+lT lBT lT lTX.
+Values:
+\(sq	Caps Lock		T{
+The alphabetic keys send uppercase characters only.
+T}
+	(default)		\^
+
+\(sq	Shift Lock		T{
+The alphabetic keys send uppercase characters, and the numeric/symbol
+keys send the top characters only. Shift Lock can also be cleared by
+pressing the \fBShift\fR key.
+T}
+
+.T&
+lBT s s lTX
+lT s s lTX.
+Auto Repeat	T{
+Selects whether or not keystrokes automatically repeat when you hold
+down a key.
+T}
+	\^
+Parameter field	\^
+	\^
+.T&
+lT s s lTX
+lT lBT lT lTX
+lT lT lT lTX
+lT lBT lT lTX.
+Values:
+\(sq	Auto Repeat		T{
+Pressing a key sends the character repeatedly until the key is released.
+T}
+	(default)		\^
+
+\(sq	No Auto Repeat		T{
+Pressing a key sends only one character.
+T}
+
+.T&
+lBT s s lTX
+lT s s lTX.
+Keyclick	T{
+Selects whether or not the keyboard makes a clicking sound each time you
+press a key.
+T}
+	\^
+Parameter field	\^
+	\^
+.T&
+lT s s lTX
+lT lBT lT lTX
+lT lT lT lTX
+lT lBT lT lTX.
+Values:
+\(sq	Keyclick		T{
+Selects the keyclick feature.
+T}
+	(default)		\^
+
+\(sq	No Keyclick		T{
+Turns off the keyclick feature.
+T}
+
+.T&
+lBT s s lTX
+lT s s lTX.
+Margin Bell	T{
+Selects whether or not the terminal sounds a bell tone when the text
+cursor approaches the right margin.
+T}
+	\^
+Parameter field	\^
+	\^
+.T&
+lT s s lTX
+lT lBT lT lTX
+lT lT lT lTX
+lT lBT lT lTX.
+Values:
+\(sq	Margin Bell		T{
+Selects the margin bell feature.
+T}
+	(default)		\^
+
+\(sq	No Margin Bell		T{
+Turns off the margin bell feature.
+T}
+
+.T&
+lBT s s lTX
+lT s s lTX.
+Warning Bell	T{
+Selects whether or not the terminal generates a bell tone for operating
+errors, and for \fBCtrl-G\fR.
+T}
+	\^
+Parameter field	\^
+	\^
+.T&
+lT s s lTX
+lT lBT lT lTX
+lT lT lT lTX
+lT lBT lT lTX.
+Values:
+\(sq	Warning Bell		T{
+Selects the warning bell feature.
+T}
+	(default)		\^
+
+\(sq	No Warning Bell		T{
+Turns off the warning bell feature.
+T}
+
+.T&
+lBT s s lTX
+lT s s lTX.
+Break	T{
+Enables or disables the \fBBreak\fR key function. (See the \(lqBreak\(rq
+section in \fIOPERATING PROCEDURES\/\fR.)
+T}
+	\^
+Parameter field	\^
+	\^
+.T&
+lT s s lTX
+lT lBT lT lTX
+lT lT lT lTX
+lT lBT lT lTX.
+Values:
+\(sq	Break		T{
+Selects the \fBBreak\fR key function.
+T}
+	(default)		\^
+
+\(sq	No Break		T{
+Turns off the \fBBreak\fR key function.
+
+Terminal disconnect (\fBShift-Break\fR) is not affected by this feature.
+(See the \(lqConnect/Disconnect\(rq section in \fICOMMUNICATION\/\fR.)
+T}
+
+.T&
+lBT s s lTX
+lT s s lTX.
+Auto Answerback	T{
+Selects whether or not the answerback message is automatically sent to
+the host computer after a communication line connection.
+T}
+	\^
+Parameter field	\^
+	\^
+.T&
+lT s s lTX
+lT lBT lT lTX
+lT lT lT lTX
+lT lBT lT lTX.
+Values:
+\(sq	Auto Answerback		T{
+Selects the answerback message feature.
+T}
+	(default)		\^
+
+\(sq	No Auto Answerback		T{
+Turns off the answerback message feature.
+T}
+
+.T&
+lBT s s lTX
+lT s s lTX.
+Answerback=	T{
+Lets you enter an answerback message.
+T}
+	\^
+Text Parameter field	\^
+
+Value: \fBtext entry\fR	T{
+The terminal sends an answerback message when it receives ENQ or you
+type \fBCtrl-Break\fR. In the case of ENQ, the message you enter is sent
+to the host without affecting screen data or requiring further operator
+action.
+
+When you select this field, the set-up status line displays the prompt
+\fBEnter Answerback =\fR (temporarily overwriting the status line). You
+can enter any keyboard character, up to a 30-character limit.
+
+Your message can be concealed using the \fBConcealed\fR field in this
+set-up screen.
+T}
+
+.T&
+lBT s s lTX
+lT s s lTX.
+Concealed	T{
+Selects whether or not your answerback message entry is displayed on the
+screen.
+T}
+	\^
+Parameter field	\^
+	\^
+.T&
+lT s s lTX
+lT lBT lT lTX
+lT lT lT lTX
+lT lBT lT lTX.
+Values:
+\(sq	Not Concealed		T{
+The terminal can display the answerback message as entered.
+T}
+	(default)		\^
+
+\(sq	Concealed		T{
+Your answerback message is not displayed on the screen, so it will not
+be revealed. You cannot reset this feature to \fBNot Concealed\fR,
+except by entering a new answerback message.
+T}
+.TE
+.
+.SS "TAB SET-UP SCREEN"
+The Tab Set-Up screen
+.\" (Figure 4-9)
+lets you set the terminal's tab stop settings.
+.P
+Table 4-10 describes all fields on this screen.
+.P
+The tab stop fields are one character wide. A ruler appears below the
+tab stop fields on the screen. Refer to the ruler when setting tabs.
+.P
+There is one tab stop field for each column on the screen display. The
+display can be 80 or 132 columns wide, depending on the number of
+columns set. (See \fBColumns\fR in the Display Set-Up screen.)
+.P
+There are two possible settings for each tab stop field: the letter T
+(tab stop set) or blank (no tab stop set).
+.P
+You can move the field cursor to a tab stop field with the arrow keys or
+the \fBTab\fR key. After you select a field, press the \fBEnter\fR key
+to place a T in a blank field or erase a T from that field.
+.
+.TBL "4-10" "Tab Set-Up Screen"
+.TS
+lB s s lBX
+lT1 lT lT lTX
+lT s s lTX.
+Field	Function
+
+\fBTo Next Set-Up\fR	T{
+Replaces the Tab Set-Up screen with the Display Set-Up screen.
+T}
+	\^
+Action field	\^
+	\^
+Value: \fBTo Next Set-Up\fR	\^
+
+\fBTo Directory\fR	T{
+Replaces the Tab Set-Up screen with the Set-Up Directory screen.
+T}
+	\^
+Action field	\^
+	\^
+Value: \fBTo Directory\fR	\^
+
+\fBClear All Tabs\fR	T{
+Clears all tabs previously set.
+T}
+	\^
+Action field	\^
+	\^
+Value: \fBClear All Tabs\fR
+
+\fBSet 8 Column Tabs\fR	T{
+Automatically sets tabs every 8 columns, starting with column 9.
+T}
+	\^
+Action field	\^
+	\^
+Value: \fBSet 8 Column Tabs\fR
+.TE
+.
+.
+.\""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+.SH "COMMUNICATION"
+.SS "GENERAL"
+This chapter describes how the VT220 communicates with a hot computer
+and a printer.
+.P
+The terminal operates on full-duplex asynchronous lines only, and has
+ten possible transmit/receive speeds. You select the transmit/receive
+speeds in set-up for both the terminal (Communications Set-Up screen)
+and the printer (Printer Set-Up screen).
+.P
+The VT220 operates in accordance with the following national and
+international communications standards.
+.P
+.RS
+EIA Standard RS232C/RS423
+.br
+CCITT V.24
+.br
+CCITT V.26 (V.10)
+.br
+CCITT X.20 (V.21)
+.RE
+.P
+You can connect the terminal directly to a local host computer with a
+cable. You can also connect the terminal indirectly to a remote host
+computer through public-switched or dedicated telephone lines, using a
+modem or acoustic coupler.
+.
+.SS "HOST AND PRINTER PORT INTERFACES"
+The VT220 has two asynchronous serial ports. One port is for
+communication with a host computer, and the other is for communication
+with a printer.
+.P
+There are two host port connectors.
+.bP
+A 25-pin subminiature D-type (EIA RS232C/RS423) connector that connects
+the terminal to a local or remote host computer.
+.bP
+An 8-pin EIA Mate-N-Lok (20 mA) connector that connects the terminal to
+a local host computer.
+.P
+The printer port has one connector.
+.bP
+A 9-pin subminiature D-type (EIA RS232C/RS423) connector that connects
+the terminal to a local printer.
+.P
+Tables 5-1 through 5-3 describe the interface signals for the three
+connectors.
+.P
+.B NOTE:
+.B Only the connector pins listed in Tables 5-1 through 5-3 are used.
+.
+.SS "MODEMS"
+The VT220 can operate with all modems conforming to the national and
+international standards listed at the beginning of this chapter.
+However, the modem at the terminal must be compatible with the modem at
+the host computer.
+.P
+The VT220 accepts compatible modems and acoustic couplers such as the
+AT&T 103, 113, and 212 types, in addition to Digital's DF02 and DF03.
+.P
+The terminal must be certified for connection to non-AT&T type modems
+used outside of continental North America. Your local Digital Field
+Service office has detailed information on terminal certification and
+use of non-AT&T type modems.
+.
+.TBL "5-1" "Comm Port EIA Interface Signals"
+.TS
+lBT lBT lBT lBT lBTX
+lT lT lT lT lTX.
+Pin	Signal	Mnemonic	EIA/CCITT/DIN	Description
+
+2	Transmit data	TXD	BA/103/D1	T{
+.I From VT220
+.br
+Transmits serial characters. Held in mark state when no characters are
+transmitted.
+
+In modem control modes, transmits data only when RTS, CTS, DSR, and DTR
+are on.
+T}
+
+3	Received data	RXD	BB/104/D2	T{
+.I To VT220
+.br
+Receives serial characters. In modem control modes, ignores characters
+if RLSD is off.
+T}
+
+4	Request to send	RTS	CA/105/S2	T{
+.I From VT220
+.br
+When on, places the modem in transmit mode.
+T}
+
+5	Clear to send	CTS	CB/106/M2	T{
+.I To VT220
+.br
+When on, tells the terminal that the modem is ready to transmit.
+T}
+
+6	Data set ready	DSR	CC/107/M1	T{
+.I To VT220
+.br
+When on, tells the terminal that the modem is in the data mode and is
+ready to exchange RTS, CTS, and RLSD.
+T}
+
+7	Signal ground	SGND	AB/102/E2	T{
+Serves as common ground reference potential for all connector signals
+except protective ground.
+T}
+
+8	Receive line	RLSD	CF/109/M5	T{
+.I To VT220
+.br
+When on, tells the terminal that the signal received on the
+communication line is good enough to ensure correct demodulation of
+received data.
+
+When off, indicates no signal received, or signal is unsuitable for
+demodulation.
+T}
+	signal detect			\^
+	(carrier detect)			\^
+
+12	Speed indicator	SPDI	CI/112/M4	T{
+.I To VT220
+.br
+When on, enables modem to control terminal transmit and receive speeds.
+Sets terminal transmit and receive speeds to 1200 bits per second,
+regardless of set-up selection.
+T}
+
+20	Data terminal	DTR	CD/108.2/S1.2	T{
+.I From VT220
+.br
+When on, tells the modem that the terminal is ready to transmit or
+receive.
+T}
+	ready			\^
+
+23	Speed select	SPDS	CH/111/S4	T{
+.I From VT220
+.br
+When on, tells the modem that receive speed selected in set-up is
+greater than 600 bits per second.
+T}
+.TE
+.
+.TBL "5-2" "20 mA Port Interface Signal"
+.TS
+lB lB
+lT lT.
+Pin	Signal
+
+1	-12 V
+
+2	Transmit -
+
+3	Receive -
+
+5	Transmit +
+
+7	Receive +
+
+8	Ground
+.TE
+.
+.TBL "5-3" "Printer Port EIA Interface Signals"
+.TS
+lB lB lB lB lBX
+lT lT lT lT lTX.
+Pin	Signal	Mnemonic	EIA/CCITT/DIN	Description
+
+1	Protective	PGND	AA/101/E1	T{
+Connects to terminal chassis. Also connects to external ground through
+third wire of power cable.
+T}
+	ground			\^
+
+2	Transmit	TXD	BA/103/D1	T{
+.I From VT220
+.br
+Transmits serial characters. Held in mark state when no characters are
+transmitted.
+T}
+	data			\^
+
+3	Receive data	RXD	BB/104/D2	T{
+.I To VT220
+.br
+Receives serial characters for flow control.
+T}
+
+4	Request	RTS	CA/105/S2	T{
+.I From VT220
+.br
+On when the terminal is on.
+T}
+	to send			\^
+
+5	Data terminal	DTR	CD/108.2/S1.2	T{
+.I From VT220
+.br
+On when the terminal is on.
+T}
+	ready			\^
+
+6	Data set ready	DSR	CC/107/M1	T{
+.I To VT220
+.br
+Receives DTR on this line. If DSR is present at power-up, the printer
+controls print operations. If DSR is not present at power-up, the
+terminal checks for DSR before each character print operation.
+T}
+
+7	Signal ground	SGND	AB/102/E2	T{
+Common ground reference for all voltages on interface.
+T}
+.TE
+.
+.\" .SS CABLES
+.\" Figure 5-1 shows the RS232C/RS423 cables you can use to connect the
+.\" terminal to a host computer and printer.
+.
+.SS PRINTERS
+You can connect the terminal to a local asynchronous serial printer by
+using a null modem cable. Here are some of the Digital printers you can
+use with the VT220.
+.P
+.RS
+.TS
+l l.
+LA12	LA50
+LA34	LA100
+LA35	LA120
+LA36	LQP02
+LA38
+.TE
+.RE
+.
+.SS "CHARACTER FORMAT"
+The terminal sends and receives characters in serial format. You select
+the character format (Figure 5-2) in set-up.
+.P
+.B NOTE:
+.B Detailed information on character format is available in ANSI
+.B Standard X3.15.
+.
+.FIG "5-2" "Character Format"
+.EX
+                                       START BIT OF NEW CHARACTER
+                                                            \*[vl]
+       IDLE STATE OF LINE                       1 OR 2      \*[vl]
+         \*[vl]                                       BITS       \*[da]
+SPACE +  \*[vl]  \*[elt]\*[hl]\*[hl]\*[hl]\*[tt]\*[hl]\*[hl]\*[hl]\*[tt]\*[hl]\*[hl]\*[tt]\*[hl]\*[hl]\*[tt]\*[hl]\*[hl]\*[tt]\*[hl]\*[hl]\*[tt]\*[hl]\*[hl]\*[tt]\*[hl]\*[hl]\*[tt]\*[hl]\*[hl]\*[hl]\*[tt]\*[hl]\*[hl]\*[hl]\*[ert]         \*[elt]\*[hl]\*[hl]\*[hl]\*[hl]\*[hl]\*[hl]\*[hl]\*[hl]
+         \*[vl]  \*[vl]   \*[vl]00 \*[vl]01\*[vl]02\*[vl]03\*[vl]04\*[vl]05\*[vl]06\*[vl]07 \*[vl]   \*[vl]STOP\*[vl]STOP\*[vl]
+         \*[da]  \*[vl]   \*[vl]LSB\*[vl]  \*[vl]  \*[vl]  \*[vl]  \*[vl]  \*[vl]  \*[vl]MSB\*[vl]   \*[vl] 1  \*[vl] 2  \*[vl]
+MARK \*[hl]  \*[hl]\*[hl]\*[hl]\*[hl]\*[erb] \*[ua] \*[elb]\*[hl]\*[hl]\*[hl]\*[bt]\*[hl]\*[hl]\*[bt]\*[hl]\*[hl]\*[bt]\*[hl]\*[hl]\*[bt]\*[hl]\*[hl]\*[bt]\*[hl]\*[hl]\*[bt]\*[hl]\*[hl]\*[bt]\*[hl]\*[hl]\*[hl]\*[bt]\*[hl]\*[hl]\*[hl]\*[bt]\*[hl]\*[hl]\*[hl]\*[hl]\*[bt]\*[hl]\*[hl]\*[hl]\*[hl]\*[erb] \*[<-]\*[hl]\*[hl]\*[hl]\*[ert]
+              \*[vl]        \*[vl]\*[<-]\*[->]\*[vl]             \*[ua]   \*[ua]                 \*[vl]
+          START BIT   ONE BIT           \*[vl]   \*[elb]\*[hl]\*[hl] OPTIONAL  RETURN TO IDLE
+                      TIME =         OPTIONAL   PARITY    STATE OF LINE
+                   ONE/BAUD RATE     8TH BIT    BIT
+.EE
+.
+.SS "TERMINAL \(em HOST DATA FLOW CONTROL"
+The terminal stores incoming characters in a character input buffer and
+processes the characters on a first-in/first-out basis. The size of the
+input buffer is 254 characters. When the input buffer fills to 64 or 128
+characters (selected from the Communications Set-Up screen), the
+terminal sends an XOFF character (if you enabled XOFF from the
+Communications Set-Up screen) to stop the host computer from sending
+more characters. If the computer fails to respond to the XOFF character,
+the terminal sends a second XOFF character when the input buffer fills
+to 220 characters. The terminal sends a third XOFF character when the
+buffer is full.
+.P
+When the input buffer contents falls below 32 characters, the terminal
+sends an XON character to tell the host computer to start sending
+characters again.
+.P
+.B NOTE:
+.B If you disable XOFF in set-up, the terminal does not send XOFF to the
+.B host computer when the input buffer fills. The Hold Screen key is
+.B also disabled. With XOFF disabled, there is no way to ensure that
+.B data will not be lost.
+.P
+If you enable XON/XOFF, the terminal recognizes received XON and XOFF
+characters. When the terminal receives XOFF, it stops sending data
+(except XON/XOFF characters). If the keyboard data buffer overflows, the
+keyboard locks and the Wait indicator turns on. The terminal resumes
+transmission when it receives an XON.
+.
+.SSS "Conditions That Send XON"
+When you enable the XOFF/XON feature in set-up, the following conditions
+send XON.
+.bP
+The number of characters in the input buffer reaches the XON point (32
+characters) and the last flow control character sent was XOFF.
+.bP
+A clear comm operation is performed.
+.bP
+A recall operation is performed.
+.bP
+The power self-test is completed (\fI\,PROBLEM SOLVING\/\fR).
+.bP
+You press the \fBHold Screen\fR key to release the screen when the input
+buffer is at or below the XON point.
+.
+.SSS "Conditions That Send XOFF"
+When you enable the XOFF/XON feature in set-up, the following conditions
+send XOFF.
+.bP
+The number of characters in the input buffer reaches the first XOFF
+point (64 or 128 characters, selected from the Communications Set-Up
+screen) for the first time since the last XON was sent.
+.bP
+The number of characters in the input buffer reaches the second XOFF
+point (220 characters) for the first time since the last XON was sent.
+.bP
+The terminal receives a character when the input buffer is full (256
+characters).
+.
+.SSS "Buffer Overflow Prevention"
+If the host computer does not respond to the XOFF from the terminal, the
+input buffer continues to fill with characters. If the buffer is filled
+and characters are still coming, the buffer overflows and characters are
+lost. In place of lost characters, the terminal displays reverse
+question mark characters (\fB\*[error]\fR).
+.P
+You can use the following formulas to determine how fast the host
+computer must respond to the first XOFF character, to prevent loss of
+characters due to buffer overflow. Calculate the overflow first, then
+host response time.
+.P
+.B NOTE:
+.B These formulas assume that you set the transmit rate limit feature in
+.B the Communications Set-Up screen to \f(BIUnlimited\fR.
+.
+.nP 1
+.I Overflow
+.IP
+OVFL = (MXBF - XOFF) - [3 \(mu (RCDR/XMDR)] - (RCDR/600)
+.P
+where:
+.nI
+OVFL = the number of characters to overflow
+.IP
+MXBF = the receive buffer size (254 characters)
+.IP
+XOFF = the first XOFF point (64 or 128)
+.IP
+RCDR = the received data rate (receive speed)
+.IP
+XMDR = the transmitted data rate (transmit speed)
+.nP 2
+.I Host Response Time
+.IP
+HRST = OVFL \(mu [(DATA + STOP + PRTY + 1)/RCDR]
+.P
+where:
+.nI
+HRST = the host computer response time (in seconds)
+.IP
+OVFL = the number of characters to overflow
+.IP
+DATA = the number of data bits per character
+.IP
+STOP = the number of stop bits per character
+.IP
+PRTY = the number of parity bits per character
+.P
+.I Example
+.br
+The VT220 sends and receives 8-bit characters with no parity at 4800
+bits per second. There is 1 stop bit. XOFF is sent when the buffer has
+64 characters in it.
+.P
+.RS
+.TS
+n.
+OVFL \&= (254 - 64) - [3 \(mu 4800/4800)] - (4800/600)
+\&= 179 characters
+.TE
+.P
+.TS
+n.
+HRST \&= 179 \(mu [(8 bits + 1 bit + 0 bits + 1)/4800]
+\&= 0.37 seconds
+.TE
+.RE
+.P
+Therefore, the host computer must stop sending data in 0.37 seconds, or
+the terminal input buffer will overflow.
+.
+.SSS "Use of Fill Characters"
+Software that does not support XON/XOFF characters from the terminal can
+still use all terminal features by using fill characters. In some
+applications, you can use the terminal without XON/XOFF support or fill
+characters. However, the bit rate must be limited to 9600. And the
+software must not send the ESC (escape) code, or use slow scrolling,
+split screen, or the printer port.
+.
+.SSS "Connect/Disconnect"
+When a connection is made to the host computer via a modem, the terminal
+performs the following operations to ensure it is ready to send and
+receive.
+.bP
+Unlocks the keyboard (if it was locked).
+.bP
+Clears any transmit in progress.
+.bP
+Clears the keyboard buffer and all message buffers.
+.bP
+Clears the input buffer.
+.bP
+Clears XOFF sent and XOFF received.
+.P
+The following conditions cause a communications line disconnect.
+.P
+.bP
+Typing \fBShift-Break\fR
+.bP
+Invoking \fBRecall\fR or \fBDefault\fR values in the Set-Up Directory
+screen
+.bP
+Loss of DSR
+.bP
+Loss of RLSD for a time you defined in set-up
+.bP
+No RLSD within 30 seconds after DSR
+.bP
+A self-test command received from the host computer
+.bP
+Switching from the EIA port to the 20 mA port, or from the 20 mA port to
+the EIA port"
+.P
+The usual way to disconnect the terminal from the communications line at
+the end of communications is to type \fBShift-Break\fR. The host
+computer's response to the disconnect signal depends on the computer and
+the software.
+.
+.SS "TERMINAL-PRINTER DATA FLOW CONTROL"
+The VT220 sends only data characters to the printer; the terminal does
+not send XON/XOFF. The terminal recognizes only XON/XOFF from the
+printer (any other characters from the printer are ignored).
+.P
+When the terminal receives XOFF from the printer, the terminal stops
+sending data. The terminal starts sending data again when it receives an
+XON, or when a clear comm operation is performed.
+.
+.SSS "Note on Printer Installation"
+Using an 8-bit setting for the printer port line implies the use of
+8-bit C1 control characters. Using a 7-bit setting implies the use of
+the 7-bit ESC [ form of C1 control characters.
+.P
+.B NOTE:
+.B Older printers may not recognize the 8-bit form of C1 control
+.B characters. With these printers, you must set the printer line to
+.B 7-bits for correct operation.
+.
+.
+.\""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+.SH "PROBLEM SOLVING"
+.SS GENERAL
+This chapter describes what to do if you have a problem with the VT220.
+The chapter provides a problem checklist and describes the power-up
+self-test.
+.
+.SS "COMMON OPERATING PROBLEMS"
+Table 6-1 lists common operating problems and their possible solutions.
+Check this list before calling for service.
+.
+.TBL "6-1" "Common Operating Problems"
+.TS
+lB lBX
+lT lTX.
+Problem	Possible Solution
+
+T{
+The terminal does not power up when the power switch is set to \fB1\fR
+(on).
+T}	T{
+Make sure the terminal power cord is plugged into the wall outlet. Check
+for power at the wall outlet by plugging in a lap to see if it lights.
+
+Make sure the voltage selection is in the correct position. (See the
+\fIVT220 Installation Guide\fR for the correct setting.)
+
+Check the fuse and replace if necessary. (If the fuse blows again, there
+is a possible shorting problem. Contact Digital Field Service.)
+T}
+
+T{
+The printer does not print.
+T}	T{
+Make sure the printer is plugged in and its power switch is on.
+
+Make sure the cable connection between the printer and terminal is
+tight.
+
+Make sure all communication features on the terminal and printer (such
+as baud rate and parity) match.
+T}
+
+T{
+The monitor display does not resume scrolling. The Hold Screen indicator
+is on.
+T}	T{
+Press the \fBHold Screen\fR key to resume scrolling.
+T}
+
+T{
+The terminal seems to be locked and does not respond to data sent from
+the host.
+T}	T{
+Clear the terminal by using the \fBClear Comm\fR field in the Set-Up
+Directory Screen (\fI\,TERMINAL SET-UP\/\fR).
+T}
+
+T{
+The screen is blank, and the power OK indicator is on.
+T}	T{
+The CRT saver feature (\fI\,A LOOK AT THE TERMINAL\/\fR) may be on.
+Press any key to reactivate the screen display.
+
+Make sure the brightness and contrast controls are correctly adjusted.
+T}
+
+T{
+The bell tone does not sound when the terminal is turned on. Keyboard
+visual indicators are not on.
+T}	T{
+Make sure the keyboard is connected to the terminal.
+T}
+.TE
+.
+.SS "POWER-UP SELF-TEST"
+The power-up self-test runs automatically each time you power up the
+terminal. During the test cycle, the power-up self-test has full control
+of the terminal. The terminal cannot respond to commands other than
+those used for the test itself. When the test cycle ends, control
+returns to the terminal.
+.P
+In the self-test mode, the monitor screen and the keyboard indicators
+(Hold Screen, Lock, Compose, and Wait) provide information about the
+terminal operating status. The monitor screen displays a text message,
+and the keyboard indicators provide a coded message.
+.
+.SS "PERFORMING THE POWER-UP SELF-TEST"
+Start the power-up self-test by setting the terminal power switch to
+\fB1\fR (on).
+.P
+During the self-test the following events should occur.
+.bP
+All keyboard indicators turn on and off.
+.bP
+The bell tone sounds.
+.P
+A successful power-up self-test ends with all keyboard indicators off
+and the screen displaying the message \(lqVT220 OK\(rq.
+.\" original manual: [...] message shown in Figure 6-1.
+The message is erased when a character is received from the host
+computer, or when you press any key.
+.P
+The terminal displays an error message on the screen (if possible) if
+the test finds any error. Table 6-2 explains the error messages
+displayed on the screen.
+.
+.TBL "6-2" "Screen Error Messages"
+.TS
+lB lBX
+lBT lTX.
+Error Message	Problem
+
+VT220 NVR Error \- 1	T{
+.I Terminal controller board.
+The nonvolatile memory (set-up storage) is not operating.
+T}
+
+VT220 EIA Port Data	T{
+.I Terminal controller board.
+The EIA host port is not operating.
+T}
+Error \- 2	\^
+
+VT220 Keyboard	T{
+.I Keyboard.
+The terminal can only receive input from the host computer.
+T}
+Error \- 4	\^
+
+VT220 Printer Port	T{
+.I Printer port.
+The terminal is operating, but cannot perform printing functions.
+T}
+Error \- 6	\^
+.TE
+.
+.SS "DIGITAL SERVICE"
+If the self-test indicates a problem, call your local Digital Field
+Service number for assistance. Before calling, make sure to note the
+exact nature of the problem, when it occurred, and any error messages or
+codes that appeared.
+.P
+Information about your warranty, Digital services, terminal supplies,
+and spare parts is provided on the inside of the back cover of this
+manual.
+.
+.
+.\""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+.SH SPECIFICATION
+.SS GENERAL
+This appendix lists the specifications of the VT220 video terminal.
+.
+.SS "VT220 SPECIFICATIONS"
+.TS
+lBT s lBTX
+lT s lTX
+lT s lTX
+lT s lTX
+lT l lTX.
+Physical
+
+Terminal
+
+	Height	28.3 cm (11-1/8 in)
+	Width	33.3 cm (13-1/8 in)
+	Depth	38.7 cm (15-1/4 in)
+	Weight	11.8 kg (26 lbs)
+
+	Adjustable tilt	+5 to -15 degrees
+
+.T&
+lT s lTX
+lT lT lTX.
+Keyboard
+
+	Height	5.1 cm (2 in)
+	Width	53.3 cm (21 in)
+	Depth	17.1 cm (6.75 in)
+	Weight	2 kg (4.5 lbs)
+
+.T&
+lTB s lBTX
+lT s lTX
+lT s lTX
+lT s lTX
+lT lT lTX.
+Environmental
+
+Operating
+
+	Temperature	10\(de to 40\(deC
+		(50\(de to 104\(deF)
+	Relative humidity	10% to 90%
+	Maximum wet bulb	28\(deC  (82\(deF)
+	Minimum dew point	2\(deC (36\(deF)
+	Maximum altitude	2.4km (8000 ft)
+
+.T&
+lT s lTX
+lT lT lTX.
+Storage
+
+	Temperature	-40\(de to 66\(deC
+		(-40\(de to 151\(deF)
+	Relative humidity	0% to 95%
+	Maximum altitude	9.1 km (30,000 ft)
+
+.T&
+lBT s lBTX
+lT s lTX.
+Electrical
+
+Line voltage	90 to 128 Vac
+(switch selectable)	(100 to 120 RMS nominal)
+	single-phase, 3-wire
+
+	180 to 268 Vac
+	(220 to 240 RMS nominal)
+	single phase, 3-wire
+
+Line frequency	47 to 63 Hz
+
+Line current	0.48 amps RMS at 120 Vac RMS
+	0.24 amps RMS at 240 Vac RMS
+
+Input power	60 watts maximum
+
+Power cord	Detachable, 3-conductor, grounded
+
+Power cord receptacle	EIA specified CEE22-6A
+
+.T&
+lBT s lBTX
+lT s lTX.
+Display
+
+CRT	30.5 cm (12 in) diagonal measure
+	monochrome
+
+Active display size
+
+.T&
+lT lT lX.
+	Horizontal	20.3 cm (8 in)
+	Vertical	12.7 cm (5 in)
+
+.T&
+lT s lX.
+Format	24 lines of 80 or 132 characters
+
+Character	7 \(mu 9 dot matrix with 2 descenders
+
+Character size
+
+.T&
+lT lT lTX.
+	80 column mode	3.35 \(mu 2.0 mm (0.132 \(mu 0.078 in)
+	132 column mode	3.35 \(mu 1.3 mm (0.132 \(mu 0.051 in)
+
+.T&
+lT s lTX.
+Character sets	T{
+ASCII, national replacement (NRC), DEC special graphic, and DEC
+supplemental character sets (each 94 characters)
+T}
+
+Video attributes	T{
+Reverse video, underline, bold, and blinking \(em selected individually
+or in any combination
+T}
+
+Cursor type	Blinking block cursor or
+	blinking underline cursor
+
+.T&
+lBT s lBTX
+lT s lTX.
+Keyboard
+
+General	T{
+105-key detachable unit with a 1.8 m (6 ft) coiled cord with a 4-pin
+telephone-type modular connector.
+.br
+Word processing and data processing versions available in 15 languages
+T}
+
+Keypad	T{
+Sculptured key array. Matte texture finish keys. Home-row key height 30
+mm (1.18 in) above desk top
+T}
+
+Key size	12.7 mm (0.5 in) square
+
+Key spacing	T{
+19 mm (0.75 in) center-to-center (single-width keys)
+T}
+
+Numeric keypad	18 keys
+
+Function keys	T{
+36 keys, firmware and software driven
+T}
+
+Visual indicators	T{
+4 LED indicators: Hold, Lock, Wait, and Compose
+T}
+
+Audible signals
+
+.T&
+lT lT lTX.
+	Keyclick	Sounds after each keystroke
+
+	Bell	T{
+Sounds when BEL character is received, when approaching right margin,
+and when compose errors occur.
+T}
+
+	Multiple bell	T{
+Sounds on error in a set-up save or recall operation.
+T}
+.TE
+.
+.
+.\""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+.SH "OPTIONS, DOCUMENTATION, AND SUPPLIES"
+.SS GENERAL
+This appendix describes the options, documentation, and supplies offered
+by Digital for the VT220. Part numbers and ordering information are
+included.
+.
+.SS "AVAILABLE OPTIONS"
+\&
+.SSS "Modems"
+There are two modem options available for the VT220. You can order these
+options from Digital.
+.P
+.TS
+lB lBX
+lT lTX.
+Part Number	Description
+
+DF02-AA	T{
+Direct-connect, AT&T 103J equivalent, 300 baud, full-duplex Modem with
+EIA RS232C interface.
+T}
+
+DF03-AA	T{
+Direct-connect, AT&T 103J/212A equivalent, 300/1200 baud full-duplex
+modem with EIA RS232C interface.
+T}
+.TE
+.
+.SSS Cables
+See \fICOMMUNICATION\fR for information on available modem and printer
+cables.
+.
+.SS "RELATED DOCUMENTATION"
+In addition to this owner's manual, you can order the following VT220
+documents from Digital.
+.P
+.TS
+lB lBX
+lT lTX.
+Title and Part Number	Description
+
+VT220 Programmer Reference Manual	T{
+Describes VT220 character processing, character codes, and control
+sequences needed to generate terminal control programs.
+T}
+(EK-VT220-RM)	\^
+
+VT220 Installation Guide	T{
+Describes the installation procedure for the VT220. This document comes
+with the terminal.
+T}
+(EK-VT220-IN)	\^
+
+VT220 Programmer Pocket Guide	T{
+Provides a summary of VT220 programming information in a pocket-size
+guide. This document comes with the terminal.
+T}
+(EK-VT220-HR)	\^
+
+VT220 Pocket Service Guide	T{
+Describes the procedures used to troubleshoot and repair the VT220 to
+the field replaceable unit.
+T}
+(EK-VT220-PS)	\^
+
+VT220 Video Terminal IPB	T{
+Provides a detailed parts breakdown of the VT220 field replaceable
+units. Does not provide part numbers for printed circuit board
+components.
+T}
+(EK-VT220-IP)	\^
+
+VT220 Family Field Maintenance	T{
+Provides a complete set of VT220 electrical and mechanical schematic
+diagrams.
+T}
+Print Set	\^
+(MP-01732-01)	\^
+.TE
+.
+.SS SPECIFICATIONS
+ANSI specifications are available from:
+.P
+.RS
+Sales Department
+.br
+American National Standards Institute
+.br
+1430 Broadway
+.br
+New York, NY 10018
+.RE
+.P
+EIA specifications are available from:
+.P
+.RS
+Engineering Department
+.br
+Electronic Industries Association
+.br
+2001 Eye Street, NW
+.br
+Washington, DC 20006
+.RE
+.P
+International standards are available from:
+.P
+.RS
+CCITT
+.br
+UN Book Store
+.br
+United Nations Building
+.br
+New York, NY 10017
+.RE
+.
+.SS "ORDERING INFORMATION"
+You can order options, supplies, and documentation by phone from 8:30
+a.m.\& to 6:00 p.m.\& (EST) or by mail.
+.
+.SSS "Continental USA and Puerto Rico"
+Call 800-258-1710 or mail to:
+.P
+.RS
+Digital Equipment Corporation
+.br
+P.O.\& Box CS2008
+.br
+Nashua, NH 03061
+.RE
+.
+.SSS "New Hampsire, Alaska, Hawaii"
+Call 1-603-884-6660.
+.
+.SSS "Outside the USA and Puerto Rico"
+Mail to:
+.P
+.RS
+Digital Equipment Corporation
+.br
+Attn: Accessories and Supplies Business Manager
+.br
+c/o Local Subsidiary or Digital-Approved Distributor
+.RE
+.
+.
+.\""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+.SH "NOTE"
+This man-page was transferred from the hardcopy DEC manual
+EK-VT220-UG-003
+.I VT220 Owner's Manual
+(3rd Edition, December 1984).
+.P
+Minor modifications and improvements were implemented where necessary,
+especially some typesetting errors were fixed.
+.
+.SH "SEE ALSO"
+.MR vt220 1 ,
+.MR vt220pg 7 ,
+.MR vt220rm 7
+.
+.\" Another hack to get rid of the page size in nroff mode
+.if n .pl (\n[nl]u+4)
