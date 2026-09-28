@@ -96,7 +96,6 @@
 .  ds o \[u25CF]
 .  ds cir \[u25CB]
 .\}
-..
 .
 .\" TODO: this is ultra hacky, but it works ... at least for now
 .\" The TL/IL/BPC macros are used for tagged/indented lines instead of
@@ -334,7 +333,7 @@ VT52 Mode
 executes standard ANSI functions. It has a high degree of compatibility
 with DIGITAL's VT102 terminal (VT220/VT102 differences are described in
 Appendix A). This mode restricts use of the keyboard to VT100 keys. All
-data is restricted to 7 bits and only ASCII, U.K, or Special Graphics
+data is restricted to 7 bits and only ASCII, U.K., or Special Graphics
 Characters are generated. This mode is provided for strict backward
 compatibility with existing software written for the VT100 terminal
 family.
@@ -606,13 +605,13 @@ graphic repertoire. But they are not available for use until mapped into
 the GL or GR codes. The commands for mapping graphic character sets into
 GL or GR are described in \fIRECEIVED CODES\fR.
 .P
-The terminals graphic repertoire consists of the following character
+The terminal's graphic repertoire consists of the following character
 sets which are described in the following subparagraphs.
 .bP
 DEC Multinational Character Set (comprising ASCII Graphics Set and the
 DEC Supplemental Graphics Set)
 .bP
-U.K.\@ National Set
+U.K.\& National Set
 .bP
 DEC Special Graphics Set
 .bP
@@ -699,7 +698,7 @@ cB c c c c c c c c c.
 .TE
 .
 .SSS "U.K. National Set"
-The terminal's graphic repertoire includes the U.K.\@ National Set. This
+The terminal's graphic repertoire includes the U.K.\& National Set. This
 set is shown in Table 2-4. This set differs from the ASCII Character Set
 only in that the pound sign (\(Po) replaces the number sign (\(sh) in
 column 2, row 3 (2/3). This set is available for use only in the VT100
@@ -781,7 +780,7 @@ GL or GR as described in \fIRECEIVED CODES\fR. This feature is available
 only in the VT200 mode.
 .
 .SS "CONTROL FUNCTIONS"
-You use control functions in you program to specify how the terminal
+You use control functions in your program to specify how the terminal
 should handle data. There are many uses for control functions. Here are
 some examples:
 .bP
@@ -1170,7 +1169,7 @@ COMPOSE
 .br
 CHARACTER
 T}	T{
-The \fBCOMPOSE CHARACTER\fR key does not transit a code. Pressing the
+The \fBCOMPOSE CHARACTER\fR key does not transmit a code. Pressing the
 \fBCOMPOSE CHARACTER\fR key starts a compose sequence which is used to
 generate characters that cannot be typed directly from the keyboard.
 T}
@@ -4133,7 +4132,7 @@ available for further definition with another DECUDK string. The default
 for the lock parameter is lock.
 .P
 .B NOTE:
-.B A Pl value of 1, doe snot unlock the keys, it simply does not lock
+.B A Pl value of 1, does not unlock the keys, it simply does not lock
 .B them.
 .P
 The following is a summary of Pl values and meanings:
@@ -4167,7 +4166,7 @@ contents of the keys. The string parameters (Stn) consist of hex pairs
 in the range of 3/0 through 3/9 (\(lq0\(rq through \(lq9\(rq), 4/1
 through 4/6 (\(lqA\(rq through \(lqF\(rq), and 6/1 through 6/6
 (\(lqa\(rq through \(lqf\(rq). When you combine these hex values they
-represent an 8-bit quentity. This allows any of the 256 character codes
+represent an 8-bit quantity. This allows any of the 256 character codes
 to be used in the key sequence. You can use key definition strings in
 any order and can specify multiple definitions using a semicolon (;
 3/11) as a delimiter.
@@ -4645,7 +4644,7 @@ introduces the sequence.
 specifies loading the DRCS font buffer, selects starting character as
 column 2/row 1 of the ASCII table (\fICHARACTER ENCODING\/\fR), selects
 .\" original manual: "[...] of ASCII chart [...]"
-to erase only the character that are loaded (refer to Table 4-9). Note
+to erase only the characters that are loaded (refer to Table 4-9). Note
 that Pcms, Pw, and Pt are not included; they default to zero values.
 .P
 .I {
@@ -4661,11 +4660,11 @@ represents one space. You can use other DRCS values to define other
 specific character set.
 .P
 .I ogcacgo
-are the character codes fro the upper columns of the example DRCS
+are the character codes for the upper columns of the example DRCS
 character A.
 .P
 .I /
-advances the sixel sequence ot the lower columns of the example DRCS
+advances the sixel sequence to the lower columns of the example DRCS
 character A.
 .P
 .I B?????B
@@ -4730,7 +4729,7 @@ T}	T{
 T}
 
 T{
-VT220 to Host (Primary DA Responste)
+VT220 to Host (Primary DA Response)
 T}	\fBCSI ? 62; 1; 2; 6; 7; 8 c\fR	T{
 \(lqI am a service class 2 (VT200 family) terminal (62) with 132 columns
 (1), printer port (2), selective erase (6), DRCS (7), and UDK (8).\(rq
@@ -4879,7 +4878,7 @@ ESC	Z
 .RE
 .
 .SS "TERMINAL RESET (DECSTR AND RIS)"
-There are two termianal reset escape sequences. One causes a
+There are two terminal reset escape sequences. One causes a
 \(lqsoft\(rq terminal reset (DECSTR), and the other causes a
 \(lqhard\(rq terminal reset (RIS).
 .

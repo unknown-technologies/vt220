@@ -100,7 +100,6 @@
 .  ds da \[u25BC]
 .  ds error \[u2E2E]
 .\}
-..
 .
 .\" TODO: this is ultra hacky, but it works ... at least for now
 .\" The TL/IL/BPC macros are used for tagged/indented lines instead of
@@ -383,7 +382,7 @@ The monitor controls are
 .\" shown in Figure 2-2 and
 described in Table 2-2.
 .
-.TBL "2-1" "Terminal Controls, Indicators, and Connctors"
+.TBL "2-1" "Terminal Controls, Indicators, and Connectors"
 .TS
 lB lBX
 lT lTX.
@@ -445,7 +444,7 @@ Display Set-Up screen (\fI\,TERMINAL SET-UP\/\fR).
 T}
 .TE
 .
-.TBL "2-2" "Monitor Controls and Tilt Leg Relase Button"
+.TBL "2-2" "Monitor Controls and Tilt Leg Release Button"
 .TS
 lB lBX
 lT lTX.
@@ -489,7 +488,7 @@ This keypad
 .\" (Figure 2-4)
 operates like a standard typewriter keyboard.
 .P
-The main keypad ahs the following special function keys.
+The main keypad has the following special function keys.
 .
 .SSS "Tab"
 Pressing the \fBTab\fR key sends a horizontal tab, which normally moves
@@ -593,7 +592,7 @@ Pressing the \fBPrint Screen\fR key sends the text on the screen to the
 printer.
 .P
 Typing \fBCtrl-Print Screen\fR sets or resets auto print mode. See the
-\(lqAuto Print Mode\(rq section in \fIOPERATING PROCEDURES\fB.
+\(lqAuto Print Mode\(rq section in \fIOPERATING PROCEDURES\fR.
 .
 .SSS "Set-Up"
 Pressing the \fBSet-Up\fR key causes the terminal to enter or exit the
@@ -620,7 +619,7 @@ SET-UP\fR.)
 .
 .SSS "F11 (ESC)"
 \fBF11\fR is normally a function key used by application programs. In
-VT100 and VT52 mode, it sends an ESC (escape) character.
+VT100 and VT52 modes, it sends an ESC (escape) character.
 .
 .SSS "F12 (BS)"
 \fBF12\fR is normally a function key used by application programs. In
@@ -784,7 +783,7 @@ print mode, type \fBCtrl-Print Screen\fR again.
 In printer controller mode, the host computer has direct control of the
 printer. Characters received from the host computer go directly to the
 printer, and are not displayed on the screen. (See
-\fICOMMUNICATIONS\fR.) When selected, \fBPrinter Controller Mode\fR
+\fICOMMUNICATION\fR.) When selected, \fBPrinter Controller Mode\fR
 appears on the status line in set-up. You cannot select this mode from
 the keyboard (except by entering set-up).
 .P
@@ -794,7 +793,7 @@ example, \fBPrint Full Page\fR does not work.
 .SSS "Local Controller Mode"
 Local controller mode is a special mode that lets you send information
 directly from the keyboard to the printer. You may find this feature
-useful in setting up certain printer for operation, without involving
+useful in setting up certain printers for operation, without involving
 the host computer.
 .P
 To select local controller mode, you must select two different set-up
@@ -1135,7 +1134,7 @@ Character	Sequence	Sequence
 
 \(~n	(n tilde)	\fBn\(ti\fR	\fB\(tin\fR
 
-\(`o	(o grave)	\fBo\(ga\fR	\fB\gao\fR
+\(`o	(o grave)	\fBo\(ga\fR	\fB\(gao\fR
 
 \('o	(o acute)	\fBo\(aq\fR	\fB\(aao\fR
 
@@ -1767,7 +1766,7 @@ Communications Set-Up	Printer Set-Up	Keyboard Set-Up
 
 To Next Set-Up	To Next Set-Up	To Next Set-Up
 To Directory	To Directory	To Directory
-Transmit Speed	Transmit/Receive Speed	Typewriter/D.P.\@ Keys
+Transmit Speed	Transmit/Receive Speed	Typewriter/D.P.\& Keys
 Receive Speed	Print Mode	Caps/Shift-Lock
 XOFF	Data-Bits Parity	Auto Repeat
 Data-Bits/Parity	Stop Bits	Keyclick
@@ -1908,7 +1907,6 @@ T}
 Action field	\^
 	\^
 Value: \fBClear Comm\fR	\^
-\fB
 
 \fBReset Terminal\fR	T{
 Resets many terminal operating features to a default setting used by
@@ -2230,7 +2228,7 @@ Action field	\^
 Value: \fBTo Next Set-Up\fR	\^
 
 \fBTo Directory\fR	T{
-Replaces the Display Set-Up screen with the Set-Up Directory screen.
+Replaces the General Set-Up screen with the Set-Up Directory screen.
 T}
 	\^
 Action field	\^
@@ -2594,7 +2592,7 @@ lT lBT lT lTX.
 Values:
 \(sq	Receive=Transmit		T{
 The terminal receive speed must match the computer transmit speed.
-However, the terminal can receive at one sped and transit at another.
+However, the terminal can receive at one speed and transit at another.
 T}
 	(default)		\^
 \(sq	Receive=   75		\^
@@ -3413,7 +3411,7 @@ Value: \fBSet 8 Column Tabs\fR
 .\""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 .SH "COMMUNICATION"
 .SS "GENERAL"
-This chapter describes how the VT220 communicates with a hot computer
+This chapter describes how the VT220 communicates with a host computer
 and a printer.
 .P
 The terminal operates on full-duplex asynchronous lines only, and has
@@ -3847,7 +3845,7 @@ No RLSD within 30 seconds after DSR
 A self-test command received from the host computer
 .bP
 Switching from the EIA port to the 20 mA port, or from the 20 mA port to
-the EIA port"
+the EIA port
 .P
 The usual way to disconnect the terminal from the communications line at
 the end of communications is to type \fBShift-Break\fR. The host
@@ -3896,7 +3894,7 @@ The terminal does not power up when the power switch is set to \fB1\fR
 (on).
 T}	T{
 Make sure the terminal power cord is plugged into the wall outlet. Check
-for power at the wall outlet by plugging in a lap to see if it lights.
+for power at the wall outlet by plugging in a lamp to see if it lights.
 
 Make sure the voltage selection is in the correct position. (See the
 \fIVT220 Installation Guide\fR for the correct setting.)
@@ -4332,7 +4330,7 @@ P.O.\& Box CS2008
 Nashua, NH 03061
 .RE
 .
-.SSS "New Hampsire, Alaska, Hawaii"
+.SSS "New Hampshire, Alaska, Hawaii"
 Call 1-603-884-6660.
 .
 .SSS "Outside the USA and Puerto Rico"

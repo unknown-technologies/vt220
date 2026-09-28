@@ -100,7 +100,6 @@
 .  ds da \[u25BC]
 .  ds error \[u2E2E]
 .\}
-..
 .
 .\" TODO: this is ultra hacky, but it works ... at least for now
 .\" The TL/IL/BPC macros are used for tagged/indented lines instead of
@@ -767,7 +766,8 @@ ST.
 DCS is an 8-bit control character that can also be expressed as ESC P
 when coding for a 7-bit environment.
 .P
-ST is an 8-bit control character that can also be expressed as ESC /
+ST is an 8-bit control character that can also be expressed as ESC \(rs
+.\" the original manual incorrectly says "ESC /"
 when coding for a 7-bit environment.
 .
 .
@@ -864,7 +864,7 @@ Key	Mode	Mode	Mode	Mode
 9	9	SS3 y	9	ESC ? y
 \-	\-(minus)	SS3 m	\-	ESC ? m
 ,	,(comma)	SS3 l	,	ESC ? l\*[dg]
-.	.(period)	SS3 n	.	ESC ? n
+\&.	.(period)	SS3 n	.	ESC ? n
 Enter	CR	SS3 M	CR	ESC ? M\*[d2]
 	or		or
 	CR LF		CR LF
@@ -1151,7 +1151,7 @@ T}
 		sequence	\^
 		introducer	\^
 
-ST	ESC /	String	T{
+ST	ESC \(rs	String	T{
 Processed as closing delimiter of a string opened by DCS.
 T}
 		terminator	\^
@@ -1233,7 +1233,7 @@ ESC + Dscs	G3
 Dscs can consist of zero, one, or two intermediate characters and a
 final character.
 .P
-Intermediate characters are int he range of 2/0 to 2/15; final
+Intermediate characters are in the range of 2/0 to 2/15; final
 characters are in the range of 3/0 to 7/14. (See ASCII Code Table for
 column/row notation.)
 .
@@ -1728,7 +1728,7 @@ CSI	Pt	;	Pb	r
 .P
 Selects top and bottom margins defining the scrolling region. Pt is the
 line number of the first line in the scrolling region. Pb is the line
-number o the bottom line. If you do not select either Pt or Pb, they
+number of the bottom line. If you do not select either Pt or Pb, they
 default to top and bottom respectively. Lines are counted from 1.
 .
 .SS "Printing"
@@ -1743,7 +1743,7 @@ Name	Sequence	Action
 Auto print	CSI ? 5 i	T{
 Turns on auto print mode. All following display lines print when you
 move the cursor off the line using a line feed, form feed, vertical tab,
-or auto wrap. The printed line ends with a carriage return adn the
+or auto wrap. The printed line ends with a carriage return and the
 character (LF, FF, or VT) which moved the cursor off the previous line.
 Auto wrap lines end with a line feed.
 T}
@@ -1781,7 +1781,7 @@ line		\^
 
 Print screen	CSI i	T{
 Prints the screen display (full screen or scrolling region depending on
-the print extend DECEXT selection). Printer form feed mode (DECPFF)
+the print extent DECEXT selection). Printer form feed mode (DECPFF)
 selects either a form feed (FF) or nothing as the print terminator. The
 print screen sequence is complete when the screen prints.
 T}
@@ -1839,7 +1839,7 @@ T}
 .TS
 lB lB lB lB
 l l l l.
-Key	Value (kyn)	KEy	Value (kyn)
+Key	Value (kyn)	Key	Value (kyn)
 
 F6	17	F14	26
 F7	18
@@ -1856,7 +1856,7 @@ Stn is a string of hex pairs of ASCII characters that define the
 specified key.
 .P
 .B NOTE:
-.B To access the programmed values of the keys, you type Shfit-(function
+.B To access the programmed values of the keys, you type Shift-(function
 .B key).
 .
 .SS "Down-Line-Loading Characters (DRCS)"
@@ -1900,7 +1900,7 @@ erase all characters in all DRCS sets (this font buffer number and other
 font buffer numbers)
 T}
 
-Pcn	Character	0	\&=	device default (7 \(mu 10)
+Pcms	Character	0	\&=	device default (7 \(mu 10)
 	Matrix size	1	\&=	(not used)
 		2	\&=	5 \(mu 10
 		3	\&=	6 \(mu 10
@@ -1965,7 +1965,7 @@ lT lT lTX.
 Communication	Sequence	Meaning
 
 Host to VT220	CSI c	T{
-\(lqWhat is you rservice class code and what are your attributes?\(rq
+\(lqWhat is your service class code and what are your attributes?\(rq
 T}
 (primary DA	or	\^
 request)	CSI 0 c	\^

@@ -22,7 +22,7 @@ vt220 \- DEC VT220 terminal emulator
 The \fBvt220\fR program is a GPU accelerated terminal emulator which
 emulates the DEC VT220 terminal with reasonable accuracy.
 .TP
-\fB\-h\fR
+\fB\-h\fR, \fB\-\-help\fR
 display a short help message and exit.
 .TP
 \fB\-g\fR
@@ -124,6 +124,10 @@ The X11 display server address.
 .TP
 .B XDG_STATE_HOME
 The state directory where the NVR image (\(lqsettings\(rq) is stored.
+.TP
+.B HOME
+The user's home directory which is used to compute \fBXDG_STATE_HOME\fR
+in case \fBXDG_STATE_HOME\fR is not set.
 .
 .SH ADDITIONAL DOCUMENTATION
 The Owner's Manual (available at
@@ -141,7 +145,7 @@ Written by unknown.
 .
 .SH "REPORTING BUGS"
 To report rendering glitches, general bugs, and deviations from the real
-DEC VT220's behaivor, use the issue tracker at
+DEC VT220's behavior, use the issue tracker at
 .UR https://github.com/unknown-technologies/vt220
 .UE
 .
