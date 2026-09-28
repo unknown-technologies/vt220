@@ -264,7 +264,7 @@ cB c c c c c c c c c.
 .TS
 tab(@);
 c cB cB cB cB cB cB cB cB cB cB cB cB cB cB cB cB
-cB2 c2 c2 c2 c2 c2 c2 c2 c2 c2 c2 c2 c2 c2 c2 c2 c2.
+cB2 c2 c2 c2 c2 c2 c2 c2 c2 c2 c2 c2 c2 c2 c2 c2 c.
 @00@01@02@03@04@05@06@07@08@09@10@11@12@13@14@15
 00@NUL@DLE@SP@@@@@@@DCS@///@@@@@
 01@SOH@DC1@@@@@@@@PU1@@@@@@
@@ -1416,8 +1416,8 @@ Moves cursor to line Pl, column Pc. The numbering of the lines and
 columns depends on the state (set/reset) of origin mode (DECOM). Digital
 recommends using CUP instead of HVP.
 T}
-vertical position			\^
-(HVP)			\^
+vertical			\^
+position (HVP)			\^
 
 Index	IND	ESC D	T{
 Moves cursor down one line in the same column. If the cursor is at the
@@ -1425,7 +1425,7 @@ bottom margin the screen performs a scroll-up.
 T}
 (IND)			\^
 
-Reverse	Index	RI	ESC M	T{
+Reverse Index	RI	ESC M	T{
 Moves cursor up one line in the same column. If the cursor is at the top
 margin the screen performs a scroll-down.
 T}
@@ -1866,7 +1866,7 @@ DECDLD device control string format.
 .RS
 .EX
 .TS
-cB2 cB2 cB2 cB2 cB2 cB2.
+cB2 cB2 cB2 cB2 cB2 cB.
 DCS	Pfn;Pcn;Pe;Pcms;Pw;Pt	{	Dcs	Sxbp1;Sxbp2;...;Sxbpn	ST
 .TE
 .EE
@@ -1941,7 +1941,7 @@ following DECDLD control sequence.
 .RS
 .EX
 .TS
-cB2 cB2 cB2 cB2 cB2 cB2.
+cB2 cB2 cB2 cB2 cB2 cB.
 DCS	1;1;2	{	sp	@	ST
 .TE
 .EE
@@ -2167,7 +2167,7 @@ language. The VT220 will never send this response.
 .RS
 .EX
 .TS
-cB2 cB2.
+cB2 cB.
 ESC	Z
 .TE
 .EE
@@ -2201,7 +2201,7 @@ The sequence format for invoking terminal tests is as follows.
 .RS
 .EX
 .TS
-cB2 cB2 cB2 cB2 cB2 cB2 cB2.
+cB2 cB2 cB2 cB2 cB2 cB2 cB.
 CSI	4	;	.....	;	Ps	y
 .TE
 .EE

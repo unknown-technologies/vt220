@@ -562,7 +562,7 @@ You can use GR codes only in an 8-bit environment.
 .TS
 nowarn tab(@);
 c cB cB cB cB cB cB cB cB cB cB cB cB cB cB cB cB
-cB2 c2 c2 c2 c2 c2 c2 c2 c2 c2 c2 c2 c2 c2 c2 c2 c2.
+cB2 c2 c2 c2 c2 c2 c2 c2 c2 c2 c2 c2 c2 c2 c2 c2 c.
 @00@01@02@03@04@05@06@07@08@09@10@11@12@13@14@15
 00@NUL@DLE@SP@@@@@@@DCS@///@@@@@
 01@SOH@DC1@@@@@@@@PU1@@@@@@
@@ -1287,7 +1287,7 @@ ANSI (VT100, VT200) mode and in VT52 mode.
 cB s  s  cB s
 cB s  s  cB s
 cB s  s  cB s
-lB2 lB2 lB2 lB2 lB2
+lB2 lB2 lB2 lB2 lB
 lB lB lB lB lB
 l  l  l  l  l
 l  lB lB lB lB
@@ -1910,7 +1910,9 @@ T}
 		ESC	H		\^	\^
 
 RI	8/13	1/11	4/13		T{
+.na
 Reverse index
+.ad
 T}	T{
 Moves cursor up one line in same column. If cursor is at top margin,
 screen performs a scroll down.
@@ -1918,7 +1920,9 @@ T}
 		ESC	M		\^	\^
 
 SS2	8/14	1/11	4/14		T{
+.na
 Single shift G2
+.ad
 T}	T{
 Temporarily invokes G2 character set into GL for the next graphic
 character. G2 is designated by a select-character-set (SCS) sequence.
@@ -1926,7 +1930,9 @@ T}
 		ESC	N		\^	\^
 
 SS3	8/15	1/11	4/15		T{
+.na
 Single shift G3
+.ad
 T}	T{
 Temporarily invokes G3 character set into GL for the next graphic
 character. G3 is designated by a select-character-set (SCS) sequence.
@@ -1934,7 +1940,9 @@ T}
 		ESC	O		\^	\^
 
 DCS	9/0	1/11	5/0		T{
+.na
 Device control string
+.ad
 T}	T{
 Processed as opening delimiter of a device control string for device
 control use.
@@ -1942,14 +1950,18 @@ T}
 		ESC	P		\^	\^
 
 CSI	9/11	1/11	5/11		T{
+.na
 Control sequence introducer
+.ad
 T}	T{
 Processed as control sequence introducer.
 T}
 		ESC	[		\^	\^
 
 ST	9/12	1/11	5/12		T{
+.na
 String terminator
+.ad
 T}	T{
 Processed as closing delimiter of a string opened by DCS.
 T}
@@ -2417,7 +2429,7 @@ when coding for a 7-bit environment:
 .RS
 .EX
 .TS
-l2 l2
+l2 l
 cB cB.
 1/11	4/14
 ESC	N
@@ -2433,7 +2445,7 @@ when coding for a 7-bit environment:
 .RS
 .EX
 .TS
-l2 l2
+l2 l
 cB cB.
 1/11	4/15
 ESC	O
@@ -2465,7 +2477,7 @@ control state.
 .RS
 .EX
 .TS
-l2 l1 l1
+l2 l1 l
 cB cB cB.
 1/11	2/0	4/7
 ESC	sp	F
@@ -2486,7 +2498,7 @@ equivalent 7-bit code extensions.
 .RS
 .EX
 .TS
-l2 l1 l1
+l2 l1 l
 cB cB cB.
 1/11	2/0	4/6
 ESC	sp	G
@@ -2521,7 +2533,7 @@ The Set Mode command for ANSI modes is:
 .RS
 .EX
 .TS
-c2 cw(4)2 c0 c0 c2 c2 c2 c2
+c2 cw(4)2 c0 c0 c2 c2 c2 c
 cB cB cB cB cB cB cB cB.
 9/11		3/11		3/11		6/8
 CSI	Ps	;	....	;	Ps	h
@@ -2534,7 +2546,7 @@ The Set Mode command for DIGITAL private mode is:
 .RS
 .EX
 .TS
-c2 c2 c0 c0 c2 c2 c2
+c2 c2 c0 c0 c2 c2 c
 cB cB cB cB cB cB cB.
 9/11	3/15	3/11		3/11		6/8
 CSI	?	;	....	;	Ps	h
@@ -2712,7 +2724,7 @@ The Reset Mode command for ANSI modes is:
 .RS
 .EX
 .TS
-c2 cw(4)2 c0 c0 c2 c2 c2 c2
+c2 cw(4)2 c0 c0 c2 c2 c2 c
 cB cB cB cB cB cB cB cB.
 9/11		3/11		3/11		6/12
 CSI	Ps	;	....	;	Ps	l
@@ -2725,7 +2737,7 @@ The Reset Mode command for DIGITAL private mode is:
 .RS
 .EX
 .TS
-c2 c2 c0 c0 c2 c2 c2
+c2 c2 c0 c0 c2 c2 c
 cB cB cB cB cB cB cB.
 9/11	3/15	3/11		3/11		6/12
 CSI	?	;	....	;	Ps	l
@@ -3431,7 +3443,7 @@ following format:
 .RS
 .EX
 .TS
-c1 c1 c1 c1 c1 c1
+c1 c1 c1 c1 c1 c
 cB cB cB cB cB cB.
 9/11		3/11			6/13
 CSI	Ps	;	Ps	...	m
@@ -3446,7 +3458,7 @@ to blinking-underline, you can use:
 .RS
 .EX
 .TS
-c1 c1 c1 c1 c1 c1 c1
+c1 c1 c1 c1 c1 c1 c
 cB cB cB cB cB cB cB.
 9/11	3/0	3/11	3/4	3/11	3/5	6/13
 CSI	0	;	4	;	5	m
@@ -3460,7 +3472,7 @@ example, to select blinking only, you can use:
 .RS
 .EX
 .TS
-c1 c1 c1
+c1 c1 c
 cB cB cB.
 9/11	3/15	6/13
 CSI	5	m
@@ -3622,7 +3634,7 @@ single-height, all characters to the right of center are lost.
 .RS
 .EX
 .TS
-c1 c1 c1
+c1 c1 c
 cB cB cB.
 1/11	2/3	3/5
 ESC	\(sh	5
@@ -3640,7 +3652,7 @@ screen.
 .RS
 .EX
 .TS
-c1 c1 c1
+c1 c1 c
 cB cB cB.
 1/11	2/3	3/6
 ESC	\(sh	6
@@ -3811,9 +3823,11 @@ T}
 \^	CSI	2	K		\^
 
 T{
+.na
 Selective Erase in Line (DECSEL)
 .br
 (VT200 mode only)
+.ad
 T}	9/11	3/15	4/11		T{
 Erases all \(lqerasable\(rq characters (DECSCA) from the cursor to the
 end of the line. Does not affect video line attributes or video
@@ -3838,9 +3852,11 @@ T}
 	CSI	?	2	K	\^
 
 T{
+.na
 Selective Erase In Display (DECSED)
 .br
 (VT200 mode only)
+.ad
 T}	9/11	3/15	4/10		T{
 Erases all \(lqerasable\(rq characters (DECSCA) from and including the
 cursor to the end of the screen. Does not affect video line attributes
@@ -3881,7 +3897,7 @@ the following sequence.
 .RS
 .EX
 .TS
-c1 c1 c1 c1 c1
+c1 c1 c1 c1 c
 cB cB cB cB cB.
 9/11		3/11		7/2
 CSI	Pt	;	Pb	r
@@ -4149,12 +4165,12 @@ slash (/, 2/15). The key selector numbers (Kyn) specify the particular
 key to be redefined, and the string parameters (Stn) are the encoded
 contents of the keys. The string parameters (Stn) consist of hex pairs
 in the range of 3/0 through 3/9 (\(lq0\(rq through \(lq9\(rq), 4/1
-through 4/6 (\(lqA\(rq through \(lqF\(rq), and 6s1 through 6/6 (\lqa\(rq
-through \(lqf\(rq). When you combine these hex values they represent an
-8-bit quentity. This allows any of the 256 character codes to be used in
-the key sequence. You can use key definition strings in any order and
-can specify multiple definitions using a semicolon (; 3/11) as a
-delimiter.
+through 4/6 (\(lqA\(rq through \(lqF\(rq), and 6/1 through 6/6
+(\(lqa\(rq through \(lqf\(rq). When you combine these hex values they
+represent an 8-bit quentity. This allows any of the 256 character codes
+to be used in the key sequence. You can use key definition strings in
+any order and can specify multiple definitions using a semicolon (;
+3/11) as a delimiter.
 .P
 The following is a list of definable keys and their identifying values:
 .P
@@ -4225,7 +4241,7 @@ To clear keys send the following string:
 .RS
 .EX
 .TS
-c2 c2 c2 c2 c2 c2
+c2 c2 c2 c2 c2 c
 cB cB cB cB cB cB.
 9/0	3/0	3/11	3/1	7/12	9/12
 DCS	0	;	1	|	ST
@@ -4238,7 +4254,7 @@ To lock keys send the following string:
 .RS
 .EX
 .TS
-c2 c2 c2 c2 c2 c2
+c2 c2 c2 c2 c2 c
 cB cB cB cB cB cB.
 9/0	3/1	3/11	3/0	7/12	9/12
 DCS	1	;	0	|	ST
@@ -4253,7 +4269,7 @@ part of the string would be:
 .RS
 .EX
 .TS
-c2 c2 c2 c2 c2 c2 c2 c2
+c2 c2 c2 c2 c2 c2 c2 c
 cB cB cB cB cB cB cB cB.
 9/0	3/1	3/11	3/1	7/12	3/3	3/4	2/15
 DCS	1	;	1	|	3	4	/
@@ -4267,7 +4283,7 @@ encoding for PRINT is:
 .P
 .RS
 .TS
-c1 c1 c1.
+c1 c1 c.
 P	\&=	50 hex
 R	\&=	52 hex
 I	\&=	49 hex
@@ -4281,7 +4297,7 @@ Thus, after the slash character, you would provide:
 .RS
 .EX
 .TS
-c2 c2 c2 c2 c2 c2 c2 c2 c2 c2 c2
+c2 c2 c2 c2 c2 c2 c2 c2 c2 c2 c
 cB cB cB cB cB cB cB cB cB cB cB.
 3/5	3/0	3/5	3/2	3/4	3/9	3/4	4/5	3/5	3/4	9/12
 5	0	5	2	4	9	4	E	5	4	ST
@@ -4854,7 +4870,7 @@ The DECID sequence is:
 .RS
 .EX
 .TS
-c1 c1
+c1 c
 cB cB.
 1/11	5/10
 ESC	Z
@@ -4883,7 +4899,7 @@ The DECSTR escape sequence is:
 .RS
 .EX
 .TS
-c1 c1 c1
+c1 c1 c
 cB cB cB.
 9/11 2/1 7/0
 ESC	!	p
@@ -5014,7 +5030,7 @@ The RIS escape sequence is:
 .RS
 .EX
 .TS
-c1 c1
+c1 c
 cB cB.
 1/11	6/3
 ESC	c
@@ -5088,7 +5104,7 @@ the DECALN sequence.
 .RS
 .EX
 .TS
-c1 c1 c1
+c1 c1 c
 cB cB cB.
 1/11	2/3	3/8
 ESC	#	8
@@ -5119,7 +5135,7 @@ ESC B	Cursor Down
 ESC C	Cursor Right
 ESC D	Cursor Left
 ESC F	Enter \(lqGraphics\(rq Mode
-ESC G	Exit \(qlGraphics\(rq Mode
+ESC G	Exit \(lqGraphics\(rq Mode
 ESC H	Cursor To Home
 ESC I	Reverse Line Feed
 ESC J	Erase To End Of Screen
