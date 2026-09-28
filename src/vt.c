@@ -58,7 +58,7 @@
 #define	STATE_DECDLD_ERR_ESC	26
 #define	STATE_MAX		STATE_DECDLD_ERR_ESC
 
-static const VT220NVR default_config = { .magic = { 'N', 'V', 'R' }, .tx_baud_rate = 4800, 0 };
+static const VT220NVR default_config = { .magic = { 'V', 'T' }, .tx_baud_rate = 4800, 0 };
 
 static void VT220iSaveConfig(const VT220* vt, VT220NVR* nvr);
 
@@ -110,6 +110,60 @@ void VT220Init(VT220* vt)
 	/* reset config */
 	VT220LoadDefaults(vt);
 	VT220iSaveConfig(vt, &vt->config_nvr);
+}
+
+static inline void VT220iPutText(VT220* vt, const int line, const int column, const char* text, u16 sgr)
+{
+	int y = line - 1;
+	int x = column - 1;
+
+	for(const char* c = text; *c; c++, x++) {
+		unsigned char ch = (unsigned char) *c;
+		if(ch == 0x20) {
+			ch = 0;
+		}
+		vt->text[y * vt->columns + x].text = ch;
+		vt->text[y * vt->columns + x].attr = sgr;
+	}
+}
+
+void VT220ShowInitScreen(VT220* vt)
+{
+	vt->mode |= DECINIT;
+	VT220iPutText(vt, 20, 17, "Firmware and Set-Up Screens Copyright \xA9 1983,86", 0);
+	VT220iPutText(vt, 22, 27, "Digital Equipment Corporation", 0);
+	VT220iPutText(vt, 12, 37, "VT220 OK", 0);
+
+	for(int i = 0, x = 31; i < 18; i++, x++) {
+		vt->text[10 * vt->columns + x].text = 0x12;
+		vt->text[12 * vt->columns + x].text = 0x12;
+		vt->text[10 * vt->columns + x].attr = 0;
+		vt->text[12 * vt->columns + x].attr = 0;
+	}
+
+	vt->text[10 * vt->columns + 30].text = 0x0D;
+	vt->text[10 * vt->columns + 30].attr = 0;
+	vt->text[10 * vt->columns + 49].text = 0x0C;
+	vt->text[10 * vt->columns + 49].attr = 0;
+
+	vt->text[11 * vt->columns + 30].text = 0x19;
+	vt->text[11 * vt->columns + 30].attr = 0;
+	vt->text[11 * vt->columns + 49].text = 0x19;
+	vt->text[11 * vt->columns + 49].attr = 0;
+
+	vt->text[12 * vt->columns + 30].text = 0x0E;
+	vt->text[12 * vt->columns + 30].attr = 0;
+	vt->text[12 * vt->columns + 49].text = 0x0B;
+	vt->text[12 * vt->columns + 49].attr = 0;
+}
+
+static inline void VT220iClearInit(VT220* vt)
+{
+	vt->mode &= ~DECINIT;
+
+	VT220EraseScreen(vt);
+	VT220CursorHome(vt);
+	VT220SaveCursor(vt);
 }
 
 static inline unsigned int VT220GetCellWidth(VT220* vt)
@@ -3393,6 +3447,10 @@ void VT220ProcessChar(VT220* vt, unsigned char c)
 
 void VT220Receive(VT220* vt, unsigned char c)
 {
+	if(vt->mode & DECINIT) {
+		VT220iClearInit(vt);
+	}
+
 	if(vt->enable_buffering) {
 		if(vt->buf_used < 256) {
 			vt->buf[vt->buf_w++] = c;
@@ -4302,6 +4360,10 @@ void VT220ProcessKeyVT52(VT220* vt, u16 key)
 
 void VT220ProcessKey(VT220* vt, u16 key)
 {
+	if(vt->mode & DECINIT) {
+		VT220iClearInit(vt);
+	}
+
 	if(key == VT220_KEY_SET_UP) {
 		if(vt->in_setup) {
 			VT220LeaveSetup(vt);
@@ -4333,7 +4395,7 @@ void VT220ProcessKey(VT220* vt, u16 key)
 				/* TODO: implement */
 				return;
 			case VT220_KEY_BREAK:
-				if(vt->brk) {
+				if(vt->config.brk == VT220_BREAK && vt->brk) {
 					vt->brk();
 				}
 				return;
@@ -4515,7 +4577,8 @@ void VT220LoadDefaults(VT220* vt)
 
 	vt->config.user_features = VT220_USER_FEATURES_UNLOCKED;
 	vt->config.mode = VT220_MODE_VT200_MODE_7BIT_CONTROLS;
-	vt->config.auto_wrap = true;
+	vt->config.auto_wrap = true; /* this is incorrect */
+	vt->config.scroll = VT220_SCROLL_JUMP_SCROLL; /* this is also incorrect */
 	vt->config.text_cursor = VT220_TEXT_CURSOR;
 	vt->config.new_line = VT220_NO_NEW_LINE;
 	vt->config.local_echo = VT220_NO_LOCAL_ECHO;
@@ -4537,7 +4600,7 @@ void VT220SaveConfig(VT220* vt)
 
 int VT220LoadConfig(VT220* vt, const VT220NVR* nvr)
 {
-	if(memcmp(nvr->magic, default_config.magic, 3)) {
+	if(memcmp(nvr->magic, default_config.magic, sizeof(default_config.magic))) {
 		return false;
 	}
 

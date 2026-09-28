@@ -102,6 +102,7 @@
 #define	VT220_LANGUAGE_ENGLISH			0
 #define	VT220_LANGUAGE_FRANCAIS			1
 #define	VT220_LANGUAGE_DEUTSCH			2
+#define	VT220_LANGUAGE_COUNT			3
 
 #define	VT220_KEYBOARD_UNKNOWN			0
 #define	VT220_KEYBOARD_NORTH_AMERICAN		1
@@ -200,6 +201,32 @@
 #define	VT220_TRANSMIT_LIMITED			0
 #define	VT220_TRANSMIT_UNLIMITED		1
 
+#define	VT220_PRINTER_MODE_NORMAL		0
+#define	VT220_PRINTER_MODE_AUTO_PRINT		1
+#define	VT220_PRINTER_MODE_CONTROLLER		2
+
+#define	VT220_PRINTER_FORMAT_8BIT_NO_PARITY	0
+#define	VT220_PRINTER_FORMAT_8BIT_EVEN_PARITY	1
+#define	VT220_PRINTER_FORMAT_8BIT_ODD_PARITY	2
+#define	VT220_PRINTER_FORMAT_7BIT_NO_PARITY	3
+#define	VT220_PRINTER_FORMAT_7BIT_MARK_PARITY	4
+#define	VT220_PRINTER_FORMAT_7BIT_SPACE_PARITY	5
+#define	VT220_PRINTER_FORMAT_7BIT_EVEN_PARITY	6
+#define	VT220_PRINTER_FORMAT_7BIT_ODD_PARITY	7
+
+#define	VT220_PRINTER_STOP_BITS_1		0
+#define	VT220_PRINTER_STOP_BITS_2		1
+
+#define	VT220_PRINTER_FULL_PAGE			0
+#define	VT220_PRINTER_SCROLL_REGION		1
+
+#define	VT220_PRINTER_NATIONAL_ONLY		0
+#define	VT220_PRINTER_NATIONAL_LINE_DRAWING	1
+#define	VT220_PRINTER_MULTINATIONAL		2
+
+#define	VT220_PRINTER_NO_TERMINATOR		0
+#define	VT220_PRINTER_TERMINATOR_FF		1
+
 #define	VT220_KEYS_TYPEWRITER			0
 #define	VT220_KEYS_DATA_PROCESSING		1
 
@@ -265,8 +292,18 @@ typedef struct {
 	unsigned char	bell:1;
 	unsigned char	brk:1;
 	unsigned char	concealed:1;
+	unsigned char	printer_stop_bits:1;
+	unsigned char	printer_mode:2;
 
-	unsigned char	magic[3];
+	unsigned char	printer_format:3;
+	unsigned char	printer_region:1;
+	unsigned char	printer_data_type:2;
+	unsigned char	printer_terminator:1;
+	unsigned char   :1;
+
+	/* TODO: 5bit for the printer speed */
+
+	unsigned char	magic[2];
 
 	unsigned char	tabstops[17];	/* 132 / 8 = 16.5 */
 
@@ -486,6 +523,7 @@ typedef struct {
 #define	DECGPCS		_BV(19)
 #define	DECGPBM		_BV(20)
 #define	DECGRPM		_BV(21)
+#define	DECINIT		_BV(31)
 
 #define	SGR_BOLD	_BV(0)
 #define	SGR_UNDERSCORE	_BV(1)
@@ -515,6 +553,7 @@ void VT220Receive(VT220* vt, unsigned char c);
 void VT220ReceiveText(VT220* vt, const char* s);
 void VT220Draw(VT220* vt);
 void VT220SetScreenColor(VT220* vt, unsigned int color);
+void VT220ShowInitScreen(VT220* vt);
 
 /* private functions */
 void VT220Write(VT220* vt, u16 c);

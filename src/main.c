@@ -840,6 +840,8 @@ int main(int argc, char** argv, char** envp)
 
 	CFGLoadState(&vt);
 
+	VT220ShowInitScreen(&vt);
+
 	VTEnableGlow(&renderer, enable_glow);
 	VTSetRaw(&renderer, rawmode);
 	VTSetSimplePhosphor(&renderer, simple_phosphor);

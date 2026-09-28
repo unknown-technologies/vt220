@@ -24,6 +24,7 @@
 #define	DECGPCS		_BV(19)
 #define	DECGPBM		_BV(20)
 #define	DECGRPM		_BV(21)
+#define	DECINIT		_BV(31)
 
 #define	SGR_BOLD	_BV(0)
 #define	SGR_UNDERSCORE	_BV(1)
@@ -284,7 +285,7 @@ void main(void)
 		cursor_cell.x = line_length - 1u;
 	}
 
-	if(scrolling == 0 && (mode & DECTCEM) != 0u && cursor_on && !in_setup && cell == cursor_cell) {
+	if(scrolling == 0 && (mode & DECTCEM) != 0u && (mode & DECINIT) == 0u && cursor_on && !in_setup && cell == cursor_cell) {
 		uint xor = block_cursor ? SGR_REVERSE : SGR_UNDERSCORE;
 		attr ^= xor;
 	}
