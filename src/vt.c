@@ -1366,6 +1366,18 @@ static void VT220iHardReset(VT220* vt, const VT220NVR* nvr)
 		vt->mode &= ~DECCKM;
 	}
 
+	if(nvr->printer_terminator == VT220_PRINTER_TERMINATOR_FF) {
+		vt->mode |= DECPFF;
+	} else {
+		vt->mode &= ~DECPFF;
+	}
+
+	if(nvr->printer_extent == VT220_PRINTER_FULL_PAGE) {
+		vt->mode |= DECPEX;
+	} else {
+		vt->mode &= ~DECPEX;
+	}
+
 	vt->xoff = 0;
 	vt->xoff_point = 64;
 	vt->xon_point = 32;
@@ -4546,6 +4558,8 @@ static void VT220iSaveConfig(const VT220* vt, VT220NVR* nvr)
 	nvr->columns = (vt->mode & DECCOLM) ? VT220_COLUMNS_132 : VT220_COLUMNS_80;
 	nvr->keypad = (vt->mode & KAM) ? VT220_KEYPAD_APPLICATION : VT220_KEYPAD_NUMERIC;
 	nvr->cursor_keys = (vt->mode & DECCKM) ? VT220_CURSOR_KEYS_APPLICATION : VT220_CURSOR_KEYS_NORMAL;
+	nvr->printer_terminator = (vt->mode & DECPFF) ? VT220_PRINTER_TERMINATOR_FF : VT220_PRINTER_NO_TERMINATOR;
+	nvr->printer_extent = (vt->mode & DECPEX) ? VT220_PRINTER_FULL_PAGE : VT220_PRINTER_SCROLL_REGION;
 
 	switch(vt->xoff_point) {
 		case 0:

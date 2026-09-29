@@ -1601,7 +1601,7 @@ void VT220SetupShowPrinter(VT220* vt)
 	/* line 3 */
 	VT220SetupGoto(vt, 6, 1);
 	VT220SetupEraseLine(vt);
-	switch(vt->config.printer_region) {
+	switch(vt->config.printer_extent) {
 		default:
 		case VT220_PRINTER_FULL_PAGE:
 			VT220SetupWriteField(vt, printer_field_names, PRINTER_PRINT_FULL_PAGE, GET_SGR(2, 0));
@@ -1624,7 +1624,7 @@ void VT220SetupShowPrinter(VT220* vt)
 			break;
 	}
 	VT220SetupCursorRight(vt);
-	if(vt->config.printer_terminator == VT220_PRINTER_TERMINATOR_FF) {
+	if(vt->mode & DECPFF) {
 		VT220SetupWriteField(vt, printer_field_names, PRINTER_TERMINATOR_FF, GET_SGR(2, 2));
 	} else {
 		VT220SetupWriteField(vt, printer_field_names, PRINTER_NO_TERMINATOR, GET_SGR(2, 2));
@@ -2271,10 +2271,10 @@ void VT220SetupPrinterEnter(VT220* vt)
 		case 2:
 			switch(vt->setup.cursor_x) {
 				case 0:
-					if(vt->config.printer_region == VT220_PRINTER_FULL_PAGE) {
-						vt->config.printer_region = VT220_PRINTER_SCROLL_REGION;
+					if(vt->config.printer_extent == VT220_PRINTER_FULL_PAGE) {
+						vt->config.printer_extent = VT220_PRINTER_SCROLL_REGION;
 					} else {
-						vt->config.printer_region = VT220_PRINTER_FULL_PAGE;
+						vt->config.printer_extent = VT220_PRINTER_FULL_PAGE;
 					}
 					break;
 				case 1:
@@ -2292,11 +2292,7 @@ void VT220SetupPrinterEnter(VT220* vt)
 					}
 					break;
 				case 2:
-					if(vt->config.printer_terminator == VT220_PRINTER_TERMINATOR_FF) {
-						vt->config.printer_terminator = VT220_PRINTER_NO_TERMINATOR;
-					} else {
-						vt->config.printer_terminator = VT220_PRINTER_TERMINATOR_FF;
-					}
+					vt->mode ^= DECPFF;
 					break;
 			}
 	}

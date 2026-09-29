@@ -296,7 +296,7 @@ typedef struct {
 	unsigned char	printer_mode:2;
 
 	unsigned char	printer_format:3;
-	unsigned char	printer_region:1;
+	unsigned char	printer_extent:1;
 	unsigned char	printer_data_type:2;
 	unsigned char	printer_terminator:1;
 	unsigned char   :1;
