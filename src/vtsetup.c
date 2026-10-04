@@ -49,7 +49,7 @@ static const char* vt220_setup_screen_names_german[SETUP_SCREEN_COUNT] = {
 	"Auswahlbild TAB"
 };
 
-static const char* vt220_keyboard_languages[16] = {
+static const char* vt220_keyboard_languages_english[16] = {
 	"Unknown Keyboard",
 	"North American Keyboard",
 	"British Keyboard",
@@ -66,6 +66,44 @@ static const char* vt220_keyboard_languages[16] = {
 	"Norwegian Keyboard",
 	"French/Belgian Keyboard",
 	"Spanish Keyboard"
+};
+
+static const char* vt220_keyboard_languages_french[16] = {
+	"Clavier inconnu",
+	"Clavier nord am\xE9ricain",
+	"Clavier britannique",
+	"Clavier flamand",
+	"Clavier canadien fran\xE7""ais",
+	"Clavier danois",
+	"Clavier finnois",
+	"Clavier allemand",
+	"Clavier hollandais",
+	"Clavier italien",
+	"Clavier suiesse fran\xE7""ais",
+	"Clavier suisse allemand",
+	"Clavier su\xE9""dois",
+	"Clavier norv\xE9gien",
+	"Clavier fran\xE7""ais/belge",
+	"Clavier espagnol"
+};
+
+static const char* vt220_keyboard_languages_german[16] = {
+	"unbekannte Tastatur",
+	"nordamerikanische Tastatur",
+	"britische Tastatur",
+	"fl\xE4mische Tastatur",
+	"kanadische(franz) Tastatur",
+	"d\xE4nische Tastatur",
+	"finnische Tastatur",
+	"deutsche Tastatur",
+	"holl\xE4ndische Tastatur",
+	"italienische Tastatur",
+	"schweizerische(franz) Tastatur",
+	"schweizerische(deutsch) Tastatur",
+	"schwedische Tastatur",
+	"norwegische Tastatur",
+	"franz/belgische Tastatur",
+	"spanische Tastatur"
 };
 
 typedef struct {
@@ -1082,9 +1120,23 @@ static inline int VT220SetupGetSGR(VT220* vt, int x, int y, int cursor_x, int cu
 
 #define GET_SGR(y, x)	VT220SetupGetSGR(vt, x, y, vt->setup.cursor_x, vt->setup.cursor_y)
 
-const char* VT220SetupGetKeyboardLanguage(VT220* vt)
+void VT220SetupGetKeyboardLanguage(VT220* vt, FIELD* field)
 {
-	return vt220_keyboard_languages[(int) vt->config.keyboard];
+	switch(vt->config.language) {
+		default:
+		case VT220_LANGUAGE_ENGLISH:
+			field->width = 25;
+			field->label = vt220_keyboard_languages_english[(int) vt->config.keyboard];
+			break;
+		case VT220_LANGUAGE_FRANCAIS:
+			field->width = 25;
+			field->label = vt220_keyboard_languages_french[(int) vt->config.keyboard];
+			break;
+		case VT220_LANGUAGE_DEUTSCH:
+			field->width = 32;
+			field->label = vt220_keyboard_languages_german[(int) vt->config.keyboard];
+			break;
+	}
 }
 
 void VT220SetupShowDirectory(VT220* vt)
@@ -1162,13 +1214,12 @@ void VT220SetupShowDirectory(VT220* vt)
 	VT220SetupEraseLine(vt);
 	VT220SetupWriteField(vt, setup_directory_field_names, DIRECTORY_SET_UP, GET_SGR(2, 0));
 	VT220SetupCursorRight(vt);
-	VT220SetupWriteString(vt, " ", GET_SGR(2, 1));
-	VT220SetupCursorSave(vt);
-	VT220SetupWriteString(vt, "                          ", GET_SGR(2, 1));
-	VT220SetupCursorRestore(vt);
-	VT220SetupWriteString(vt, VT220SetupGetKeyboardLanguage(vt), GET_SGR(2, 1));
-	VT220SetupCursorRestore(vt);
-	VT220SetupCursorRightN(vt, 27);
+
+	FIELD kblang;
+	VT220SetupGetKeyboardLanguage(vt, &kblang);
+	VT220iSetupWriteField(vt, &kblang, GET_SGR(2, 1), 0);
+
+	VT220SetupCursorRight(vt);
 	VT220SetupWriteField(vt, setup_directory_field_names, DIRECTORY_DEFAULT, GET_SGR(2, 2));
 	VT220SetupCursorRight(vt);
 	VT220SetupWriteField(vt, setup_directory_field_names, DIRECTORY_EXIT, GET_SGR(2, 3));
