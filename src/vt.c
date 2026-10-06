@@ -3314,7 +3314,11 @@ void VT220ProcessCharVT52(VT220* vt, unsigned char c)
 					break;
 				case '^': /* Enter auto print mode */
 				case '_': /* Exit auto print mode */
+					break;
 				case 'W': /* Enter printer controller mode */
+					vt->printer_controller = 1;
+					vt->print_wr = 0;
+					break;
 				case 'X': /* Exit printer controller mode */
 				case ']': /* Print screen */
 				case 'V': /* Print cursor line */
@@ -3515,23 +3519,24 @@ void VT220ProcessPrinterCharVT220(VT220* vt, unsigned char c)
 					vt->print_buf[0] = CSI;
 					vt->print_wr = 1;
 					break;
-				default:
-					vt->state = STATE_TEXT;
-					if((c + 0x40) >= 0x80 && (c + 0x40) < 0xA0) {
-						if(vt->print_wr < sizeof(vt->print_buf)) {
-							vt->print_buf[vt->print_wr++] = c;
-						}
-						VT220ProcessPrinterCharVT220(vt, c + 0x40);
-					} else {
-						if(vt->print_rx) {
-							for(unsigned int i = 0; i < vt->print_wr; i++) {
-								vt->print_rx(vt->print_buf[i]);
-							}
-							vt->print_rx(c);
-						}
-						vt->print_wr = 0;
-						vt->state = STATE_TEXT;
+				case '[':
+					if(vt->print_wr < sizeof(vt->print_buf)) {
+						vt->print_buf[vt->print_wr++] = c;
 					}
+					vt->parameter_id = 0;
+					memset(vt->parameters, 0, MAX_PARAMETERS * sizeof(u16));
+					vt->state = STATE_CSI;
+					break;
+				default:
+					if(vt->print_rx) {
+						for(unsigned int i = 0; i < vt->print_wr; i++) {
+							vt->print_rx(vt->print_buf[i]);
+						}
+						vt->print_rx(c);
+					}
+					vt->print_wr = 0;
+					vt->state = STATE_TEXT;
+					break;
 			}
 			break;
 		case STATE_CSI:
@@ -3642,18 +3647,30 @@ void VT220ProcessChar(VT220* vt, unsigned char c)
 						case ESC:
 							vt->state = STATE_ESC;
 							break;
+						default:
+							if(vt->print_rx) {
+								vt->print_rx(c);
+							}
+							break;
 					}
 					break;
 				case STATE_ESC:
 					switch(c) {
 						case ESC:
 							vt->state = STATE_ESC;
+							if(vt->print_rx) {
+								vt->print_rx(ESC);
+							}
 							break;
 						case 'X':
 							vt->state = STATE_TEXT;
 							vt->printer_controller = 0;
 							break;
 						default:
+							if(vt->print_rx) {
+								vt->print_rx(ESC);
+								vt->print_rx(c);
+							}
 							vt->state = STATE_TEXT;
 					}
 					break;
