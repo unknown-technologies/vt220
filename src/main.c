@@ -410,6 +410,11 @@ void print_ch(unsigned char c)
 	VT220Receive(&vt, c);
 }
 
+void printer_ch(unsigned char c)
+{
+	fputc(c, stdout);
+}
+
 void display_func(void)
 {
 	GL_ERROR();
@@ -835,6 +840,7 @@ int main(int argc, char** argv, char** envp)
 	vt.rx = print_ch;
 	vt.resize = resize;
 	vt.save_config = CFGSaveState;
+	vt.print_rx = printer_ch;
 
 	VTInitRenderer(&renderer, &vt);
 

@@ -424,6 +424,12 @@ typedef struct {
 	VT220CELL*	scroll_text;
 	unsigned long	scroll_time;
 
+	/* printer */
+	int		printer_controller;
+	int		auto_print_mode;
+	unsigned int	print_wr;
+	unsigned char	print_buf[8];
+
 	/* configuration */
 	VT220NVR	config;
 	VT220NVR	config_nvr;
@@ -440,6 +446,7 @@ typedef struct {
 	void		(*brk)(void);
 	void		(*flowcontrol)(int);
 	void		(*resize)(unsigned int width, unsigned int height);
+	void		(*print_rx)(unsigned char);
 
 	void		(*update_baudrate)(unsigned int rx, unsigned int tx);
 	void		(*update_flowcontrol)(int enable);

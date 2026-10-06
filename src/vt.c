@@ -1378,6 +1378,22 @@ static void VT220iHardReset(VT220* vt, const VT220NVR* nvr)
 		vt->mode &= ~DECPEX;
 	}
 
+	switch(nvr->printer_mode) {
+		default:
+		case VT220_PRINTER_MODE_NORMAL:
+			vt->auto_print_mode = 0;
+			vt->printer_controller = 0;
+			break;
+		case VT220_PRINTER_MODE_AUTO_PRINT:
+			vt->auto_print_mode = 1;
+			vt->printer_controller = 0;
+			break;
+		case VT220_PRINTER_MODE_CONTROLLER:
+			vt->auto_print_mode = 0;
+			vt->printer_controller = 1;
+			break;
+	}
+
 	vt->xoff = 0;
 	vt->xoff_point = 64;
 	vt->xon_point = 32;
@@ -2174,6 +2190,20 @@ void VT220ProcessCharVT220(VT220* vt, unsigned char c)
 								VT220ClearAllTabstops(vt);
 								break;
 						}
+					}
+					break;
+				case 'i': /* printer control */
+					vt->state = STATE_TEXT;
+					switch(vt->parameters[0]) {
+						case 0: /* TODO: print screen */
+							break;
+						case 4: /* disable printer controller mode */
+							vt->printer_controller = 0;
+							break;
+						case 5: /* enable printer controller mode */
+							vt->printer_controller = 1;
+							vt->print_wr = 0;
+							break;
 					}
 					break;
 				case 'm': /* SGR */
@@ -3411,6 +3441,186 @@ void VT220ProcessCharVT52(VT220* vt, unsigned char c)
 	}
 }
 
+void VT220ProcessPrinterCharVT220(VT220* vt, unsigned char c)
+{
+	switch(vt->state) {
+		case STATE_TEXT:
+			switch(c) {
+				case NUL:
+					break;
+				case DC1:
+					VT220Xon(vt);
+					break;
+				case DC3:
+					VT220Xoff(vt);
+					break;
+				case ESC:
+					vt->state = STATE_ESC;
+					memset(vt->print_buf, 0, sizeof(vt->print_buf));
+					vt->print_buf[0] = ESC;
+					vt->print_wr = 1;
+					break;
+				case CSI:
+					vt->state = STATE_CSI;
+					vt->parameter_id = 0;
+					memset(vt->parameters, 0, MAX_PARAMETERS * sizeof(u16));
+					if(!vt->print_wr) {
+						memset(vt->print_buf, 0, sizeof(vt->print_buf));
+						vt->print_buf[0] = CSI;
+						vt->print_wr = 1;
+					}
+					break;
+				default:
+					if(vt->print_rx) {
+						for(unsigned int i = 0; i < vt->print_wr; i++) {
+							vt->print_rx(vt->print_buf[i]);
+						}
+						vt->print_rx(c);
+					}
+					vt->print_wr = 0;
+					break;
+			}
+			break;
+		case STATE_ESC:
+			switch(c) {
+				case NUL:
+					break;
+				case DC1:
+					VT220Xon(vt);
+					break;
+				case DC3:
+					VT220Xoff(vt);
+					break;
+				case ESC:
+					vt->state = STATE_ESC;
+					if(vt->print_rx) {
+						for(unsigned int i = 0; i < vt->print_wr; i++) {
+							vt->print_rx(vt->print_buf[i]);
+						}
+					}
+					memset(vt->print_buf, 0, sizeof(vt->print_buf));
+					vt->print_buf[0] = ESC;
+					vt->print_wr = 1;
+					break;
+				case CSI:
+					vt->state = STATE_CSI;
+					vt->parameter_id = 0;
+					memset(vt->parameters, 0, MAX_PARAMETERS * sizeof(u16));
+					if(vt->print_rx) {
+						for(unsigned int i = 0; i < vt->print_wr; i++) {
+							vt->print_rx(vt->print_buf[i]);
+						}
+					}
+					memset(vt->print_buf, 0, sizeof(vt->print_buf));
+					vt->print_buf[0] = CSI;
+					vt->print_wr = 1;
+					break;
+				default:
+					vt->state = STATE_TEXT;
+					if((c + 0x40) >= 0x80 && (c + 0x40) < 0xA0) {
+						if(vt->print_wr < sizeof(vt->print_buf)) {
+							vt->print_buf[vt->print_wr++] = c;
+						}
+						VT220ProcessPrinterCharVT220(vt, c + 0x40);
+					} else {
+						if(vt->print_rx) {
+							for(unsigned int i = 0; i < vt->print_wr; i++) {
+								vt->print_rx(vt->print_buf[i]);
+							}
+							vt->print_rx(c);
+						}
+						vt->print_wr = 0;
+						vt->state = STATE_TEXT;
+					}
+			}
+			break;
+		case STATE_CSI:
+			switch(c) {
+				case NUL:
+					break;
+				case DC1:
+					VT220Xon(vt);
+					break;
+				case DC3:
+					VT220Xoff(vt);
+					break;
+				case ESC:
+					vt->state = STATE_ESC;
+					if(vt->print_rx) {
+						for(unsigned int i = 0; i < vt->print_wr; i++) {
+							vt->print_rx(vt->print_buf[i]);
+						}
+					}
+					memset(vt->print_buf, 0, sizeof(vt->print_buf));
+					vt->print_buf[0] = CSI;
+					vt->print_wr = 1;
+					break;
+				case CSI:
+					vt->state = STATE_CSI;
+					vt->parameter_id = 0;
+					memset(vt->parameters, 0, MAX_PARAMETERS * sizeof(u16));
+					if(vt->print_rx) {
+						for(unsigned int i = 0; i < vt->print_wr; i++) {
+							vt->print_rx(vt->print_buf[i]);
+						}
+					}
+					memset(vt->print_buf, 0, sizeof(vt->print_buf));
+					vt->print_buf[0] = CSI;
+					vt->print_wr = 1;
+					break;
+				case '0':
+				case '1':
+				case '2':
+				case '3':
+				case '4':
+				case '5':
+				case '6':
+				case '7':
+				case '8':
+				case '9':
+					vt->parameters[vt->parameter_id] *= 10;
+					vt->parameters[vt->parameter_id] += c - '0';
+					if(vt->print_wr < sizeof(vt->print_buf)) {
+						vt->print_buf[vt->print_wr++] = c;
+					}
+					break;
+				case 'i':
+					switch(vt->parameters[0]) {
+						case 4: /* exit printer controller mode */
+							vt->printer_controller = 0;
+							vt->state = STATE_TEXT;
+							break;
+						case 5: /* enter printer controller mode */
+							vt->state = STATE_TEXT;
+							vt->print_wr = 0;
+							break;
+						default:
+							if(vt->print_rx) {
+								for(unsigned int i = 0; i < vt->print_wr; i++) {
+									vt->print_rx(vt->print_buf[i]);
+								}
+								vt->print_rx(c);
+							}
+							vt->print_wr = 0;
+							vt->state = STATE_TEXT;
+							break;
+					}
+					break;
+				default:
+					if(vt->print_rx) {
+						for(unsigned int i = 0; i < vt->print_wr; i++) {
+							vt->print_rx(vt->print_buf[i]);
+						}
+						vt->print_rx(c);
+					}
+					vt->print_wr = 0;
+					vt->state = STATE_TEXT;
+					break;
+			}
+			break;
+	}
+}
+
 void VT220ProcessChar(VT220* vt, unsigned char c)
 {
 	ASSERT(vt->state >= 0 && vt->state <= STATE_MAX);
@@ -3420,6 +3630,36 @@ void VT220ProcessChar(VT220* vt, unsigned char c)
 	/* strip MSB in VT52/VT100 mode */
 	if(!(vt->mode & DECANM) || vt->vt100_mode) {
 		c &= 0x7F;
+	}
+
+	if(vt->printer_controller) {
+		if(vt->mode & DECANM) {
+			VT220ProcessPrinterCharVT220(vt, c);
+		} else {
+			switch(vt->state) {
+				case STATE_TEXT:
+					switch(c) {
+						case ESC:
+							vt->state = STATE_ESC;
+							break;
+					}
+					break;
+				case STATE_ESC:
+					switch(c) {
+						case ESC:
+							vt->state = STATE_ESC;
+							break;
+						case 'X':
+							vt->state = STATE_TEXT;
+							vt->printer_controller = 0;
+							break;
+						default:
+							vt->state = STATE_TEXT;
+					}
+					break;
+			}
+		}
+		return;
 	}
 
 	switch(vt->config.controls) {
@@ -4560,6 +4800,14 @@ static void VT220iSaveConfig(const VT220* vt, VT220NVR* nvr)
 	nvr->cursor_keys = (vt->mode & DECCKM) ? VT220_CURSOR_KEYS_APPLICATION : VT220_CURSOR_KEYS_NORMAL;
 	nvr->printer_terminator = (vt->mode & DECPFF) ? VT220_PRINTER_TERMINATOR_FF : VT220_PRINTER_NO_TERMINATOR;
 	nvr->printer_extent = (vt->mode & DECPEX) ? VT220_PRINTER_FULL_PAGE : VT220_PRINTER_SCROLL_REGION;
+
+	if(vt->printer_controller) {
+		nvr->printer_mode = VT220_PRINTER_MODE_CONTROLLER;
+	} else if(vt->auto_print_mode) {
+		nvr->printer_mode = VT220_PRINTER_MODE_AUTO_PRINT;
+	} else {
+		nvr->printer_mode = VT220_PRINTER_MODE_NORMAL;
+	}
 
 	switch(vt->xoff_point) {
 		case 0:

@@ -1602,17 +1602,12 @@ void VT220SetupShowPrinter(VT220* vt)
 	/* line 2 */
 	VT220SetupGoto(vt, 4, 1);
 	VT220SetupEraseLine(vt);
-	switch(vt->config.printer_mode) {
-		default:
-		case VT220_PRINTER_MODE_NORMAL:
-			VT220SetupWriteField(vt, printer_field_names, PRINTER_NORMAL_PRINT_MODE, GET_SGR(1, 0));
-			break;
-		case VT220_PRINTER_MODE_AUTO_PRINT:
-			VT220SetupWriteField(vt, printer_field_names, PRINTER_AUTO_PRINT_MODE, GET_SGR(1, 0));
-			break;
-		case VT220_PRINTER_MODE_CONTROLLER:
-			VT220SetupWriteField(vt, printer_field_names, PRINTER_CONTROLLER_MODE, GET_SGR(1, 0));
-			break;
+	if(vt->printer_controller) {
+		VT220SetupWriteField(vt, printer_field_names, PRINTER_CONTROLLER_MODE, GET_SGR(1, 0));
+	} else if(vt->auto_print_mode) {
+		VT220SetupWriteField(vt, printer_field_names, PRINTER_AUTO_PRINT_MODE, GET_SGR(1, 0));
+	} else {
+		VT220SetupWriteField(vt, printer_field_names, PRINTER_NORMAL_PRINT_MODE, GET_SGR(1, 0));
 	}
 	VT220SetupCursorRight(vt);
 	switch(vt->config.printer_format) {
@@ -2294,17 +2289,15 @@ void VT220SetupPrinterEnter(VT220* vt)
 		case 1:
 			switch(vt->setup.cursor_x) {
 				case 0:
-					switch(vt->config.printer_mode) {
-						case VT220_PRINTER_MODE_NORMAL:
-							vt->config.printer_mode = VT220_PRINTER_MODE_AUTO_PRINT;
-							break;
-						case VT220_PRINTER_MODE_AUTO_PRINT:
-							vt->config.printer_mode = VT220_PRINTER_MODE_CONTROLLER;
-							break;
-						default:
-						case VT220_PRINTER_MODE_CONTROLLER:
-							vt->config.printer_mode = VT220_PRINTER_MODE_NORMAL;
-							break;
+					if(vt->printer_controller) {
+						vt->printer_controller = 0;
+						vt->auto_print_mode = 0;
+					} else if(vt->auto_print_mode) {
+						vt->printer_controller = 1;
+						vt->auto_print_mode = 0;
+					} else {
+						vt->printer_controller = 0;
+						vt->auto_print_mode = 1;
 					}
 					break;
 				case 1:
