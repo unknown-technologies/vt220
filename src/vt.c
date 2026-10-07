@@ -192,6 +192,7 @@ void VT220WriteGlyph(VT220* vt, u16 c, bool force_wrap)
 {
 	if(vt->cursor_x == vt->columns) {
 		if(vt->mode & DECAWM || force_wrap) { /* Auto Wrap Mode: enabled */
+			VT220AutoPrintLine(vt, LF);
 			VT220CarriageReturn(vt);
 			VT220Linefeed(vt);
 		} else {
@@ -199,6 +200,7 @@ void VT220WriteGlyph(VT220* vt, u16 c, bool force_wrap)
 		}
 	} else if(vt->line_attributes[vt->cursor_y] != DECSWL && 2 * vt->cursor_x >= vt->columns) {
 		if(vt->mode & DECAWM || force_wrap) { /* Auto Wrap Mode: enabled */
+			VT220AutoPrintLine(vt, LF);
 			VT220CarriageReturn(vt);
 			VT220Linefeed(vt);
 		} else {
@@ -1699,6 +1701,111 @@ void VT220IdentifyVT52(VT220* vt)
 	VT220SendText(vt, "\x1b/Z");
 }
 
+static inline void VT220iPrintGlyph(VT220* vt, u16 c)
+{
+	ASSERT(vt->print_rx != NULL);
+
+	if(c == 0) {
+		vt->print_rx(' ');
+	} else if(c < 0xFF) {
+		vt->print_rx(c);
+	}
+}
+
+void VT220AutoPrintLine(VT220* vt, unsigned char c)
+{
+	if(!vt->auto_print_mode || vt->printer_controller) {
+		return;
+	}
+
+	if(vt->print_rx) {
+		unsigned int start = vt->cursor_y * vt->columns;
+		int max = vt->columns;
+		for(; max > 0; max--) {
+			VT220CELL* cell = &vt->text[start + max - 1];
+			if(cell->text != 0 || cell->attr != 0) {
+				break;
+			}
+		}
+
+		for(int i = 0; i < max; i++) {
+			VT220iPrintGlyph(vt, vt->text[start + i].text);
+		}
+
+		VT220iPrintGlyph(vt, CR);
+		VT220iPrintGlyph(vt, c);
+	}
+}
+
+void VT220PrintCursorLine(VT220* vt)
+{
+	if(vt->printer_controller) {
+		return;
+	}
+
+	if(vt->print_rx) {
+		unsigned int start = vt->cursor_y * vt->columns;
+		int max = vt->columns;
+		for(; max > 0; max--) {
+			VT220CELL* cell = &vt->text[start + max - 1];
+			if(cell->text != 0 || cell->attr != 0) {
+				break;
+			}
+		}
+
+		for(int i = 0; i < max; i++) {
+			VT220iPrintGlyph(vt, vt->text[start + i].text);
+		}
+
+		VT220iPrintGlyph(vt, CR);
+		VT220iPrintGlyph(vt, LF);
+	}
+}
+
+void VT220PrintScreen(VT220* vt)
+{
+	if(vt->printer_controller) {
+		return;
+	}
+
+	if(vt->print_rx) {
+		int line_start;
+		int line_end;
+
+		if(vt->mode & DECPEX) {
+			/* full screen */
+			line_start = 0;
+			line_end = vt->lines - 1;
+		} else {
+			/* scrolling region */
+			line_start = vt->margin_top;
+			line_end = vt->margin_bottom;
+		}
+
+		for(int line = line_start; line <= line_end; line++) {
+			int pos = line * vt->columns;
+			int max = vt->columns;
+			for(; max > 0; max--) {
+				VT220CELL* cell = &vt->text[pos + max - 1];
+				if(cell->text != 0 || cell->attr != 0) {
+					break;
+				}
+			}
+
+			for(int i = 0; i < max; i++) {
+				VT220iPrintGlyph(vt, vt->text[pos + i].text);
+			}
+
+			VT220iPrintGlyph(vt, CR);
+			VT220iPrintGlyph(vt, LF);
+		}
+
+		if(vt->mode & DECPFF) {
+			VT220iPrintGlyph(vt, FF);
+		}
+	}
+}
+
 void VT220ProcessCharVT220(VT220* vt, unsigned char c)
 {
 	int tmp;
@@ -1722,6 +1829,7 @@ void VT220ProcessCharVT220(VT220* vt, unsigned char c)
 				case LF:
 				case VT:
 				case FF:
+					VT220AutoPrintLine(vt, c);
 					VT220Linefeed(vt);
 					break;
 				case CR:
@@ -2023,6 +2131,7 @@ void VT220ProcessCharVT220(VT220* vt, unsigned char c)
 				case LF:
 				case VT:
 				case FF:
+					VT220AutoPrintLine(vt, c);
 					VT220Linefeed(vt);
 					break;
 				case CR:
@@ -2195,7 +2304,8 @@ void VT220ProcessCharVT220(VT220* vt, unsigned char c)
 				case 'i': /* printer control */
 					vt->state = STATE_TEXT;
 					switch(vt->parameters[0]) {
-						case 0: /* TODO: print screen */
+						case 0: /* print screen */
+							VT220PrintScreen(vt);
 							break;
 						case 4: /* disable printer controller mode */
 							vt->printer_controller = 0;
@@ -2439,6 +2549,20 @@ void VT220ProcessCharVT220(VT220* vt, unsigned char c)
 						}
 					}
 					vt->state = STATE_TEXT;
+					break;
+				case 'i': /* printer control */
+					vt->state = STATE_TEXT;
+					switch(vt->parameters[0]) {
+						case 1: /* print cursor line */
+							VT220PrintCursorLine(vt);
+							break;
+						case 4: /* disable auto print mode */
+							vt->auto_print_mode = 0;
+							break;
+						case 5: /* enable auto print mode */
+							vt->auto_print_mode = 1;
+							break;
+					}
 					break;
 				case 'l':
 					for(tmp = 0; tmp <= vt->parameter_id; tmp++) {
@@ -3170,6 +3294,7 @@ void VT220ProcessCharVT52(VT220* vt, unsigned char c)
 				case LF:
 				case VT:
 				case FF:
+					VT220AutoPrintLine(vt, c);
 					VT220Linefeed(vt);
 					break;
 				case CR:
@@ -3238,6 +3363,7 @@ void VT220ProcessCharVT52(VT220* vt, unsigned char c)
 				case LF:
 				case VT:
 				case FF:
+					VT220AutoPrintLine(vt, c);
 					VT220Linefeed(vt);
 					break;
 				case CR:
@@ -3313,16 +3439,22 @@ void VT220ProcessCharVT52(VT220* vt, unsigned char c)
 					VT220SetANSIMode(vt);
 					break;
 				case '^': /* Enter auto print mode */
+					vt->auto_print_mode = 1;
+					break;
 				case '_': /* Exit auto print mode */
+					vt->auto_print_mode = 0;
 					break;
 				case 'W': /* Enter printer controller mode */
 					vt->printer_controller = 1;
 					vt->print_wr = 0;
 					break;
 				case 'X': /* Exit printer controller mode */
+					break;
 				case ']': /* Print screen */
+					VT220PrintScreen(vt);
+					break;
 				case 'V': /* Print cursor line */
-					/* TODO: implement */
+					VT220PrintCursorLine(vt);
 					break;
 			}
 			break;
@@ -3345,6 +3477,7 @@ void VT220ProcessCharVT52(VT220* vt, unsigned char c)
 				case LF:
 				case VT:
 				case FF:
+					VT220AutoPrintLine(vt, c);
 					VT220Linefeed(vt);
 					break;
 				case CR:
@@ -3396,6 +3529,7 @@ void VT220ProcessCharVT52(VT220* vt, unsigned char c)
 				case LF:
 				case VT:
 				case FF:
+					VT220AutoPrintLine(vt, c);
 					VT220Linefeed(vt);
 					break;
 				case CR:
@@ -4660,6 +4794,10 @@ void VT220ProcessKey(VT220* vt, u16 key)
 				}
 				return;
 			case VT220_KEY_PRINT_SCREEN:
+				if(!vt->printer_controller) {
+					VT220PrintScreen(vt);
+				}
+				break;
 			case VT220_KEY_DATA_TALK:
 				/* TODO: implement */
 				return;

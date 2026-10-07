@@ -1647,14 +1647,10 @@ void VT220SetupShowPrinter(VT220* vt)
 	/* line 3 */
 	VT220SetupGoto(vt, 6, 1);
 	VT220SetupEraseLine(vt);
-	switch(vt->config.printer_extent) {
-		default:
-		case VT220_PRINTER_FULL_PAGE:
-			VT220SetupWriteField(vt, printer_field_names, PRINTER_PRINT_FULL_PAGE, GET_SGR(2, 0));
-			break;
-		case VT220_PRINTER_SCROLL_REGION:
-			VT220SetupWriteField(vt, printer_field_names, PRINTER_PRINT_SCROLL_REGION, GET_SGR(2, 0));
-			break;
+	if(vt->mode & DECPEX) {
+		VT220SetupWriteField(vt, printer_field_names, PRINTER_PRINT_FULL_PAGE, GET_SGR(2, 0));
+	} else {
+		VT220SetupWriteField(vt, printer_field_names, PRINTER_PRINT_SCROLL_REGION, GET_SGR(2, 0));
 	}
 	VT220SetupCursorRight(vt);
 	switch(vt->config.printer_data_type) {
@@ -2315,11 +2311,7 @@ void VT220SetupPrinterEnter(VT220* vt)
 		case 2:
 			switch(vt->setup.cursor_x) {
 				case 0:
-					if(vt->config.printer_extent == VT220_PRINTER_FULL_PAGE) {
-						vt->config.printer_extent = VT220_PRINTER_SCROLL_REGION;
-					} else {
-						vt->config.printer_extent = VT220_PRINTER_FULL_PAGE;
-					}
+					vt->mode ^= DECPEX;
 					break;
 				case 1:
 					switch(vt->config.printer_data_type) {
