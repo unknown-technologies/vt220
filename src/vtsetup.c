@@ -1407,10 +1407,10 @@ void VT220SetupShowGeneral(VT220* vt)
 		VT220SetupWriteField(vt, general_field_names, GENERAL_FEATURES_LOCKED, GET_SGR(1, 1));
 	}
 	VT220SetupCursorRight(vt);
-	if(vt->config.character_set_mode == VT220_CHARACTER_SET_MODE_MULTINATIONAL) {
-		VT220SetupWriteField(vt, general_field_names, GENERAL_MULTINATIONAL, GET_SGR(1, 2));
-	} else {
+	if(vt->mode & DECNRCM) {
 		VT220SetupWriteField(vt, general_field_names, GENERAL_NATIONAL, GET_SGR(1, 2));
+	} else {
+		VT220SetupWriteField(vt, general_field_names, GENERAL_MULTINATIONAL, GET_SGR(1, 2));
 	}
 
 	/* line 3 */

@@ -7,6 +7,11 @@
 #include "vt.h"
 #include "vtfont.h"
 
+/* The following define DISABLES the NRCS features, such that the terminal
+ * behaves as described in the EK-VT220-RM-001. Later firmware versions support
+ * the NRCS feature. */
+/* #define NO_NRCS */
+
 #define	CHAR_WIDTH_80		10
 #define	CHAR_WIDTH_132		6
 #define	CHAR_HEIGHT		10
@@ -294,6 +299,36 @@ void VT220WriteCS(VT220* vt, unsigned char ch, int cs)
 			break;
 		case CHARSET_NRCS_BRITISH:
 			cs_table = vt220_cs_british;
+			break;
+		case CHARSET_NRCS_DUTCH:
+			cs_table = vt220_cs_dutch;
+			break;
+		case CHARSET_NRCS_FINNISH:
+			cs_table = vt220_cs_finnish;
+			break;
+		case CHARSET_NRCS_FRENCH:
+			cs_table = vt220_cs_french;
+			break;
+		case CHARSET_NRCS_FRENCH_CANADIAN:
+			cs_table = vt220_cs_french_canadian;
+			break;
+		case CHARSET_NRCS_GERMAN:
+			cs_table = vt220_cs_german;
+			break;
+		case CHARSET_NRCS_ITALIAN:
+			cs_table = vt220_cs_italian;
+			break;
+		case CHARSET_NRCS_NORWEGIAN:
+			cs_table = vt220_cs_norwegian;
+			break;
+		case CHARSET_NRCS_SPANISH:
+			cs_table = vt220_cs_spanish;
+			break;
+		case CHARSET_NRCS_SWEDISH:
+			cs_table = vt220_cs_swedish;
+			break;
+		case CHARSET_NRCS_SWISS:
+			cs_table = vt220_cs_swiss;
 			break;
 		case CHARSET_DRCS:
 			cs_table = vt220_cs_drcs;
@@ -1380,6 +1415,12 @@ static void VT220iHardReset(VT220* vt, const VT220NVR* nvr)
 		vt->mode &= ~DECPEX;
 	}
 
+	if(nvr->character_set_mode == VT220_CHARACTER_SET_MODE_NATIONAL) {
+		vt->mode |= DECNRCM;
+	} else {
+		vt->mode &= ~DECNRCM;
+	}
+
 	switch(nvr->printer_mode) {
 		default:
 		case VT220_PRINTER_MODE_NORMAL:
@@ -1673,7 +1714,11 @@ void VT220SendPrimaryDA(VT220* vt)
 	if(vt->vt100_mode) {
 		switch(vt->config.vt100_terminal_id) {
 			case VT220_VT100_TERMINAL_ID_VT220:
+#ifdef NO_NRCS
 				VT220SendText(vt, "\x9b?62;1;2;6;7;8c");
+#else
+				VT220SendText(vt, "\x9b?62;1;2;6;7;8;9c");
+#endif
 				break;
 			case VT220_VT100_TERMINAL_ID_VT100:
 				VT220SendText(vt, "\x1b[?1;2c");
@@ -1686,7 +1731,11 @@ void VT220SendPrimaryDA(VT220* vt)
 				break;
 		}
 	} else {
+#ifdef NO_NRCS
 		VT220SendText(vt, "\x9b?62;1;2;6;7;8c");
+#else
+		VT220SendText(vt, "\x9b?62;1;2;6;7;8;9c");
+#endif
 	}
 }
 
@@ -2071,10 +2120,49 @@ void VT220ProcessCharVT220(VT220* vt, unsigned char c)
 					vt->g[vt->g_dst] = CHARSET_DEC_SPECIAL_GRAPHICS;
 					break;
 				case 'A':
+#ifdef NO_NRCS
 					if(vt->vt100_mode) {
+#endif
 						vt->g[vt->g_dst] = CHARSET_NRCS_BRITISH;
+#ifdef NO_NRCS
 					}
+#endif
 					break;
+#ifndef NO_NRCS
+				case '4':
+					vt->g[vt->g_dst] = CHARSET_NRCS_DUTCH;
+					break;
+				case 'C':
+				case '5':
+					vt->g[vt->g_dst] = CHARSET_NRCS_FINNISH;
+					break;
+				case 'R':
+					vt->g[vt->g_dst] = CHARSET_NRCS_FRENCH;
+					break;
+				case 'Q':
+					vt->g[vt->g_dst] = CHARSET_NRCS_FRENCH_CANADIAN;
+					break;
+				case 'K':
+					vt->g[vt->g_dst] = CHARSET_NRCS_GERMAN;
+					break;
+				case 'Y':
+					vt->g[vt->g_dst] = CHARSET_NRCS_ITALIAN;
+					break;
+				case 'E':
+				case '6':
+					vt->g[vt->g_dst] = CHARSET_NRCS_NORWEGIAN;
+					break;
+				case 'Z':
+					vt->g[vt->g_dst] = CHARSET_NRCS_SPANISH;
+					break;
+				case 'H':
+				case '7':
+					vt->g[vt->g_dst] = CHARSET_NRCS_SWEDISH;
+					break;
+				case '=':
+					vt->g[vt->g_dst] = CHARSET_NRCS_SWISS;
+					break;
+#endif
 			}
 			break;
 		case STATE_ESC_SP:
@@ -4955,6 +5043,8 @@ static void VT220iSaveConfig(const VT220* vt, VT220NVR* nvr)
 	nvr->cursor_keys = (vt->mode & DECCKM) ? VT220_CURSOR_KEYS_APPLICATION : VT220_CURSOR_KEYS_NORMAL;
 	nvr->printer_terminator = (vt->mode & DECPFF) ? VT220_PRINTER_TERMINATOR_FF : VT220_PRINTER_NO_TERMINATOR;
 	nvr->printer_extent = (vt->mode & DECPEX) ? VT220_PRINTER_FULL_PAGE : VT220_PRINTER_SCROLL_REGION;
+	nvr->character_set_mode = (vt->mode & DECNRCM) ? VT220_CHARACTER_SET_MODE_NATIONAL
+		: VT220_CHARACTER_SET_MODE_MULTINATIONAL;
 
 	if(vt->printer_controller) {
 		nvr->printer_mode = VT220_PRINTER_MODE_CONTROLLER;
