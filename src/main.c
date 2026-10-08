@@ -278,7 +278,7 @@ static int get_monitor(GLFWmonitor** monitor, GLFWwindow* window)
 				}
 			}
 
-			// y, height
+			/* y, height */
 			if(window_y < pos_y) {
 				if(window_y1 < pos_y1) {
 					overlap_h = window_y1 - pos_y;
@@ -397,9 +397,9 @@ static void error_handler(int error, const char* description)
 	printf("Error 0x%X: %s\n", error, description);
 }
 
-void print_ch(unsigned char c)
+void loopback_ch(unsigned char c)
 {
-	// ignore XON/XOFF
+	/* ignore XON/XOFF */
 	if(c == DC1 || c == DC3) {
 		return;
 	}
@@ -410,10 +410,12 @@ void print_ch(unsigned char c)
 	VT220Receive(&vt, c);
 }
 
+#ifdef HAS_PRINTER
 void printer_ch(unsigned char c)
 {
 	fputc(c, stdout);
 }
+#endif
 
 void display_func(void)
 {
@@ -673,7 +675,7 @@ int main(int argc, char** argv, char** envp)
 			return 1;
 #else
 			if(i + 1 >= argc) {
-				// use default shell
+				/* use default shell */
 				shell = get_default_argv();
 			} else {
 				shell = &argv[i + 1];
@@ -837,10 +839,12 @@ int main(int argc, char** argv, char** envp)
 	VT220Init(&vt);
 	VT220SetScreenColor(&vt, color);
 	VT220SetBuffering(&vt, buffering);
-	vt.rx = print_ch;
+	vt.rx = loopback_ch;
 	vt.resize = resize;
 	vt.save_config = CFGSaveState;
+#ifdef HAS_PRINTER
 	vt.print_rx = printer_ch;
+#endif
 
 	VTInitRenderer(&renderer, &vt);
 
