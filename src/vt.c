@@ -2073,6 +2073,15 @@ void VT220ProcessCharVT220(VT220* vt, unsigned char c)
 			}
 			break;
 		case STATE_G:
+			/* TODO: NRCS handling on the real VT220 is weird. You
+			 * can only designate the NRCS which corresponds to the
+			 * current keyboard layout, otherwise the sequence is
+			 * ignored. However, if you then change the keyboard
+			 * layout via Set-Up, the designated NRCS changes to
+			 * the NRCS corresponding to the new keyboard layout.
+			 * This emulation here completely ignores the keyboard
+			 * layout and allows designating any NRCS at any time.
+			 */
 			vt->state = STATE_TEXT;
 			switch(c) {
 				case ESC:
