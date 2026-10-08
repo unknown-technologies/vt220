@@ -2389,6 +2389,8 @@ void VT220SetupPrinterEnter(VT220* vt)
 						vt->printer_controller = 0;
 						vt->auto_print_mode = 1;
 					}
+					/* this field affects the status line, repaint it */
+					VT220SetupShowStatus(vt);
 					break;
 				case 1:
 					vt->config.printer_format = (vt->config.printer_format + 1) % 8;
