@@ -34,8 +34,10 @@ u16 VT220TranslateKey(VT220* vt, int key)
 				return VT220_KEY_HOLD_SCREEN;
 			}
 		case GLFW_KEY_F2:
-			if(ctrl || alt) {
+			if(alt) {
 				return shift ? VT220_KEY_F12_UDK : VT220_KEY_F12;
+			} else if(ctrl) {
+				return VT220_KEY_AUTO_PRINT_MODE;
 			} else {
 				return VT220_KEY_PRINT_SCREEN;
 			}

@@ -4898,6 +4898,9 @@ void VT220ProcessKey(VT220* vt, u16 key)
 			case VT220_KEY_ANSWERBACK:
 				VT220SendAnswerback(vt);
 				return;
+			case VT220_KEY_AUTO_PRINT_MODE:
+				vt->auto_print_mode = !vt->auto_print_mode;
+				return;
 			case VT220_KEY_DISCONNECT:
 				/* TODO: implement */
 				return;

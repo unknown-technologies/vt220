@@ -84,11 +84,12 @@
 
 #define	VT220_KEY_DISCONNECT			364
 #define	VT220_KEY_ANSWERBACK			365
+#define	VT220_KEY_AUTO_PRINT_MODE		366
 
 /* TODO: make RETURN a separate key from CR */
 
-#define	VT220_KEY_CTRL				366
-#define	VT220_KEY_SHIFT				367
+#define	VT220_KEY_CTRL				367
+#define	VT220_KEY_SHIFT				368
 
 #define	VT220_MODIFIER_SHIFT_L			_BV(0)
 #define	VT220_MODIFIER_SHIFT_R			_BV(1)
