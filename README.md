@@ -57,6 +57,7 @@ could be sent to the host.
 
 The VT220 emulator uses the following map for local keys:
 - F1 = hold screen
+- F2 = print screen
 - F3 = setup
 - F4 = toggle fullscreen
 - F5 = send BREAK (TELNET) / SIGINT (PTY)
@@ -73,9 +74,15 @@ Feel free to test this emulator with
 
 Almost all features of the real VT220 are implemented already. Compared to a
 real VT220, the following features are currently missing:
-- Printer support
-- RS232 support
-- Complete keyboard emulation including compose keys
+- Keyclick and margin/warning bell
+
+The following features are currently incomplete or differ from the real VT220:
+- Complete keyboard emulation (dead keys and compose keys are missing)
+- Printer support (missing character set behavior)
+- 7-bit comm mode (completely missing)
+- national mode (currently this is ignored and the keyboard always sends multinational codes)
+- NRCS (currently all NRCS can be selected regardless of DECNRCM / keyboard)
+- DRCS (currently all parameters are ignored, hard character sets cannot be shadowed)
 
 This VT220 emulator is implemented using the VT220 reference manual as well as
 testing against a real VT220. If the emulator behaves differently than a real
