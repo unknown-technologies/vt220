@@ -1036,7 +1036,18 @@ void VT220SetupShowStatus(VT220* vt)
 		}
 	} else {
 		if(vt->mode & IRM) {
-			VT220SetupWriteString(vt, "Insert Mode", 0);
+			switch(vt->config.language) {
+				default:
+				case VT220_LANGUAGE_ENGLISH:
+					VT220SetupWriteString(vt, "Insert Mode", 0);
+					break;
+				case VT220_LANGUAGE_FRANCAIS:
+					VT220SetupWriteString(vt, "Mode d'insert", 0);
+					break;
+				case VT220_LANGUAGE_DEUTSCH:
+					VT220SetupWriteString(vt, "Einf\xFCg-Modus", 0);
+					break;
+			}
 		} else {
 			switch(vt->config.language) {
 				default:
@@ -1056,19 +1067,54 @@ void VT220SetupShowStatus(VT220* vt)
 		switch(vt->config.language) {
 			default:
 			case VT220_LANGUAGE_ENGLISH:
-				VT220SetupWriteString(vt, "Printer: None", 0);
+				VT220SetupWriteString(vt, "Printer: ", 0);
+				if(vt->print_rx) {
+					if(vt->printer_controller) {
+						VT220SetupWriteString(vt, "Controller", 0);
+					} else if(vt->auto_print_mode) {
+						VT220SetupWriteString(vt, "Auto", 0);
+					} else {
+						VT220SetupWriteString(vt, "Ready", 0);
+					}
+				} else {
+					VT220SetupWriteString(vt, "None", 0);
+				}
 				break;
 			case VT220_LANGUAGE_FRANCAIS:
-				VT220SetupWriteString(vt, "Imprimante: Aucune", 0);
+				VT220SetupWriteString(vt, "Imprimante: ", 0);
+				if(vt->print_rx) {
+					if(vt->printer_controller) {
+						VT220SetupWriteString(vt, "Contr\xF4leur", 0);
+					} else if(vt->auto_print_mode) {
+						VT220SetupWriteString(vt, "Auto", 0);
+					} else {
+						/* TODO: figure out the correct string here */
+						VT220SetupWriteString(vt, "Ready", 0);
+					}
+				} else {
+					VT220SetupWriteString(vt, "Aucune", 0);
+				}
 				break;
 			case VT220_LANGUAGE_DEUTSCH:
-				VT220SetupWriteString(vt, "Drucker: keiner", 0);
+				VT220SetupWriteString(vt, "Drucker: ", 0);
+				if(vt->print_rx) {
+					if(vt->printer_controller) {
+						VT220SetupWriteString(vt, "Fern-Betrieb", 0);
+					} else if(vt->auto_print_mode) {
+						VT220SetupWriteString(vt, "Auto-Betrieb", 0);
+					} else {
+						VT220SetupWriteString(vt, "ok", 0);
+					}
+				} else {
+					VT220SetupWriteString(vt, "keiner", 0);
+				}
+				break;
 				break;
 		}
 	}
 }
 
-void VT220SetupShowHint(VT220* vt)
+void VT220SetupShowHintAction(VT220* vt)
 {
 	VT220SetupGoto(vt, 8, 1);
 	VT220SetupEraseLine(vt);
@@ -1081,10 +1127,58 @@ void VT220SetupShowHint(VT220* vt)
 			VT220SetupWriteString(vt, "<VALIDER> pour faire ce que vous avez choisi - <FLECHE> pour vous d\xE9placer.", 0);
 			break;
 		case VT220_LANGUAGE_DEUTSCH:
+			VT220SetupWriteString(vt, "Zum Durchf\xFChren dieser Aktion EINGABE dr\xFC""cken - Weiter mit Pfeiltasten", 0);
+			break;
+	}
+	VT220Bell(vt);
+}
+
+void VT220SetupShowHintValue(VT220* vt)
+{
+	VT220SetupGoto(vt, 8, 1);
+	VT220SetupEraseLine(vt);
+	switch(vt->config.language) {
+		default:
+		case VT220_LANGUAGE_ENGLISH:
+			VT220SetupWriteString(vt, "Press ENTER to change this field - Press Cursor Keys to move", 0);
+			break;
+		case VT220_LANGUAGE_FRANCAIS:
+			VT220SetupWriteString(vt, "<VALIDER> pour changer cette zone - <FLECHE> pour vous d\xE9placer.", 0);
+			break;
+		case VT220_LANGUAGE_DEUTSCH:
 			VT220SetupWriteString(vt, "Zum \xC4ndern dieses Feldes EINGABE dr\xFC""cken - Weiter mit Pfeiltasten", 0);
 			break;
 	}
 	VT220Bell(vt);
+}
+
+void VT220SetupShowHint(VT220* vt)
+{
+	switch(vt->setup.screen) {
+		case SETUP_SCREEN_DIRECTORY:
+			if((vt->setup.cursor_x == 0 && (vt->setup.cursor_y == 1 || vt->setup.cursor_y == 2))
+					|| (vt->setup.cursor_x == 1 && vt->setup.cursor_y == 2)) {
+				VT220SetupShowHintValue(vt);
+			} else {
+				VT220SetupShowHintAction(vt);
+			}
+			break;
+		case SETUP_SCREEN_DISPLAY:
+		case SETUP_SCREEN_GENERAL:
+		case SETUP_SCREEN_COMM:
+		case SETUP_SCREEN_PRINTER:
+		case SETUP_SCREEN_KEYBOARD:
+			if((vt->setup.cursor_y == 0 && vt->setup.cursor_x < 2)
+					|| (vt->setup.cursor_y == 2 && vt->setup.cursor_x == 1)) {
+				VT220SetupShowHintAction(vt);
+			} else {
+				VT220SetupShowHintValue(vt);
+			}
+			break;
+		case SETUP_SCREEN_TAB:
+			VT220SetupShowHintAction(vt);
+			break;
+	}
 }
 
 void VT220SetupShowDone(VT220* vt)
@@ -2779,6 +2873,19 @@ void VT220SetupProcessKey(VT220* vt, u16 key)
 				 * that field treats ENTER and Return as
 				 * separate keys, just like the real VT220. */
 				VT220SetupProcessEnter(vt);
+			} else if(key == HT) {
+				/* In the tab field, you can jump to the next
+				 * 'T' with the TAB key */
+				if(vt->setup.screen == SETUP_SCREEN_TAB && vt->setup.cursor_y == 1) {
+					for(int i = vt->setup.cursor_x + 1; i < vt->columns; i++) {
+						if(i > 0 && vt->tabstops[i - 1]) {
+							vt->setup.cursor_x = i;
+							break;
+						}
+					}
+				} else {
+					VT220SetupShowHint(vt);
+				}
 			} else {
 				VT220SetupShowHint(vt);
 			}
