@@ -3859,7 +3859,8 @@ void VT220ProcessChar(VT220* vt, unsigned char c)
 		c &= 0x7F;
 	}
 
-	if(vt->printer_controller) {
+	/* the real VT220 ignores printer controller mode if no printer is attached */
+	if(vt->printer_controller && vt->print_rx) {
 		if(vt->mode & DECANM) {
 			VT220ProcessPrinterCharVT220(vt, c);
 		} else {
