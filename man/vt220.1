@@ -25,6 +25,9 @@ emulates the DEC VT220 terminal with reasonable accuracy.
 \fB\-h\fR, \fB\-\-help\fR
 display a short help message and exit.
 .TP
+\fB\-v\fR, \fB\-\-version\fR
+display the version / build time and exit.
+.TP
 \fB\-g\fR
 disable glow post-processing effect.
 .TP
@@ -136,10 +139,12 @@ in case \fBXDG_STATE_HOME\fR is not set.
 .SH ADDITIONAL DOCUMENTATION
 The Owner's Manual (available at
 .MR vt220ug 7 )
-describes how to configure and use the terminal. The VT220 Programmer
-Reference Manual (available at
+describes how to configure and use the terminal.
+.P
+The VT220 Programmer Reference Manual (available at
 .MR vt220rm 7 )
 describes the terminal's features and implemented control sequences.
+.P
 The Programmer Pocket Guide (available at
 .MR vt220pg 7 )
 provides a brief summary of the Programmer Reference Manual.
@@ -151,7 +156,18 @@ Written by unknown.
 To report rendering glitches, general bugs, and deviations from the real
 DEC VT220's behavior, use the issue tracker at
 .UR https://github.com/unknown-technologies/vt220
-.UE
+.UE .
+.
+.SH COPYRIGHT
+Copyright \(co 2026 unknown technologies.
+.P
+License GPLv3+:
+.UR https://gnu.org/licenses/gpl.html
+GNU GPL version 3 or later
+.UE .
+.
+This is free software: you are free to change and redistribute it. There
+is NO WARRANTY, to the extent permitted by law.
 .
 .SH "SEE ALSO"
 .MR telnet 1 ,

@@ -41,6 +41,10 @@ CFLAGS		+=	$(OPT) -Wall -Wextra -Wformat -Werror=format-security \
 			$(INCLUDE) -DUNIX \
 			-D_XOPEN_SOURCE=600 -D_DEFAULT_SOURCE \
 			-DGL_GLEXT_PROTOTYPES \
+			-DREVISION=\"$(REVISION)\" \
+			-DCOMMIT=\"$(COMMIT)\" \
+			-DBUILDDATE=\"$(BUILDDATE)\" \
+			-DBUILDTIME=\"$(BUILDTIME)\" \
 			$(DEBUG) $(ASANFLG)
 
 LIBS		:=	-lGL -lglfw
@@ -58,6 +62,11 @@ export	VPATH	:=	$(foreach dir,$(SOURCES),$(CURDIR)/$(dir)) \
 export	INCLUDE	:=	$(foreach dir,$(INCLUDES),-I$(CURDIR)/$(dir)) \
 				-I$(CURDIR)/$(BUILD)
 export	OUTPUT	:=	$(CURDIR)/$(TARGET)
+
+export	REVISION :=	$(shell git rev-list --count HEAD)
+export	COMMIT   :=	$(shell git rev-parse --short HEAD)
+export	BUILDDATE:=	$(shell date -u +"%Y-%m-%d")
+export	BUILDTIME:=	$(shell date -u +"%H:%M:%S")
 
 .PHONY: $(BUILD) clean all
 

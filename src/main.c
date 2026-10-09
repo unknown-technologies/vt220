@@ -576,6 +576,7 @@ static void print_usage(const char* self)
 		"\n"
 		"OPTIONS\n"
 		"  -h            Show this help message\n"
+		"  -v            Show version and exit\n"
 		"  -g            Disable glow effect\n"
 		"  -cg           Screen color: green\n"
 		"  -cw           Screen color: white\n"
@@ -599,6 +600,14 @@ static void print_usage(const char* self)
 #else
 		"If no option is provided, -s $(getent passwd $UID | cut -d: -f7) is assumed.\n", self);
 #endif
+}
+
+void print_version(void)
+{
+	printf("DEC VT220 emulator r" REVISION " (" BUILDDATE ", " BUILDTIME " (UTC))\n"
+			"License GPLv3+: GNU GPL version 3 or later <https://gnu.org/licenses/gpl.html>.\n"
+			"This is free software: you are free to change and redistribute it.\n"
+			"There is NO WARRANTY, to the extent permitted by law.\n");
 }
 
 #ifndef _WIN32
@@ -705,6 +714,9 @@ int main(int argc, char** argv, char** envp)
 			unlimited_fps = true;
 		} else if(!strcmp(arg, "-h") || !strcmp(arg, "--help")) {
 			print_usage(self);
+			return 0;
+		} else if(!strcmp(arg, "-v") || !strcmp(arg, "--version")) {
+			print_version();
 			return 0;
 		} else if(!strcmp(arg, "-f")) {
 			if(i + 1 >= argc) {
