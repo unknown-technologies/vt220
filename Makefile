@@ -15,7 +15,7 @@ export	NDEBUG
 #-------------------------------------------------------------------------------
 TARGET		:=	vt220
 INCLUDES	:=	include
-SOURCES		:=	src
+SOURCES		:=	src src/pc
 GLSLSOURCES	:=	glsl
 BUILD		:=	build
 

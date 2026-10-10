@@ -23,6 +23,7 @@
 #include <time.h>
 
 #include "types.h"
+#include "error.h"
 #include "vt.h"
 #include "config.h"
 #include "renderer.h"
@@ -140,45 +141,6 @@ static void load_gl_extensions(void)
 	glDetachShader = (PFNGLDETACHSHADERPROC)wglGetProcAddress("glDetachShader");
 	glDeleteShader = (PFNGLDELETESHADERPROC)wglGetProcAddress("glDeleteShader");
 	glDeleteProgram = (PFNGLDELETEPROGRAMPROC)wglGetProcAddress("glDeleteProgram");
-}
-#endif
-
-#ifdef NDEBUG
-#define GL_ERROR()
-#else
-#define	GL_ERROR()	check_error(__FILE__, __LINE__)
-
-void check_error(const char* filename, unsigned int line)
-{
-	GLenum error = glGetError();
-	switch(error) {
-		case GL_NO_ERROR:
-			break;
-		case GL_INVALID_ENUM:
-			printf("%s:%u: Error: GL_INVALID_ENUM\n", filename, line);
-			break;
-		case GL_INVALID_VALUE:
-			printf("%s:%u: Error: GL_INVALID_VALUE\n", filename, line);
-			break;
-		case GL_INVALID_OPERATION:
-			printf("%s:%u: Error: GL_INVALID_OPERATION\n", filename, line);
-			break;
-		case GL_INVALID_FRAMEBUFFER_OPERATION:
-			printf("%s:%u: Error: GL_INVALID_FRAMEBUFFER_OPERATION\n", filename, line);
-			break;
-		case GL_OUT_OF_MEMORY:
-			printf("%s:%u: Error: GL_OUT_OF_MEMORY\n", filename, line);
-			exit(1);
-			break;
-		case GL_STACK_UNDERFLOW:
-			printf("%s:%u: Error: GL_STACK_UNDERFLOW\n", filename, line);
-			break;
-		case GL_STACK_OVERFLOW:
-			printf("%s:%u: Error: GL_STACK_OVERFLOW\n", filename, line);
-			break;
-		default:
-			printf("%s:%u: Unknown error 0x%X\n", filename, line, error);
-	}
 }
 #endif
 

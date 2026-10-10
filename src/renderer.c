@@ -12,6 +12,7 @@
 #include "vt.h"
 #include "vtfont.h"
 #include "renderer.h"
+#include "error.h"
 
 #define	SCREEN_WIDTH_80		800
 #define	SCREEN_WIDTH_132	(132 * 9)
@@ -85,13 +86,6 @@ extern PFNGLGETPROGRAMINFOLOGPROC	glGetProgramInfoLog;
 extern PFNGLDETACHSHADERPROC		glDetachShader;
 extern PFNGLDELETESHADERPROC		glDeleteShader;
 extern PFNGLDELETEPROGRAMPROC		glDeleteProgram;
-#endif
-
-#ifdef NDEBUG
-#define GL_ERROR()
-#else
-extern void check_error(const char* filename, unsigned int line);
-#define	GL_ERROR()	check_error(__FILE__, __LINE__)
 #endif
 
 static const float quad_vertices[] = {
