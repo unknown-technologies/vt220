@@ -2,6 +2,7 @@
 #define __TYPES_H__
 
 #include <stdint.h>
+#include <stdbool.h>
 
 #define	u8	uint8_t
 #define	u16	uint16_t
@@ -14,10 +15,6 @@
 
 #define	f32	float
 #define	f64	double
-
-typedef	char	bool;
-#define	true	1
-#define	false	0
 
 #define	BOOL	int
 #define	TRUE	1
