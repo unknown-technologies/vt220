@@ -1,0 +1,119 @@
+#!/bin/make
+export	PREFIX	:=	
+export	CC	:=	$(PREFIX)gcc
+export	LD	:=	$(CC)
+export	OBJCOPY	:=	$(PREFIX)objcopy
+export	NM	:=	$(PREFIX)nm
+export	SIZE	:=	$(PREFIX)size
+export	BIN2O	:=	bin2o
+export	GLSLANG	:=	glslang
+
+export	NDEBUG
+
+#-------------------------------------------------------------------------------
+.SUFFIXES:
+#-------------------------------------------------------------------------------
+TARGET		:=	vt220
+INCLUDES	:=	include
+SOURCES		:=	src src/rpi
+GLSLSOURCES	:=	glsl
+BUILD		:=	build-rpi
+
+OPT		:=	-O3 -g
+
+ifdef NDEBUG
+DEBUG		:=	-DNDEBUG
+ASAN		:=	0
+else
+DEBUG		:=	-DDEBUG
+ASAN		:=	1
+endif
+
+ifeq ($(ASAN),1)
+ASANFLG		:=	-fsanitize=address
+else
+ASANFLG		:=
+endif
+
+CFLAGS		+=	$(OPT) -Wall -Wextra -Wformat -Werror=format-security \
+			-std=gnu99 \
+			-ffunction-sections -fdata-sections \
+			$(INCLUDE) -DUNIX -DRPI \
+			-D_XOPEN_SOURCE=600 -D_DEFAULT_SOURCE \
+			-DGL_GLEXT_PROTOTYPES \
+			-DREVISION=\"$(REVISION)\" \
+			-DCOMMIT=\"$(COMMIT)\" \
+			-DBUILDDATE=\"$(BUILDDATE)\" \
+			-DBUILDTIME=\"$(BUILDTIME)\" \
+			$(DEBUG) $(ASANFLG)
+
+LIBS		:=	-ldrm -lgbm -lEGL -lGLESv2
+LDFLAGS		+=	-Wl,-x -Wl,--gc-sections $(OPT) $(ASANFLG)
+
+CFILES		:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.c)))
+GLSLFILES	:=	$(foreach dir,$(GLSLSOURCES),$(notdir $(wildcard $(dir)/*.glsl)))
+
+ifneq ($(BUILD),$(notdir $(CURDIR)))
+#-------------------------------------------------------------------------------
+export	DEPSDIR	:=	$(CURDIR)/$(BUILD)
+export	OFILES	:=	$(CFILES:.c=.o) $(GLSLFILES:.glsl=.o)
+export	VPATH	:=	$(foreach dir,$(SOURCES),$(CURDIR)/$(dir)) \
+			$(foreach dir,$(GLSLSOURCES),$(CURDIR)/$(dir)) $(CURDIR)
+export	INCLUDE	:=	$(foreach dir,$(INCLUDES),-I$(CURDIR)/$(dir)) \
+				-I/usr/include/libdrm \
+				-I$(CURDIR)/$(BUILD)
+export	OUTPUT	:=	$(CURDIR)/$(TARGET)
+
+export	REVISION :=	$(shell git rev-list --count HEAD)
+export	COMMIT   :=	$(shell git rev-parse --short HEAD)
+export	BUILDDATE:=	$(shell date -u +"%Y-%m-%d")
+export	BUILDTIME:=	$(shell date -u +"%H:%M:%S")
+
+.PHONY: $(BUILD) clean all
+
+$(BUILD):
+	@echo compiling...
+	@[ -d $@ ] || mkdir -p $@
+	@$(MAKE) --no-print-directory -C $(BUILD) -f $(CURDIR)/Makefile.rpi
+
+clean:
+	@echo "[CLEAN]"
+	@rm -rf $(BUILD) $(TFILES) $(OFILES) $(TARGET)
+
+else
+
+#-------------------------------------------------------------------------------
+# main target
+#-------------------------------------------------------------------------------
+.PHONY: all
+
+all: $(OUTPUT)
+
+$(OUTPUT): $(TARGET).elf
+	@cp $(TARGET).elf $(OUTPUT)
+
+%.o: %.c
+	@echo "[CC]    $(notdir $@)"
+	@$(CC) -MMD -MP -MF $(DEPSDIR)/$*.d $(CFLAGS) -c $< -o $@
+	@#$(CC) -S $(CFLAGS) -o $(@:.o=.s) $< # create assembly file
+
+%.o: %.glsl
+	@echo "[GLSL]  $(notdir $@)"
+	@echo "#version 300 es" > gles_$(notdir $<)
+	@echo "precision highp float;" >> gles_$(notdir $<)
+	@echo "precision highp int;" >> gles_$(notdir $<)
+	@echo "precision highp usampler2D;" >> gles_$(notdir $<)
+	@tail -n +2 $< >> gles_$(notdir $<)
+	@$(GLSLANG) gles_$(notdir $<)
+	@$(BIN2O) -t -l$(subst .,_,$(basename $@)) -igles_$(notdir $<) -o$@
+	@rm gles_$(notdir $<)
+
+$(TARGET).elf: $(OFILES)
+	@echo "[LD]    $(notdir $@)"
+	@$(LD) $(LDFLAGS) $(OFILES) $(LIBS) -o $@ -Wl,-Map=$(@:.elf=.map)
+
+-include $(DEPSDIR)/*.d
+
+#-------------------------------------------------------------------------------
+endif
+#-------------------------------------------------------------------------------
