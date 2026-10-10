@@ -75,7 +75,7 @@ uniform float scroll_time;
 uniform uint margin_top;
 uniform uint margin_bottom;
 
-uniform float intensity = 1.0;
+uniform float intensity; // default = 1.0;
 
 in  vec2 pos;
 out vec4 color;
@@ -248,7 +248,7 @@ void main(void)
 			attr, bit);
 
 	// get previous cell/attribute/bit
-	vec2 last_pos = vec2(max(position.x - 1, 0), position.y);
+	vec2 last_pos = vec2(max(position.x - 1.0, 0.0), position.y);
 
 	uvec2 last_cell;
 	uvec2 last_cell_pos;
@@ -259,7 +259,7 @@ void main(void)
 			last_cell_pos, last_attr, last_bit);
 
 	// get previous - 1 cell/attribute/bit
-	vec2 last_2_pos = vec2(max(position.x - 2, 0), position.y);
+	vec2 last_2_pos = vec2(max(position.x - 2.0, 0.0), position.y);
 
 	uvec2 last_2_cell;
 	uvec2 last_2_cell_pos;

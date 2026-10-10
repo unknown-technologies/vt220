@@ -6,7 +6,7 @@ const int width_80  = 80 * 10;
 const int width_132  = 132 * 9;
 const int height = 240;
 
-uniform float focus = 0.75;
+uniform float focus; // default = 0.75;
 const float glow_control = 0.9;
 const float glow_intensity = 0.5;
 
