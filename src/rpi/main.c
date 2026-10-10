@@ -241,7 +241,7 @@ int main(int argc, char** argv)
 	int baud = -1;
 	bool flip = false;
 
-	unsigned int color = VT220_SCREEN_COLOR_GREEN;
+	unsigned int color = VT220_SCREEN_COLOR_AMBER;
 
 	argc--;
 	argv++;
