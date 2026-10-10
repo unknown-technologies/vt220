@@ -58,6 +58,7 @@ typedef struct {
 	GLuint		post_shader_raw;
 	GLuint		post_shader_simple;
 	GLuint		post_shader_focus;
+	GLuint		post_shader_flipped;
 	GLuint		post_shader_colorscheme;
 
 	unsigned long	blink_time;
@@ -65,6 +66,7 @@ typedef struct {
 	bool		enable_glow;
 	bool		raw;
 	bool		simple_phosphor;
+	bool		flipped;
 	float		focus;
 	float		intensity;
 
@@ -77,6 +79,7 @@ void	VTSetRaw(VTRenderer* vt, bool raw);
 void	VTSetSimplePhosphor(VTRenderer* self, bool simple);
 void	VTSetFocus(VTRenderer* vt, float color);
 void	VTSetIntensity(VTRenderer* vt, float intensity);
+void	VTSetFlipped(VTRenderer* vt, bool flipped);
 void	VTProcess(VTRenderer* self, unsigned long dt);
 void	VTRender(VTRenderer* self, unsigned int width, unsigned int height);
 

@@ -517,7 +517,6 @@ typedef struct {
 #define	CSI		0x9B
 #define	ST		0x9C
 
-#define _BV(x)		(1 << (x))
 #define	KAM		_BV(0)
 #define	IRM		_BV(1)
 #define	SRM		_BV(2)

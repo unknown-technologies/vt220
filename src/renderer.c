@@ -123,6 +123,7 @@ void VTInitRenderer(VTRenderer* self, VT220* vt)
 	self->intensity = 1.0f;
 	self->raw = false;
 	self->simple_phosphor = false;
+	self->flipped = false;
 
 	self->vt_shader = VTCreateShader(vt220_vert, vt220_frag);
 	self->vt_shader_font = glGetUniformLocation(self->vt_shader, "font");
@@ -158,6 +159,7 @@ void VTInitRenderer(VTRenderer* self, VT220* vt)
 	self->post_shader_raw = glGetUniformLocation(self->post_shader, "raw_mode");
 	self->post_shader_simple = glGetUniformLocation(self->post_shader, "use_simple_phosphor");
 	self->post_shader_focus = glGetUniformLocation(self->post_shader, "focus");
+	self->post_shader_flipped = glGetUniformLocation(self->post_shader, "flipped");
 	self->post_shader_colorscheme = glGetUniformLocation(self->post_shader, "colorscheme");
 	GL_ERROR();
 
@@ -193,6 +195,11 @@ void VTSetFocus(VTRenderer* self, float focus)
 void VTSetIntensity(VTRenderer* self, float intensity)
 {
 	self->intensity = intensity;
+}
+
+void VTSetFlipped(VTRenderer* self, bool flipped)
+{
+	self->flipped = flipped;
 }
 
 void VTProcess(VTRenderer* self, unsigned long dt)
@@ -232,6 +239,7 @@ void VTRender(VTRenderer* self, unsigned int width, unsigned int height)
 	glUniform1i(self->post_shader_raw, self->raw);
 	glUniform1i(self->post_shader_simple, self->simple_phosphor);
 	glUniform1f(self->post_shader_focus, self->focus);
+	glUniform1i(self->post_shader_flipped, self->flipped);
 	glUniform3fv(self->post_shader_colorscheme, 1, (GLfloat*) vt220_colors[self->vt->screen_color]);
 
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);

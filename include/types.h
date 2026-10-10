@@ -20,4 +20,6 @@
 #define	TRUE	1
 #define	FALSE	0
 
+#define _BV(x)	(1 << (x))
+
 #endif
