@@ -95,8 +95,36 @@ from the input/photo.
 Raspberry Pi Version
 --------------------
 
-A version for Raspberry Pi 4+ is planned, but not yet implemented. This will be
-useful to create dedicated "VT220 appliances" without relying on X11 / Wayland.
+A version for Raspberry Pi 4+ is implemented but not yet complete. This
+implementation is useful to create dedicated "VT220 appliances" without relying
+on X11 / Wayland. Instead, the graphics context is created via DRM/EGL and
+keyboard events are directly handled via the appropriate /dev/input device.
+
+Any hardware variant of the Raspberry Pi 4+ works, even the smallest 1GB
+version is sufficient. The only hardware requirements are a keyboard and a
+screen. Ideally the screen has a resultion of 800x480 pixels, like the official
+Raspberry Pi foundation 7" touch display. Development happens on a Raspberry Pi
+4 running [ALARM](https://archlinuxarm.org/).
+
+At the moment, the Raspberry Pi version only supports RS232 connections, but a
+more advanced "Connection Manager" is planned for SSH/TELNET/PTY support.
+
+To build the Raspberry Pi version, you need a Raspberry Pi 4+ with libdrm, EGL,
+glslang, and [bin2o](https://github.com/hackyourlife/bin2o). GLFW is _not_
+required nor used. Once the prerequisites are installed, run the following
+command on the Raspberry Pi:
+
+```
+make -f Makefile.rpi -j4 NDEBUG=1
+```
+
+**IMPORTANT**: the VT220 emulator takes exclusive control of the keyboard
+device which means you have _no_ way to exit the VT220 emulator once it is
+running. This is intended behavior, since the Raspberry Pi version is meant to
+be used as the only application running on an "appliance" built around the
+Raspberry Pi, with the VT220 emulator started as a system service. The intended
+method to stop the VT220 emulator is by sending a SIGINT or SIGTERM signal to
+the process.
 
 
 Windows Version
