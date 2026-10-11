@@ -17,7 +17,7 @@ TARGET		:=	vt220
 INCLUDES	:=	include
 SOURCES		:=	src src/rpi
 GLSLSOURCES	:=	glsl
-BUILD		:=	build-rpi
+BUILD		:=	build.rpi
 
 OPT		:=	-O3 -g
 
