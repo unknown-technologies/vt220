@@ -325,6 +325,9 @@ int main(int argc, char** argv)
 	if(sigaction(SIGINT, &sa, NULL) == -1) {
 		printf("WARNING: failed to set SIGINT signal handler\n");
 	}
+	if(sigaction(SIGTERM, &sa, NULL) == -1) {
+		printf("WARNING: failed to set SIGTERM signal handler\n");
+	}
 
 	if(!KBInit(&kb)) {
 		fprintf(stderr, "failed to initialize keyboard\n");
