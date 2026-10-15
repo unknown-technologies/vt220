@@ -36,6 +36,7 @@
 #define	SUPPRESS_GA	3
 #define	TERMINAL_TYPE	24
 #define	LINEMODE	34
+#define	NAWS		31
 #define	ENVIRON		36
 #define	NEW_ENVIRON	39
 
@@ -187,6 +188,15 @@ void TELNETInit(TELNET* telnet)
 #endif
 }
 
+void TELNETDestroy(TELNET* telnet)
+{
+	TELNETDisconnect(telnet);
+
+	free(telnet->buf);
+	free(telnet->sb_buf);
+	free(telnet->rxbuf);
+}
+
 void TELNETRxString(TELNET* telnet, const char* s)
 {
 	for(; *s; s++) {
@@ -217,6 +227,9 @@ void TELNETConnected(TELNET* telnet)
 	TELNETSendRaw(telnet, IAC);
 	TELNETSendRaw(telnet, WONT);
 	TELNETSendRaw(telnet, LINEMODE);
+	TELNETSendRaw(telnet, IAC);
+	TELNETSendRaw(telnet, WILL);
+	TELNETSendRaw(telnet, NAWS);
 }
 
 void TELNETConnect(TELNET* telnet, const char* hostname, int port)
@@ -238,16 +251,21 @@ void TELNETConnect(TELNET* telnet, const char* hostname, int port)
 		return;
 	}
 
+	sin.sin_family = AF_INET;
+	sin.sin_port = htons(port);
+	sin.sin_addr = *((struct in_addr*) he->h_addr);
+
+	TELNETConnectTo(telnet, (struct sockaddr*) &sin, sizeof(struct sockaddr_in));
+}
+
+void TELNETConnectTo(TELNET* telnet, struct sockaddr* target, int addr_size)
+{
 	telnet->socket = socket(AF_INET, SOCK_STREAM, 0);
 	if(telnet->socket == -1) {
 		const char* str = geterror();
 		TELNETRxError(telnet, "socket", str);
 		return;
 	}
-
-	sin.sin_family = AF_INET;
-	sin.sin_port = htons(port);
-	sin.sin_addr = *((struct in_addr*) he->h_addr);
 
 #ifdef _WIN32
 	u_long mode = 1;
@@ -277,7 +295,7 @@ void TELNETConnect(TELNET* telnet, const char* hostname, int port)
 	}
 #endif
 
-	if(connect(telnet->socket, (struct sockaddr*) &sin, sizeof(struct sockaddr)) == -1) {
+	if(connect(telnet->socket, target, addr_size) == -1) {
 #ifdef _WIN32
 		if(WSAGetLastError() != WSAEWOULDBLOCK) {
 #else
@@ -296,6 +314,7 @@ void TELNETConnect(TELNET* telnet, const char* hostname, int port)
 
 void TELNETDisconnect(TELNET* telnet)
 {
+	telnet->connected = 0;
 	if(telnet->socket != -1) {
 		close(telnet->socket);
 		telnet->socket = -1;
@@ -368,6 +387,21 @@ void TELNETBreak(TELNET* telnet)
 {
 	TELNETSendRaw(telnet, IAC);
 	TELNETSendRaw(telnet, BRK);
+}
+
+void TELNETResize(TELNET* telnet, unsigned int width, unsigned int height)
+{
+	if(telnet->naws) {
+		TELNETSendRaw(telnet, IAC);
+		TELNETSendRaw(telnet, SB);
+		TELNETSendRaw(telnet, NAWS);
+		TELNETSend(telnet, width >> 8);
+		TELNETSend(telnet, (unsigned char) width);
+		TELNETSend(telnet, height >> 8);
+		TELNETSend(telnet, (unsigned char) height);
+		TELNETSendRaw(telnet, IAC);
+		TELNETSendRaw(telnet, SE);
+	}
 }
 
 void TELNETEnqueueTX(TELNET* telnet, unsigned char c)
@@ -623,6 +657,9 @@ void TELNETProcess(TELNET* telnet, unsigned char c)
 					TELNETSendRaw(telnet, WILL);
 					TELNETSendRaw(telnet, c);
 					break;
+				case NAWS:
+					telnet->naws = 1;
+					break;
 				default:
 					TELNETSendRaw(telnet, IAC);
 					TELNETSendRaw(telnet, WONT);
@@ -632,9 +669,15 @@ void TELNETProcess(TELNET* telnet, unsigned char c)
 		case STATE_DONT:
 			telnet->state = STATE_TEXT;
 			LOG("[TELNET] DONT %s [%d]\n", TELNETGetOptionName(c), c);
-			TELNETSendRaw(telnet, IAC);
-			TELNETSendRaw(telnet, WONT);
-			TELNETSendRaw(telnet, c);
+			switch(c) {
+				case NAWS:
+					telnet->naws = 0;
+					break;
+				default:
+					TELNETSendRaw(telnet, IAC);
+					TELNETSendRaw(telnet, WONT);
+					TELNETSendRaw(telnet, c);
+			}
 			break;
 		case STATE_SB:
 			switch(c) {
