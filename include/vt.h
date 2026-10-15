@@ -440,6 +440,9 @@ typedef struct {
 	int		in_setup;
 	VT220Setup	setup;
 
+	/* keyboard grab */
+	int		keyboard_grabbed;
+
 	/* callbacks */
 	void		(*bell)(void);
 	void		(*keyclick)(void);
@@ -454,6 +457,10 @@ typedef struct {
 	void		(*update_format)(unsigned int format, unsigned int stop);
 
 	void		(*save_config)(const VT220NVR* nvr);
+
+	void		(*datatalk)(void);
+	void		(*disconnect)(void);
+	void		(*key)(u16 key);
 } VT220;
 
 #define	CHARSET_ASCII			0
@@ -656,6 +663,8 @@ void VT220SetBaudRate(VT220* vt, unsigned int rx, unsigned int tx);
 void VT220LoadDefaults(VT220* vt);
 void VT220SaveConfig(VT220* vt);
 int  VT220LoadConfig(VT220* vt, const VT220NVR* nvr);
+void VT220ClearInit(VT220* vt);
+void VT220ResetCursorTime(VT220* vt);
 
 /* keyboard */
 void VT220InitKeyboard(VT220* vt);
@@ -663,6 +672,7 @@ void VT220KeyboardKeyDown(VT220* vt, int key);
 void VT220KeyboardKeyUp(VT220* vt, int key);
 void VT220KeyboardChar(VT220* vt, unsigned int code);
 void VT220KeyboardProcess(VT220* vt, unsigned long dt);
+void VT220SetKeyboardGrabbed(VT220* vt, int grabbed);
 
 /* setup functions */
 void VT220EnterSetup(VT220* vt);

@@ -99,6 +99,17 @@ void VT220Init(VT220* vt)
 	vt->rx = NULL;
 	vt->brk = NULL;
 	vt->flowcontrol = NULL;
+	vt->resize = NULL;
+	vt->print_rx = NULL;
+	vt->update_baudrate = NULL;
+	vt->update_flowcontrol = NULL;
+	vt->update_format = NULL;
+	vt->save_config = NULL;
+	vt->datatalk = NULL;
+	vt->disconnect = NULL;
+	vt->key = NULL;
+
+	vt->keyboard_grabbed = 0;
 
 	vt->drcs = (unsigned char*) malloc(940);
 	vt->drcs_dirty = 1;
@@ -169,6 +180,13 @@ static inline void VT220iClearInit(VT220* vt)
 	VT220EraseScreen(vt);
 	VT220CursorHome(vt);
 	VT220SaveCursor(vt);
+}
+
+void VT220ClearInit(VT220* vt)
+{
+	if(vt->mode & DECINIT) {
+		VT220iClearInit(vt);
+	}
 }
 
 static inline unsigned int VT220GetCellWidth(VT220* vt)
@@ -4874,7 +4892,7 @@ void VT220ProcessKey(VT220* vt, u16 key)
 		return;
 	}
 
-	if(!vt->in_setup && vt->mode & KAM) {
+	if(!vt->in_setup && vt->mode & KAM && !vt->keyboard_grabbed) {
 		return;
 	}
 
@@ -4897,7 +4915,9 @@ void VT220ProcessKey(VT220* vt, u16 key)
 				}
 				break;
 			case VT220_KEY_DATA_TALK:
-				/* TODO: implement */
+				if(vt->datatalk) {
+					vt->datatalk();
+				}
 				return;
 			case VT220_KEY_BREAK:
 				if(vt->config.brk == VT220_BREAK && vt->brk) {
@@ -4911,7 +4931,9 @@ void VT220ProcessKey(VT220* vt, u16 key)
 				vt->auto_print_mode = !vt->auto_print_mode;
 				return;
 			case VT220_KEY_DISCONNECT:
-				/* TODO: implement */
+				if(vt->disconnect) {
+					vt->disconnect();
+				}
 				return;
 			case DC1:
 				if(vt->use_xoff) {
@@ -4925,6 +4947,13 @@ void VT220ProcessKey(VT220* vt, u16 key)
 					return;
 				}
 				break;
+		}
+
+		if(vt->keyboard_grabbed) {
+			if(vt->key) {
+				vt->key(key);
+			}
+			return;
 		}
 
 		if(vt->mode & DECANM) {
@@ -5128,4 +5157,14 @@ int VT220LoadConfig(VT220* vt, const VT220NVR* nvr)
 	VT220HardReset(vt);
 
 	return true;
+}
+
+void VT220SetKeyboardGrabbed(VT220* vt, int grabbed)
+{
+	vt->keyboard_grabbed = grabbed;
+}
+
+void VT220ResetCursorTime(VT220* vt)
+{
+	vt->cursor_time = 0;
 }
