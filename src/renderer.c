@@ -202,6 +202,11 @@ void VTSetFlipped(VTRenderer* self, bool flipped)
 	self->flipped = flipped;
 }
 
+void VTSetAltScreen(VTRenderer* self, VTScreen* altscreen)
+{
+	self->altscreen = altscreen;
+}
+
 void VTProcess(VTRenderer* self, unsigned long dt)
 {
 	self->blink_time = (self->blink_time + dt)
@@ -257,6 +262,7 @@ void VTRenderTerminal(VTRenderer* self)
 {
 	unsigned int width = self->vt->mode & DECCOLM ? SCREEN_WIDTH_132 : SCREEN_WIDTH_80;
 	bool resize = !!(self->vt->mode & DECCOLM) != self->was_132col;
+	bool altscreen = self->altscreen && !(self->vt->mode & DECINIT);
 
 	if(resize) {
 		glBindTexture(GL_TEXTURE_2D, self->vt_tex);
@@ -287,21 +293,25 @@ void VTRenderTerminal(VTRenderer* self)
 	}
 	glUniform1i(self->vt_shader_drcs, 1);
 
+	VT220CELL* text = altscreen ? self->altscreen->text : self->vt->text;
+
 	glActiveTexture(GL_TEXTURE2);
 	glBindTexture(GL_TEXTURE_2D, self->text_tex);
 	if(resize) {
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RG16UI, self->vt->columns, TEXT_HEIGHT, 0, GL_RG_INTEGER, GL_UNSIGNED_SHORT,
-				(GLvoid*) self->vt->text);
+				(GLvoid*) text);
 	} else {
 		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, self->vt->columns, TEXT_HEIGHT, GL_RG_INTEGER, GL_UNSIGNED_SHORT,
-				(GLvoid*) self->vt->text);
+				(GLvoid*) text);
 	}
 	glUniform1i(self->vt_shader_text, 2);
+
+	char* lineattr = altscreen ? self->altscreen->lineattr : self->vt->line_attributes;
 
 	glActiveTexture(GL_TEXTURE3);
 	glBindTexture(GL_TEXTURE_2D, self->line_attrib_tex);
 	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, TEXT_HEIGHT, 1, GL_RED_INTEGER, GL_UNSIGNED_BYTE,
-			(GLvoid*) self->vt->line_attributes);
+			(GLvoid*) lineattr);
 	glUniform1i(self->vt_shader_line_attributes, 3);
 	GL_ERROR();
 
@@ -337,16 +347,30 @@ void VTRenderTerminal(VTRenderer* self)
 	GL_ERROR();
 
 	glUniform2ui(self->vt_shader_text_size, self->vt->columns, self->vt->lines);
-	glUniform2ui(self->vt_shader_cursor, self->vt->cursor_x, self->vt->cursor_y);
+	if(altscreen) {
+		u32 mode = self->vt->mode & ~DECTCEM;
+		if(self->altscreen->cursor) {
+			mode |= DECTCEM;
+		}
+
+		glUniform2ui(self->vt_shader_cursor, self->altscreen->cursor_x, self->altscreen->cursor_y);
+		glUniform1ui(self->vt_shader_mode, mode);
+	} else {
+		glUniform2ui(self->vt_shader_cursor, self->vt->cursor_x, self->vt->cursor_y);
+		glUniform1ui(self->vt_shader_mode, self->vt->mode);
+	}
 	glUniform1f(self->vt_shader_cursor_time, self->vt->cursor_time / 1000.0f);
 	glUniform1f(self->vt_shader_blink_time, self->blink_time / 1000.0f);
-	glUniform1ui(self->vt_shader_mode, self->vt->mode);
 	glUniform1ui(self->vt_shader_in_setup, self->vt->in_setup);
 	glUniform1ui(self->vt_shader_block_cursor, self->vt->config.cursor_style == VT220_CURSOR_STYLE_BLOCK_CURSOR);
 	glUniform1f(self->vt_shader_intensity, self->intensity);
 
 	// smooth scroll handling
-	glUniform1i(self->vt_shader_scrolling, self->vt->scrolling);
+	if(altscreen) {
+		glUniform1i(self->vt_shader_scrolling, 0);
+	} else {
+		glUniform1i(self->vt_shader_scrolling, self->vt->scrolling);
+	}
 	glUniform1ui(self->vt_shader_scroll_attributes, self->vt->scroll_attributes);
 	glUniform1f(self->vt_shader_scroll_time, self->vt->scroll_time / 1000.0f);
 	glUniform1ui(self->vt_shader_margin_top, self->vt->margin_top);

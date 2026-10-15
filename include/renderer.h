@@ -1,10 +1,21 @@
 #ifndef __RENDERER_H__
 #define __RENDERER_H__
 
+#include <GL/gl.h>
+
 #include "vt.h"
 
 typedef struct {
+	VT220CELL*	text;
+	char*		lineattr;
+	int		cursor;
+	int		cursor_x;
+	int		cursor_y;
+} VTScreen;
+
+typedef struct {
 	VT220*		vt;
+	VTScreen*	altscreen;
 
 	GLuint		quad_vbo;
 	GLuint		quad_vao;
@@ -82,6 +93,7 @@ void	VTSetIntensity(VTRenderer* vt, float intensity);
 void	VTSetFlipped(VTRenderer* vt, bool flipped);
 void	VTProcess(VTRenderer* self, unsigned long dt);
 void	VTRender(VTRenderer* self, unsigned int width, unsigned int height);
+void	VTSetAltScreen(VTRenderer* self, VTScreen* altscreen);
 
 void	VTCreateBuffers(VTRenderer* self);
 void	VTCreateFrameBuffer(VTRenderer* self);
