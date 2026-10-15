@@ -568,8 +568,6 @@ typedef struct {
 #define	ED_FROM_BEGIN	1
 #define	ED_ALL		2
 
-int* VT220CreateTextureSheet(void);
-
 void VT220Init(VT220* vt);
 void VT220Destroy(VT220* vt);
 void VT220Process(VT220* vt, unsigned long dt);
