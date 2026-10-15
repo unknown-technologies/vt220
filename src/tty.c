@@ -13,28 +13,34 @@
 
 #include "tty.h"
 
+static speed_t TTYiGetBaudRate(unsigned int rate);
+static void TTYiSetBaudRate(TTY* tty, unsigned int rx_rate, unsigned int tx_rate);
+static void TTYiSetFlowControl(TTY* tty, bool enable_xoff);
+static void TTYiSetFormat(TTY* tty, unsigned int data, unsigned int stop, unsigned int parity);
+
 void TTYInit(TTY* tty)
 {
 	memset(tty, 0, sizeof(TTY));
+	tty->fd = -1;
 }
 
-void TTYOpen(TTY* tty, const char* path)
+BOOL TTYOpen(TTY* tty, const char* path)
 {
 	tty->fd = open(path, O_RDWR | O_NONBLOCK | O_NOCTTY | O_CLOEXEC);
 	if(tty->fd == -1) {
-		fprintf(stderr, "Failed to open %s: %s\n", path, strerror(errno));
-		fflush(stderr);
-		_Exit(1);
+		TTYOpenError(tty, path, strerror(errno));
+		return FALSE;
 	}
 
 	if(tcgetattr(tty->fd, &tty->ttyattrs)) {
 		if(errno == ENOTTY) {
-			fprintf(stderr, "Failed to open %s: not a TTY\n", path);
+			TTYOpenError(tty, path, "not a TTY");
 		} else {
-			perror("tcgetattr");
+			TTYError(tty, "tcgetattr");
 		}
-		fflush(stderr);
-		_Exit(1);
+		close(tty->fd);
+		tty->fd = -1;
+		return FALSE;
 	}
 
 	memcpy(&tty->tio, &tty->ttyattrs, sizeof(struct termios));
@@ -51,6 +57,18 @@ void TTYOpen(TTY* tty, const char* path)
 		/* this is not good but also not fatal */
 		TTYError(tty, "tcsetattr");
 	}
+
+	if(tty->baud_rx) {
+		TTYiSetBaudRate(tty, tty->baud_rx, tty->baud_tx);
+	}
+
+	TTYiSetFlowControl(tty, tty->flowctl);
+
+	if(tty->fmt_data) {
+		TTYiSetFormat(tty, tty->fmt_data, tty->fmt_stop, tty->fmt_parity);
+	}
+
+	return TRUE;
 }
 
 static speed_t TTYiGetBaudRate(unsigned int rate)
@@ -112,7 +130,7 @@ static speed_t TTYiGetBaudRate(unsigned int rate)
 	}
 }
 
-void TTYSetBaudRate(TTY* tty, unsigned int rx_rate, unsigned int tx_rate)
+static void TTYiSetBaudRate(TTY* tty, unsigned int rx_rate, unsigned int tx_rate)
 {
 	if(tty->fd == -1) {
 		return;
@@ -134,7 +152,7 @@ void TTYSetBaudRate(TTY* tty, unsigned int rx_rate, unsigned int tx_rate)
 	}
 }
 
-void TTYSetFlowControl(TTY* tty, bool enable_xoff)
+static void TTYiSetFlowControl(TTY* tty, bool enable_xoff)
 {
 	if(tty->fd == -1) {
 		return;
@@ -155,7 +173,7 @@ void TTYSetFlowControl(TTY* tty, bool enable_xoff)
 	}
 }
 
-void TTYSetFormat(TTY* tty, unsigned int data, unsigned int stop, unsigned int parity)
+static void TTYiSetFormat(TTY* tty, unsigned int data, unsigned int stop, unsigned int parity)
 {
 	if(tty->fd == -1) {
 		return;
@@ -224,6 +242,29 @@ void TTYSetFormat(TTY* tty, unsigned int data, unsigned int stop, unsigned int p
 	}
 }
 
+void TTYSetBaudRate(TTY* tty, unsigned int rx_rate, unsigned int tx_rate)
+{
+	tty->baud_rx = rx_rate;
+	tty->baud_tx = tx_rate;
+
+	TTYiSetBaudRate(tty, rx_rate, tx_rate);
+}
+
+void TTYSetFlowControl(TTY* tty, bool enable_xoff)
+{
+	tty->flowctl = enable_xoff;
+	TTYiSetFlowControl(tty, enable_xoff);
+}
+
+void TTYSetFormat(TTY* tty, unsigned int data, unsigned int stop, unsigned int parity)
+{
+	tty->fmt_data = data;
+	tty->fmt_stop = stop;
+	tty->fmt_parity = parity;
+
+	TTYiSetFormat(tty, data, stop, parity);
+}
+
 void TTYRxString(TTY* tty, const char* s)
 {
 	for(; *s; s++) {
@@ -245,6 +286,17 @@ void TTYError(TTY* tty, const char* what)
 {
 	char* msg = strerror(errno);
 	TTYRxError(tty, what, msg);
+}
+
+void TTYOpenError(TTY* tty, const char* path, const char* what)
+{
+	TTYRxString(tty, "Failed to open ");
+	TTYRxString(tty, path);
+	TTYRxString(tty, ": ");
+	TTYRxString(tty, what);
+	TTYRxString(tty, "\r\n");
+
+	printf("[TTY] Failed to open %s: %s\n", path, what);
 }
 
 void TTYEnqueueTX(TTY* tty, unsigned char c)

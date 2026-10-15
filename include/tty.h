@@ -34,12 +34,19 @@ typedef struct {
 	struct termios	ttyattrs;
 	struct termios	tio;
 
+	unsigned int	baud_rx;
+	unsigned int	baud_tx;
+	unsigned int	flowctl;
+	unsigned int	fmt_data;
+	unsigned int	fmt_stop;
+	unsigned int	fmt_parity;
+
 	void		(*rx)(unsigned char c);
 	int		(*rxe)(void);
 } TTY;
 
 void	TTYInit(TTY* tty);
-void	TTYOpen(TTY* tty, const char* path);
+BOOL	TTYOpen(TTY* tty, const char* path);
 void	TTYSend(TTY* tty, unsigned char c);
 void	TTYBreak(TTY* tty);
 void	TTYPoll(TTY* tty);
@@ -53,5 +60,6 @@ void	TTYSetFormat(TTY* tty, unsigned int data, unsigned int stop, unsigned int p
 void	TTYRxString(TTY* tty, const char* s);
 void	TTYRxError(TTY* tty, const char* what, const char* msg);
 void	TTYError(TTY* tty, const char* what);
+void	TTYOpenError(TTY* tty, const char* path, const char* what);
 
 #endif
