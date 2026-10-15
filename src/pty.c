@@ -26,6 +26,8 @@
 void PTYInit(PTY* pty)
 {
 	memset(pty, 0, sizeof(PTY));
+	pty->master = -1;
+	pty->pid = -1;
 }
 
 void PTYOpen(PTY* pty, char** argv, char** envp)
@@ -344,6 +346,7 @@ void PTYCheckExit(PTY* pty)
 		PTYRxString(pty, p);
 		close(pty->master);
 		pty->master = -1;
+		pty->pid = -1;
 	} else if(WIFSIGNALED(status)) {
 		char* p = (char*) pty->buf;
 		char* signame = strsignal(WTERMSIG(status));
@@ -355,6 +358,7 @@ void PTYCheckExit(PTY* pty)
 		PTYRxString(pty, p);
 		close(pty->master);
 		pty->master = -1;
+		pty->pid = -1;
 	}
 }
 
@@ -453,5 +457,34 @@ void PTYResize(PTY* pty, unsigned int width, unsigned int height)
 	if(kill(pty->pid, SIGWINCH) == -1) {
 		printf("[PTY] failed to send SIGWINCH: %s\n", strerror(errno));
 	}
+}
+
+void PTYClose(PTY* pty)
+{
+	if(pty->pid != -1) {
+		if(kill(pty->pid, SIGKILL) == -1) {
+			printf("[PTY] failed to send SIGTERM: %s\n", strerror(errno));
+		} else {
+			int status;
+			int result = waitpid(pty->pid, &status, 0);
+			if(result == -1) {
+				printf("[PTY] waitpid failed: %s\n", strerror(errno));
+			} else if(result == 0) {
+				printf("[PTY] waitpid failed because child did not exit yet\n");
+			}
+		}
+
+		pty->pid = -1;
+	}
+
+	if(pty->master != -1) {
+		close(pty->master);
+		pty->master = -1;
+	}
+}
+
+bool PTYIsAlive(PTY* pty)
+{
+	return pty->master != -1 && pty->pid != -1;
 }
 #endif

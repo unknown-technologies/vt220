@@ -1,6 +1,7 @@
 #ifndef __PTY_H__
 #define __PTY_H__
 
+#include <stdbool.h>
 #include <sys/types.h>
 
 #define	PTY_BUFFER_SIZE		32768
@@ -29,6 +30,8 @@ void	PTYSend(PTY* pty, unsigned char c);
 void	PTYBreak(PTY* pty);
 void	PTYPoll(PTY* pty);
 void	PTYResize(PTY* pty, unsigned int width, unsigned int height);
+void	PTYClose(PTY* pty);
+bool	PTYIsAlive(PTY* pty);
 
 void	PTYRxString(PTY* pty, const char* s);
 void	PTYRxError(PTY* pty, const char* what, const char* msg);
