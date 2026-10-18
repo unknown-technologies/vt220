@@ -513,6 +513,7 @@ typedef struct {
 #define	GS		0x1D
 #define	RS		0x1E
 #define	US		0x1F
+#define	SP		0x20
 #define	DEL		0x7F
 #define	IND		0x84
 #define	NEL		0x85
