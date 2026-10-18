@@ -9,9 +9,8 @@
 #include "vt.h"
 #include "config.h"
 #include "renderer.h"
-#include "telnet.h"
-#include "tty.h"
 #include "kb.h"
+#include "cm.h"
 #include "error.h"
 
 static EGL egl;
@@ -19,16 +18,9 @@ static KB kb;
 
 static VT220 vt;
 static VTRenderer renderer;
-static TELNET telnet;
-static TTY tty;
+static CM cm;
 
 static unsigned long current_time = 0;
-
-#define	MODE_NONE	0
-#define	MODE_TTY	1
-#define	MODE_TELNET	2
-
-static int mode = MODE_NONE;
 
 static volatile bool quit = false;
 
@@ -38,6 +30,18 @@ static void sigint_handler(int signum)
 
 	quit = true;
 }
+
+#ifdef DEBUG
+void __assert_fail(const char* assertion, const char* file, unsigned int line, const char* function)
+{
+	printf("%s:%u: %s%sAssertion `%s' failed.\n", file, line, function ? function : "", function ? ": " : "", assertion);
+
+	EGLDestroy(&egl);
+	KBClose(&kb);
+
+	_Exit(1);
+}
+#endif
 
 static unsigned long long get_time(void)
 {
@@ -56,16 +60,10 @@ void process(void)
 		dt = 1000;
 	}
 
-	switch(mode) {
-		case MODE_TELNET:
-			TELNETPoll(&telnet);
-			break;
-		case MODE_TTY:
-			TTYPoll(&tty);
-			break;
-	}
+	CMPoll(&cm);
 
 	KBPoll(&kb);
+	CMProcess(&cm);
 	VT220Process(&vt, dt);
 	VTProcess(&renderer, dt);
 
@@ -87,44 +85,32 @@ static void vt_flowcontrol_nop(int start)
 	(void) start;
 }
 
-#if 0
-static void telnet_tx(unsigned char c)
+static void cm_tx(unsigned char c)
 {
-	TELNETSend(&telnet, c);
+	CMSend(&cm, c);
 }
 
-static void telnet_brk(void)
+static void cm_brk(void)
 {
-	TELNETBreak(&telnet);
-}
-#endif
-
-static void tty_tx(unsigned char c)
-{
-	TTYSend(&tty, c);
+	CMBreak(&cm);
 }
 
-static void tty_brk(void)
+static void cm_resize(unsigned int width, unsigned int height)
 {
-	TTYBreak(&tty);
+	CMResize(&cm, width, height);
 }
 
-static void tty_resize(unsigned int width, unsigned int height)
+static void cm_update_baudrate(unsigned int rx, unsigned int tx)
 {
-	TTYResize(&tty, width, height);
+	CMSetBaudRate(&cm, rx, tx);
 }
 
-static void tty_update_baudrate(unsigned int rx, unsigned int tx)
+static void cm_update_flowcontrol(int enable)
 {
-	TTYSetBaudRate(&tty, rx, tx);
+	CMSetFlowControl(&cm, enable);
 }
 
-static void tty_update_flowcontrol(int enable)
-{
-	TTYSetFlowControl(&tty, enable);
-}
-
-static void tty_update_format(unsigned int format, unsigned int stopbits)
+static void cm_update_format(unsigned int format, unsigned int stopbits)
 {
 	unsigned int data;
 	unsigned int stop = stopbits == VT220_COMM_2_STOP_BITS ? 2 : 1;
@@ -182,17 +168,35 @@ static void tty_update_format(unsigned int format, unsigned int stopbits)
 			break;
 	}
 
-	TTYSetFormat(&tty, data, stop, parity);
+	CMSetFormat(&cm, data, stop, parity);
 }
 
-void kb_down(KB* kb, int code)
+static void cm_datatalk(void)
+{
+	int visible = CMIsVisible(&cm);
+	CMSetVisible(&cm, !visible);
+}
+
+static void cm_disconnect(void)
+{
+	CMDisconnect(&cm);
+	CMSetVisible(&cm, 1);
+}
+
+static void cm_key(u16 key)
+{
+	CMProcessKey(&cm, key);
+}
+
+static void kb_down(KB* kb, int code)
 {
 	(void) kb;
 
+	VT220ClearInit(&vt);
 	VT220KeyboardKeyDown(&vt, code);
 }
 
-void kb_up(KB* kb, int code)
+static void kb_up(KB* kb, int code)
 {
 	(void) kb;
 
@@ -228,7 +232,7 @@ void print_version(void)
 			"There is NO WARRANTY, to the extent permitted by law.\n");
 }
 
-int main(int argc, char** argv)
+int main(int argc, char** argv, char** envp)
 {
 	const char* self = *argv;
 	const char* serial = NULL;
@@ -359,6 +363,25 @@ int main(int argc, char** argv)
 
 	VTInitRenderer(&renderer, &vt);
 
+	CMInit(&cm, &vt, envp);
+	CMSetVisible(&cm, 1);
+
+	cm.rx = vt_rx;
+	cm.rxe = vt_rxe;
+	vt.rx = cm_tx;
+	vt.brk = cm_brk;
+	vt.resize = cm_resize;
+	vt.save_config = CFGSaveState;
+	vt.flowcontrol = vt_flowcontrol_nop;
+	vt.update_baudrate = cm_update_baudrate;
+	vt.update_flowcontrol = cm_update_flowcontrol;
+	vt.update_format = cm_update_format;
+	vt.key = cm_key;
+	vt.datatalk = cm_datatalk;
+	vt.disconnect = cm_disconnect;
+
+	CMUpdateHandlers(&cm);
+
 	CFGLoadState(&vt);
 
 	VT220ShowInitScreen(&vt);
@@ -381,24 +404,15 @@ int main(int argc, char** argv)
 	glClearColor(0.0, 0.0, 0.0, 0.0);
 
 	if(serial) {
-		mode = MODE_TTY;
-
-		TTYInit(&tty);
-		TTYOpen(&tty, serial);
+		CMOpenTTY(&cm, serial);
 
 		if(baud != -1) {
 			VT220SetBaudRate(&vt, baud, baud);
 		}
 
-		tty.rx = vt_rx;
-		tty.rxe = vt_rxe;
-		vt.rx = tty_tx;
-		vt.brk = tty_brk;
-		vt.resize = tty_resize;
-		vt.flowcontrol = vt_flowcontrol_nop;
-		vt.update_baudrate = tty_update_baudrate;
-		vt.update_flowcontrol = tty_update_flowcontrol;
-		vt.update_format = tty_update_format;
+		CMSetVisible(&cm, 0);
+	} else {
+		CMAutoConnect(&cm);
 	}
 
 	VT220InitComm(&vt);
@@ -413,13 +427,19 @@ int main(int argc, char** argv)
 	GL_ERROR();
 
 	while(!quit) {
+		process();
+
 		EGLBegin(&egl);
 
 		GL_ERROR();
 
 		glClear(GL_COLOR_BUFFER_BIT);
 
-		process();
+		if(CMIsVisible(&cm)) {
+			VTSetAltScreen(&renderer, CMGetScreen(&cm));
+		} else {
+			VTSetAltScreen(&renderer, NULL);
+		}
 
 		VTRender(&renderer, drm->mode->hdisplay, drm->mode->vdisplay);
 
@@ -428,6 +448,7 @@ int main(int argc, char** argv)
 		}
 	}
 
+	CMDestroy(&cm);
 	EGLDestroy(&egl);
 	GBMDestroy(gbm);
 	DRMDestroy(drm);

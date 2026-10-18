@@ -100,14 +100,18 @@ implementation is useful to create dedicated "VT220 appliances" without relying
 on X11 / Wayland. Instead, the graphics context is created via DRM/EGL and
 keyboard events are directly handled via the appropriate /dev/input device.
 
+An advanced "Connection Manager" supports configuration of local PTY sessions,
+TTY sessions (RS232, UART) in case TTY lines are available, and TELNET
+connections. This Connection Manager automatically shows a menu of available
+connections in case no connection is marked as "autoconnect". By invoking a
+disconnect sequence (SHIFT-F5) or pressing the DATA/TALK key (F4), you can
+always enter the Connection Manager at any time.
+
 Any hardware variant of the Raspberry Pi 4+ works, even the smallest 1GB
 version is sufficient. The only hardware requirements are a keyboard and a
 screen. Ideally the screen has a resultion of 800x480 pixels, like the official
 Raspberry Pi foundation 7" touch display. Development happens on a Raspberry Pi
 4 running [ALARM](https://archlinuxarm.org/).
-
-At the moment, the Raspberry Pi version only supports RS232 connections, but a
-more advanced "Connection Manager" is planned for SSH/TELNET/PTY support.
 
 To build the Raspberry Pi version, you need a Raspberry Pi 4+ with libdrm, EGL,
 glslang, and [bin2o](https://github.com/hackyourlife/bin2o). GLFW is _not_
