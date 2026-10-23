@@ -89,10 +89,9 @@ void CMConnectionMenuDraw(SPFPanel* self)
 
 	SPFPrintAt(self, 19, 2, "F4=End", 0);
 	if(cm->mode != CM_MODE_NONE) {
-		SPFPrintAt(self, 19, 30, "SHIFT-F5=Host Disconnect", 0);
+		SPFPrintCenter(self, 19, "SHIFT-F5=Host Disconnect", 0);
 	}
-	SPFGoto(self, 19, SPFGetWidth(self) - 9);
-	SPFPrint(self, "F12=Setup", 0);
+	SPFPrintAt(self, 19, SPFGetWidth(self) - 9, "F12=Setup", 0);
 
 	SPFPrintAt(self, 21, 2, "===> ", 0);
 	SPFPrint(self, this->input, 0);
