@@ -71,7 +71,7 @@ export	BUILDTIME:=	$(shell date -u +"%H:%M:%S")
 
 .PHONY: $(BUILD) clean all
 
-$(BUILD):
+$(BUILD): suid-helper
 	@echo compiling...
 	@[ -d $@ ] || mkdir -p $@
 	@$(MAKE) --no-print-directory -C $(BUILD) -f $(CURDIR)/Makefile.rpi
@@ -79,6 +79,9 @@ $(BUILD):
 clean:
 	@echo "[CLEAN]"
 	@rm -rf $(BUILD) $(TFILES) $(OFILES) $(TARGET)
+
+suid-helper: src/helper/vt220-agetty.c
+	@$(CC) $(CFLAGS) $(LDFLAGS) $< -o $@
 
 else
 

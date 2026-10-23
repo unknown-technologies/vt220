@@ -1,5 +1,6 @@
 #include <string.h>
 #include <stdlib.h>
+#include <unistd.h>
 
 #include "cm.h"
 #include "tty.h"
@@ -185,20 +186,37 @@ void CMConnect(CM* self, int id)
 
 	switch(con->mode) {
 		case CM_MODE_PTY: {
-			char* argv[] = { "/bin/agetty", "-8", "-s", "--local-line", "--noreset", "--noclear", "-",
+			char* argv_agetty[] = { "/bin/agetty", "-8", "-s", "--local-line", "--noreset", "--noclear", "-",
 				"vt220", NULL };
+			char* argv_helper[] = { "/bin/vt220-agetty", NULL };
+
+			char** argv;
+
+			if(!access(*argv_helper, X_OK)) {
+				argv = argv_helper;
+			} else {
+				argv = argv_agetty;
+			}
 
 			self->mode = CM_MODE_PTY;
+
+			VT220CursorHome(vt);
+			VT220EraseScreen(vt);
+			VT220SaveCursor(vt);
 			VT220ClearComm(vt);
-			VT220ReceiveText(vt, "\x1B[H\x1B[2J");
+
 			PTYOpen(&self->pty, argv, self->envp);
 			CMSetVisible(self, 0);
 			break;
 		}
 		case CM_MODE_TTY:
 			self->mode = CM_MODE_TTY;
+
+			VT220CursorHome(vt);
+			VT220EraseScreen(vt);
+			VT220SaveCursor(vt);
 			VT220ClearComm(vt);
-			VT220ReceiveText(vt, "\x1B[H\x1B[2J");
+
 			if(TTYOpen(&self->tty, con->target)) {
 				VT220ReceiveText(vt, "READY\r\n");
 			}
@@ -206,8 +224,12 @@ void CMConnect(CM* self, int id)
 			break;
 		case CM_MODE_TELNET:
 			self->mode = CM_MODE_TELNET;
+
+			VT220CursorHome(vt);
+			VT220EraseScreen(vt);
+			VT220SaveCursor(vt);
 			VT220ClearComm(vt);
-			VT220ReceiveText(vt, "\x1B[H\x1B[2J");
+
 			TELNETConnect(&self->telnet, con->target, con->port);
 			CMSetVisible(self, 0);
 			break;
