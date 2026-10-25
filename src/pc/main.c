@@ -1,4 +1,5 @@
 #ifdef _WIN32
+#include <winsock2.h>
 #include <windows.h>
 #endif
 
@@ -421,6 +422,12 @@ static void resize(unsigned int width, unsigned int height)
 	if(!is_fullscreen) {
 		glfwSetWindowSize(window, window_width, SCREEN_HEIGHT);
 	}
+}
+
+static void telnet_resize(unsigned int width, unsigned int height)
+{
+	resize(width, height);
+	TELNETResize(&telnet, width, height);
 }
 
 #ifndef _WIN32
@@ -854,6 +861,7 @@ int main(int argc, char** argv, char** envp)
 		telnet.rxe = vt_rxe;
 		vt.rx = telnet_tx;
 		vt.brk = telnet_brk;
+		vt.resize = telnet_resize;
 		vt.flowcontrol = vt_flowcontrol_nop;
 
 		TELNETConnect(&telnet, hostname, port);
