@@ -5,6 +5,7 @@
 #include "vt.h"
 #include "renderer.h"
 #include "telnet.h"
+#include "ssh.h"
 #include "tty.h"
 #include "pty.h"
 #include "spf.h"
@@ -35,6 +36,7 @@ struct CM {
 
 	TTY		tty;
 	PTY		pty;
+	SSH		ssh;
 	TELNET		telnet;
 
 	int		osc_state;

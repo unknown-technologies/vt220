@@ -5,6 +5,7 @@
 #include "cm.h"
 #include "tty.h"
 #include "pty.h"
+#include "ssh.h"
 #include "telnet.h"
 
 static int CMPTYRXE(void* ptr)
@@ -24,6 +25,7 @@ void CMInit(CM* self, VT220* vt, char** envp)
 	TTYInit(&self->tty);
 	PTYInit(&self->pty);
 	TELNETInit(&self->telnet);
+	SSHInit(&self->ssh);
 
 	self->envp = envp;
 
@@ -52,6 +54,7 @@ void CMDestroy(CM* self)
 {
 	CMDisconnect(self);
 
+	SSHDestroy(&self->ssh);
 	TELNETDestroy(&self->telnet);
 
 	SPFDestroy(&self->spf);
@@ -63,6 +66,8 @@ void CMUpdateHandlers(CM* self)
 	self->tty.rxe = self->rxe;
 	self->telnet.rx = self->rx;
 	self->telnet.rxe = self->rxe;
+	self->ssh.rx = self->rx;
+	self->ssh.rxe = self->rxe;
 }
 
 void CMDisconnect(CM* self)
@@ -76,6 +81,9 @@ void CMDisconnect(CM* self)
 			break;
 		case CM_MODE_TELNET:
 			TELNETDisconnect(&self->telnet);
+			break;
+		case CM_MODE_SSH:
+			SSHDisconnect(&self->ssh);
 			break;
 	}
 
@@ -94,6 +102,9 @@ void CMPoll(CM* self)
 		case CM_MODE_TELNET:
 			TELNETPoll(&self->telnet);
 			break;
+		case CM_MODE_SSH:
+			SSHPoll(&self->ssh);
+			break;
 	}
 }
 
@@ -109,6 +120,9 @@ void CMSend(CM* self, unsigned char c)
 		case CM_MODE_TELNET:
 			TELNETSend(&self->telnet, c);
 			break;
+		case CM_MODE_SSH:
+			SSHSend(&self->ssh, c);
+			break;
 	}
 }
 
@@ -123,6 +137,9 @@ void CMBreak(CM* self)
 			break;
 		case CM_MODE_TELNET:
 			TELNETBreak(&self->telnet);
+			break;
+		case CM_MODE_SSH:
+			SSHBreak(&self->ssh);
 			break;
 	}
 }
@@ -140,6 +157,9 @@ void CMResize(CM* self, unsigned int width, unsigned int height)
 			break;
 		case CM_MODE_TELNET:
 			TELNETResize(&self->telnet, width, height);
+			break;
+		case CM_MODE_SSH:
+			SSHResize(&self->ssh, width, height);
 			break;
 	}
 }
@@ -250,6 +270,17 @@ void CMConnect(CM* self, int id)
 			VT220ClearComm(vt);
 
 			TELNETConnect(&self->telnet, con->target, con->port);
+			CMSetVisible(self, 0);
+			break;
+		case CM_MODE_SSH:
+			self->mode = CM_MODE_SSH;
+
+			VT220CursorHome(vt);
+			VT220EraseScreen(vt);
+			VT220SaveCursor(vt);
+			VT220ClearComm(vt);
+
+			SSHConnect(&self->ssh, con->target, con->port, con->username);
 			CMSetVisible(self, 0);
 			break;
 		default:
