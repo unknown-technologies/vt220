@@ -42,7 +42,7 @@ void TELNETDisconnect(TELNET* telnet);
 void TELNETSend(TELNET* telnet, unsigned char c);
 void TELNETBreak(TELNET* telnet);
 void TELNETResize(TELNET* telnet, unsigned int width, unsigned int height);
-void TELNETSendRaw(TELNET* telnet, unsigned char c);
+void TELNETSendRaw(TELNET* telnet, unsigned char c, int immediate);
 void TELNETPoll(TELNET* telnet);
 
 #endif

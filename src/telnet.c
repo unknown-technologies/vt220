@@ -8,6 +8,7 @@
 #include <winsock2.h>
 #else
 #include <netdb.h>
+#include <netinet/tcp.h>
 #include <sys/socket.h>
 #include <sys/select.h>
 #endif
@@ -32,6 +33,7 @@
 #define	DONT		254
 #define	IAC		255
 
+#define	TRANSMIT_BINARY	0
 #define	ECHO		1
 #define	SUPPRESS_GA	3
 #define	TERMINAL_TYPE	24
@@ -59,7 +61,7 @@
 #define	STATE_SB_IAC	7
 #define	STATE_FAIL	10
 
-#define	BUFFER_SIZE	256
+#define	BUFFER_SIZE	512
 
 #ifdef DEBUG
 #define	LOG(...)	printf(__VA_ARGS__)
@@ -218,18 +220,27 @@ void TELNETConnected(TELNET* telnet)
 {
 	telnet->connected = 1;
 	TELNETRxString(telnet, "Connected.\r\n");
-	TELNETSendRaw(telnet, IAC);
-	TELNETSendRaw(telnet, WILL);
-	TELNETSendRaw(telnet, SUPPRESS_GA);
-	TELNETSendRaw(telnet, IAC);
-	TELNETSendRaw(telnet, WONT);
-	TELNETSendRaw(telnet, ECHO);
-	TELNETSendRaw(telnet, IAC);
-	TELNETSendRaw(telnet, WONT);
-	TELNETSendRaw(telnet, LINEMODE);
-	TELNETSendRaw(telnet, IAC);
-	TELNETSendRaw(telnet, WILL);
-	TELNETSendRaw(telnet, NAWS);
+	TELNETSendRaw(telnet, IAC, 0);
+	TELNETSendRaw(telnet, WILL, 0);
+	TELNETSendRaw(telnet, SUPPRESS_GA, 0);
+	TELNETSendRaw(telnet, IAC, 0);
+	TELNETSendRaw(telnet, DO, 0);
+	TELNETSendRaw(telnet, SUPPRESS_GA, 0);
+	TELNETSendRaw(telnet, IAC, 0);
+	TELNETSendRaw(telnet, WILL, 0);
+	TELNETSendRaw(telnet, TRANSMIT_BINARY, 0);
+	TELNETSendRaw(telnet, IAC, 0);
+	TELNETSendRaw(telnet, DO, 0);
+	TELNETSendRaw(telnet, TRANSMIT_BINARY, 0);
+	TELNETSendRaw(telnet, IAC, 0);
+	TELNETSendRaw(telnet, WONT, 0);
+	TELNETSendRaw(telnet, ECHO, 0);
+	TELNETSendRaw(telnet, IAC, 0);
+	TELNETSendRaw(telnet, WONT, 0);
+	TELNETSendRaw(telnet, LINEMODE, 0);
+	TELNETSendRaw(telnet, IAC, 0);
+	TELNETSendRaw(telnet, WILL, 0);
+	TELNETSendRaw(telnet, NAWS, 1);
 }
 
 void TELNETConnect(TELNET* telnet, const char* hostname, int port)
@@ -294,6 +305,16 @@ void TELNETConnectTo(TELNET* telnet, struct sockaddr* target, int addr_size)
 		return;
 	}
 #endif
+
+	int nodelay = 1;
+#ifdef _WIN32
+	if(setsockopt(telnet->socket, IPPROTO_TCP, TCP_NODELAY, (char*) &nodelay, sizeof(nodelay)) == -1) {
+#else
+	if(setsockopt(telnet->socket, SOL_TCP, TCP_NODELAY, &nodelay, sizeof(nodelay)) == -1) {
+#endif
+		const char* str = geterror();
+		TELNETRxError(telnet, "setsockopt", str);
+	}
 
 	if(connect(telnet->socket, target, addr_size) == -1) {
 #ifdef _WIN32
@@ -373,34 +394,39 @@ void TELNETPollConnect(TELNET* telnet)
 	}
 }
 
-void TELNETSend(TELNET* telnet, unsigned char c)
+void TELNETiSend(TELNET* telnet, unsigned char c, int immediate)
 {
 	if(c == IAC) {
-		TELNETSendRaw(telnet, IAC);
-		TELNETSendRaw(telnet, IAC);
+		TELNETSendRaw(telnet, IAC, 0);
+		TELNETSendRaw(telnet, IAC, immediate);
 	} else {
-		TELNETSendRaw(telnet, c);
+		TELNETSendRaw(telnet, c, immediate);
 	}
+}
+
+void TELNETSend(TELNET* telnet, unsigned char c)
+{
+	TELNETiSend(telnet, c, 1);
 }
 
 void TELNETBreak(TELNET* telnet)
 {
-	TELNETSendRaw(telnet, IAC);
-	TELNETSendRaw(telnet, BRK);
+	TELNETSendRaw(telnet, IAC, 0);
+	TELNETSendRaw(telnet, BRK, 1);
 }
 
 void TELNETResize(TELNET* telnet, unsigned int width, unsigned int height)
 {
 	if(telnet->naws) {
-		TELNETSendRaw(telnet, IAC);
-		TELNETSendRaw(telnet, SB);
-		TELNETSendRaw(telnet, NAWS);
-		TELNETSend(telnet, width >> 8);
-		TELNETSend(telnet, (unsigned char) width);
-		TELNETSend(telnet, height >> 8);
-		TELNETSend(telnet, (unsigned char) height);
-		TELNETSendRaw(telnet, IAC);
-		TELNETSendRaw(telnet, SE);
+		TELNETSendRaw(telnet, IAC, 0);
+		TELNETSendRaw(telnet, SB, 0);
+		TELNETSendRaw(telnet, NAWS, 0);
+		TELNETiSend(telnet, width >> 8, 0);
+		TELNETiSend(telnet, (unsigned char) width, 0);
+		TELNETiSend(telnet, height >> 8, 0);
+		TELNETiSend(telnet, (unsigned char) height, 0);
+		TELNETSendRaw(telnet, IAC, 0);
+		TELNETSendRaw(telnet, SE, 1);
 	}
 }
 
@@ -408,6 +434,7 @@ void TELNETEnqueueTX(TELNET* telnet, unsigned char c)
 {
 	if(telnet->count >= BUFFER_SIZE) {
 		/* the TX buffer is full; drop this byte */
+		printf("[TELNET] dropping byte %02X\n", c);
 		return;
 	}
 
@@ -416,7 +443,7 @@ void TELNETEnqueueTX(TELNET* telnet, unsigned char c)
 	telnet->write_ptr %= BUFFER_SIZE;
 }
 
-int TELNETDrainTX(TELNET* telnet)
+int TELNETDrainTX(TELNET* telnet, int immediate)
 {
 	if(telnet->socket == -1) {
 		return 0;
@@ -425,7 +452,12 @@ int TELNETDrainTX(TELNET* telnet)
 	while(telnet->count > 0) {
 		unsigned char ch = telnet->buf[telnet->read_ptr];
 
-		if(send(telnet->socket, WINCAST &ch, 1, MSG_NOSIGNAL) == -1) {
+#ifdef _WIN32
+		int moredata = 0;
+#else
+		int moredata = (!immediate || telnet->count > 1) ? MSG_MORE : 0;
+#endif
+		if(send(telnet->socket, WINCAST &ch, 1, MSG_NOSIGNAL | moredata) == -1) {
 #ifdef _WIN32
 			if(WSAGetLastError() == WSAEWOULDBLOCK) {
 #else
@@ -448,7 +480,7 @@ int TELNETDrainTX(TELNET* telnet)
 	return 1;
 }
 
-void TELNETSendRaw(TELNET* telnet, unsigned char c)
+void TELNETSendRaw(TELNET* telnet, unsigned char c, int immediate)
 {
 	if(telnet->socket == -1) {
 		return;
@@ -465,10 +497,18 @@ void TELNETSendRaw(TELNET* telnet, unsigned char c)
 			return;
 		}
 	} else if(telnet->count > 0) {
-		if(!TELNETDrainTX(telnet)) {
+		if(!immediate) {
+			TELNETEnqueueTX(telnet, c);
+			return;
+		} else if(!TELNETDrainTX(telnet, 0)) {
 			TELNETEnqueueTX(telnet, c);
 			return;
 		}
+	}
+
+	if(!immediate) {
+		TELNETEnqueueTX(telnet, c);
+		return;
 	}
 
 	if(send(telnet->socket, WINCAST &c, 1, MSG_NOSIGNAL) == -1) {
@@ -489,10 +529,10 @@ void TELNETSendRaw(TELNET* telnet, unsigned char c)
 	}
 }
 
-void TELNETSendRawString(TELNET* telnet, const char* s)
+void TELNETSendRawString(TELNET* telnet, const char* s, int immediate)
 {
 	for(; *s; s++) {
-		TELNETSendRaw(telnet, *s);
+		TELNETSendRaw(telnet, *s, immediate);
 	}
 }
 
@@ -507,13 +547,13 @@ void TELNETProcessSB(TELNET* telnet)
 	switch(telnet->sb_buf[0]) {
 		case TERMINAL_TYPE:
 			if(telnet->sb_write_ptr == 2 && telnet->sb_buf[1] == SEND) {
-				TELNETSendRaw(telnet, IAC);
-				TELNETSendRaw(telnet, SB);
-				TELNETSendRaw(telnet, TERMINAL_TYPE);
-				TELNETSendRaw(telnet, IS);
-				TELNETSendRawString(telnet, "DEC-VT220");
-				TELNETSendRaw(telnet, IAC);
-				TELNETSendRaw(telnet, SE);
+				TELNETSendRaw(telnet, IAC, 0);
+				TELNETSendRaw(telnet, SB, 0);
+				TELNETSendRaw(telnet, TERMINAL_TYPE, 0);
+				TELNETSendRaw(telnet, IS, 0);
+				TELNETSendRawString(telnet, "DEC-VT220", 0);
+				TELNETSendRaw(telnet, IAC, 0);
+				TELNETSendRaw(telnet, SE, 1);
 			}
 			break;
 		case NEW_ENVIRON:
@@ -559,22 +599,22 @@ void TELNETProcessSB(TELNET* telnet)
 				}
 #endif
 
-				TELNETSendRaw(telnet, IAC);
-				TELNETSendRaw(telnet, SB);
-				TELNETSendRaw(telnet, NEW_ENVIRON);
-				TELNETSendRaw(telnet, IS);
+				TELNETSendRaw(telnet, IAC, 0);
+				TELNETSendRaw(telnet, SB, 0);
+				TELNETSendRaw(telnet, NEW_ENVIRON, 0);
+				TELNETSendRaw(telnet, IS, 0);
 #if 0
-				TELNETSendRaw(telnet, USERVAR);
-				TELNETSendRawString(telnet, "TERM");
-				TELNETSendRaw(telnet, VALUE);
-				TELNETSendRawString(telnet, "vt220");
-				TELNETSendRaw(telnet, USERVAR);
-				TELNETSendRawString(telnet, "LANG");
-				TELNETSendRaw(telnet, VALUE);
-				TELNETSendRawString(telnet, "C");
+				TELNETSendRaw(telnet, USERVAR, 0);
+				TELNETSendRawString(telnet, "TERM", 0);
+				TELNETSendRaw(telnet, VALUE, 0);
+				TELNETSendRawString(telnet, "vt220", 0);
+				TELNETSendRaw(telnet, USERVAR, 0);
+				TELNETSendRawString(telnet, "LANG", 0);
+				TELNETSendRaw(telnet, VALUE, 0);
+				TELNETSendRawString(telnet, "C", 0);
 #endif
-				TELNETSendRaw(telnet, IAC);
-				TELNETSendRaw(telnet, SE);
+				TELNETSendRaw(telnet, IAC, 0);
+				TELNETSendRaw(telnet, SE, 1);
 			}
 			break;
 	}
@@ -625,45 +665,50 @@ void TELNETProcess(TELNET* telnet, unsigned char c)
 			telnet->state = STATE_TEXT;
 			LOG("[TELNET] WILL %s [%d]\n", TELNETGetOptionName(c), c);
 			switch(c) {
+				case TERMINAL_TYPE:
+					TELNETSendRaw(telnet, IAC, 0);
+					TELNETSendRaw(telnet, DO, 0);
+					TELNETSendRaw(telnet, c, 1);
+					break;
+				case TRANSMIT_BINARY:
 				case ECHO:
 				case SUPPRESS_GA:
-				case TERMINAL_TYPE:
-					TELNETSendRaw(telnet, IAC);
-					TELNETSendRaw(telnet, DO);
-					TELNETSendRaw(telnet, c);
 					break;
 				default:
-					TELNETSendRaw(telnet, IAC);
-					TELNETSendRaw(telnet, DONT);
-					TELNETSendRaw(telnet, c);
+					TELNETSendRaw(telnet, IAC, 0);
+					TELNETSendRaw(telnet, DONT, 0);
+					TELNETSendRaw(telnet, c, 1);
 			}
 			break;
 		case STATE_WONT:
 			telnet->state = STATE_TEXT;
 			LOG("[TELNET] WONT %s [%d]\n", TELNETGetOptionName(c), c);
-			TELNETSendRaw(telnet, IAC);
-			TELNETSendRaw(telnet, DONT);
-			TELNETSendRaw(telnet, c);
+			TELNETSendRaw(telnet, IAC, 0);
+			TELNETSendRaw(telnet, DONT, 0);
+			TELNETSendRaw(telnet, c, 1);
 			break;
 		case STATE_DO:
 			telnet->state = STATE_TEXT;
 			LOG("[TELNET] DO %s [%d]\n", TELNETGetOptionName(c), c);
 			switch(c) {
-				case ECHO:
-				case SUPPRESS_GA:
 				case TERMINAL_TYPE:
 				case NEW_ENVIRON:
-					TELNETSendRaw(telnet, IAC);
-					TELNETSendRaw(telnet, WILL);
-					TELNETSendRaw(telnet, c);
+					TELNETSendRaw(telnet, IAC, 0);
+					TELNETSendRaw(telnet, WILL, 0);
+					TELNETSendRaw(telnet, c, 1);
 					break;
 				case NAWS:
 					telnet->naws = 1;
 					break;
+				case TRANSMIT_BINARY:
+				case SUPPRESS_GA:
+					/* we requested this */
+					break;
+				case ECHO:
 				default:
-					TELNETSendRaw(telnet, IAC);
-					TELNETSendRaw(telnet, WONT);
-					TELNETSendRaw(telnet, c);
+					TELNETSendRaw(telnet, IAC, 0);
+					TELNETSendRaw(telnet, WONT, 0);
+					TELNETSendRaw(telnet, c, 1);
 			}
 			break;
 		case STATE_DONT:
@@ -674,9 +719,9 @@ void TELNETProcess(TELNET* telnet, unsigned char c)
 					telnet->naws = 0;
 					break;
 				default:
-					TELNETSendRaw(telnet, IAC);
-					TELNETSendRaw(telnet, WONT);
-					TELNETSendRaw(telnet, c);
+					TELNETSendRaw(telnet, IAC, 0);
+					TELNETSendRaw(telnet, WONT, 0);
+					TELNETSendRaw(telnet, c, 1);
 			}
 			break;
 		case STATE_SB:
@@ -740,7 +785,7 @@ void TELNETPoll(TELNET* telnet)
 		}
 	}
 
-	TELNETDrainTX(telnet);
+	TELNETDrainTX(telnet, 1);
 
 	int n = recv(telnet->socket, WINCAST telnet->rxbuf, TELNET_BUFFER_SIZE, 0);
 	if(n == -1) {
