@@ -59,21 +59,24 @@ void CMDiagnosticsMenuDraw(SPFPanel* self)
 
 	SPFPrintAt(self, 2, 2, "System Information:", 0);
 
-	sprintf(buf, "Total memory:   %luMB", info.totalram * (size_t) info.mem_unit / (1024 * 1024));
-	SPFPrintAt(self, 4, 4, buf, 0);
-	sprintf(buf, "Free memory:    %luMB", info.freeram * (size_t) info.mem_unit / (1024 * 1024));
-	SPFPrintAt(self, 5, 4, buf, 0);
-	sprintf(buf, "Load average:   %.2f %.2f %.2f", info.loads[0] * load_scale, info.loads[1] * load_scale,
-			info.loads[2] * load_scale);
+	SPFPrintAt(self, 4, 4, "Software version: r" REVISION "~" COMMIT, 0);
+	SPFPrintAt(self, 5, 4, "Build time:       " BUILDDATE " " BUILDTIME " (UTC)", 0);
+
+	sprintf(buf, "Total memory:     %luMB", info.totalram * (size_t) info.mem_unit / (1024 * 1024));
 	SPFPrintAt(self, 6, 4, buf, 0);
-	sprintf(buf, "CPU cores:      %d", get_nprocs());
+	sprintf(buf, "Free memory:      %luMB", info.freeram * (size_t) info.mem_unit / (1024 * 1024));
 	SPFPrintAt(self, 7, 4, buf, 0);
-	sprintf(buf, "Uptime:         %d days, %02d:%02d:%02d", uptime_d, uptime_h, uptime_m, uptime_s);
+	sprintf(buf, "Load average:     %.2f %.2f %.2f", info.loads[0] * load_scale, info.loads[1] * load_scale,
+			info.loads[2] * load_scale);
 	SPFPrintAt(self, 8, 4, buf, 0);
+	sprintf(buf, "CPU cores:        %d", get_nprocs());
+	SPFPrintAt(self, 9, 4, buf, 0);
+	sprintf(buf, "Uptime:           %d days, %02d:%02d:%02d", uptime_d, uptime_h, uptime_m, uptime_s);
+	SPFPrintAt(self, 10, 4, buf, 0);
 
-	SPFPrintAt(self, 10, 2, "Network Interfaces:", 0);
+	SPFPrintAt(self, 12, 2, "Network Interfaces:", 0);
 
-	int pos_y = 12;
+	int pos_y = 14;
 	for(struct ifaddrs* ifa = this->addrs; ifa && pos_y < 20; ifa = ifa->ifa_next) {
 		/* no address => uninteresting for us */
 		if(!ifa->ifa_addr) {
@@ -101,7 +104,7 @@ void CMDiagnosticsMenuDraw(SPFPanel* self)
 			color = SGR_BOLD;
 		}
 
-		SPFPrintAt(self, pos_y, 20, buf, color);
+		SPFPrintAt(self, pos_y, 22, buf, color);
 		pos_y++;
 	}
 
