@@ -101,7 +101,7 @@ on X11 / Wayland. Instead, the graphics context is created via DRM/EGL and
 keyboard events are directly handled via the appropriate /dev/input device.
 
 An advanced "Connection Manager" supports configuration of local PTY sessions,
-TTY sessions (RS232, UART) in case TTY lines are available, and TELNET
+TTY sessions (RS232, UART) in case TTY lines are available, TELNET, and SSH
 connections. This Connection Manager automatically shows a menu of available
 connections in case no connection is marked as "autoconnect". By invoking a
 disconnect sequence (SHIFT-F5) or pressing the DATA/TALK key (F4), you can
@@ -114,9 +114,9 @@ Raspberry Pi foundation 7" touch display. Development happens on a Raspberry Pi
 4 running [ALARM](https://archlinuxarm.org/).
 
 To build the Raspberry Pi version, you need a Raspberry Pi 4+ with libdrm, EGL,
-glslang, and [bin2o](https://github.com/hackyourlife/bin2o). GLFW is _not_
-required nor used. Once the prerequisites are installed, run the following
-command on the Raspberry Pi:
+glslang, libssh, and [bin2o](https://github.com/hackyourlife/bin2o). GLFW is
+_not_ required nor used. Once the prerequisites are installed, run the
+following command on the Raspberry Pi:
 
 ```
 make -f Makefile.rpi -j4 NDEBUG=1
