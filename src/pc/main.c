@@ -399,6 +399,7 @@ static int vt_rxe(void)
 	return VT220CanReceive(&vt);
 }
 
+#ifndef _WIN32
 static void vt_rx_pty(void* ptr, unsigned char c)
 {
 	(void) ptr;
@@ -410,6 +411,7 @@ static int vt_rxe_pty(void* ptr)
 	(void) ptr;
 	return VT220CanReceive(&vt);
 }
+#endif
 
 static void vt_flowcontrol_nop(int start)
 {
