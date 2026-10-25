@@ -36,6 +36,75 @@ void SPFDrawWidget(SPFWidget* widget)
 	}
 }
 
+/* TODO: improve this. For example, right now it only selects some widget on
+ * the next/previous line, while completely ignoring if this widget is close to
+ * the cursor position in case there are multiple widgets on the same line */
+BOOL SPFiWidgetKeyUp(SPFWidget* widget)
+{
+	SPFPanel* panel = widget->panel;
+	SPFWidget* focus = NULL;
+	int line = widget->pos_y;
+	int focus_line = 0;
+	int focus_dst = line - focus_line;
+	ASSERT(focus_dst >= 0);
+
+	for(SPFWidget** w = panel->widgets; *w; w++) {
+		if(*w != widget && SPFCanFocusWidget(*w) && (*w)->pos_y < line) {
+			int dst = line - (*w)->pos_y;
+			ASSERT(dst >= 0);
+			if(dst < focus_dst) {
+				focus = *w;
+				focus_dst = dst;
+			}
+			if(dst == 0) {
+				break;
+			}
+		}
+	}
+
+	if(focus) {
+		SPFSetFocus(panel, focus);
+		SPFFocusWidget(panel->focus);
+		VT220ResetCursorTime(SPFGetVT(SPFGet(panel)));
+		return TRUE;
+	} else {
+		return FALSE;
+	}
+}
+
+BOOL SPFiWidgetKeyDown(SPFWidget* widget)
+{
+	SPFPanel* panel = widget->panel;
+	SPFWidget* focus = NULL;
+	int line = widget->pos_y;
+	int focus_line = SPFGetHeight(panel);
+	int focus_dst = focus_line - line;
+	ASSERT(focus_dst >= 0);
+
+	for(SPFWidget** w = panel->widgets; *w; w++) {
+		if(*w != widget && SPFCanFocusWidget(*w) && (*w)->pos_y > line) {
+			int dst = (*w)->pos_y - line;
+			ASSERT(dst >= 0);
+			if(dst < focus_dst) {
+				focus = *w;
+				focus_dst = dst;
+			}
+			if(dst == 0) {
+				break;
+			}
+		}
+	}
+
+	if(focus) {
+		SPFSetFocus(panel, focus);
+		SPFFocusWidget(panel->focus);
+		VT220ResetCursorTime(SPFGetVT(SPFGet(panel)));
+		return TRUE;
+	} else {
+		return FALSE;
+	}
+}
+
 BOOL SPFProcessWidget(SPFWidget* widget, u16 key)
 {
 	ASSERT(widget);
@@ -71,6 +140,16 @@ BOOL SPFProcessWidget(SPFWidget* widget, u16 key)
 
 			return TRUE;
 		}
+		case VT220_KEY_UP:
+			 if(SPFiWidgetKeyUp(widget)) {
+				 return TRUE;
+			 }
+			 break;
+		case VT220_KEY_DOWN:
+			 if(SPFiWidgetKeyDown(widget)) {
+				 return TRUE;
+			 }
+			 break;
 	}
 
 	switch(widget->type) {
