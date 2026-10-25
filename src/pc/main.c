@@ -399,6 +399,18 @@ static int vt_rxe(void)
 	return VT220CanReceive(&vt);
 }
 
+static void vt_rx_pty(void* ptr, unsigned char c)
+{
+	(void) ptr;
+	VT220Receive(&vt, c);
+}
+
+static int vt_rxe_pty(void* ptr)
+{
+	(void) ptr;
+	return VT220CanReceive(&vt);
+}
+
 static void vt_flowcontrol_nop(int start)
 {
 	(void) start;
@@ -872,8 +884,8 @@ int main(int argc, char** argv, char** envp)
 		PTYInit(&pty);
 		PTYOpen(&pty, shell, envp);
 
-		pty.rx = vt_rx;
-		pty.rxe = vt_rxe;
+		pty.rx = vt_rx_pty;
+		pty.rxe = vt_rxe_pty;
 		vt.rx = pty_tx;
 		vt.brk = pty_brk;
 		vt.resize = pty_resize;

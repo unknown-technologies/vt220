@@ -451,6 +451,7 @@ typedef struct {
 	void		(*flowcontrol)(int);
 	void		(*resize)(unsigned int width, unsigned int height);
 	void		(*print_rx)(unsigned char);
+	void		(*clear_comm)(void);
 
 	void		(*update_baudrate)(unsigned int rx, unsigned int tx);
 	void		(*update_flowcontrol)(int enable);
@@ -524,6 +525,7 @@ typedef struct {
 #define	DCS		0x90
 #define	CSI		0x9B
 #define	ST		0x9C
+#define	OSC		0x9D
 
 #define	KAM		_BV(0)
 #define	IRM		_BV(1)

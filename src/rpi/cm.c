@@ -7,6 +7,16 @@
 #include "pty.h"
 #include "telnet.h"
 
+static int CMPTYRXE(void* ptr)
+{
+	CM* self = (CM*) ptr;
+	if(self->rxe) {
+		return self->rxe();
+	} else {
+		return 0;
+	}
+}
+
 void CMInit(CM* self, VT220* vt, char** envp)
 {
 	memset(self, 0, sizeof(CM));
@@ -28,7 +38,12 @@ void CMInit(CM* self, VT220* vt, char** envp)
 	self->connections[0].mode = CM_MODE_PTY;
 	strcpy(self->connections[0].name, "LOCAL SHELL");
 
+	PTYSetUserData(&self->pty, (void*) self);
+	self->pty.rx = (void (*)(void*, unsigned char)) CMOSCReceive;
+	self->pty.rxe = CMPTYRXE;
+
 	CMiInitUI(self, vt);
+	CMInitOSCFilter(self);
 
 	CMLoadState(self);
 }
@@ -46,8 +61,6 @@ void CMUpdateHandlers(CM* self)
 {
 	self->tty.rx = self->rx;
 	self->tty.rxe = self->rxe;
-	self->pty.rx = self->rx;
-	self->pty.rxe = self->rxe;
 	self->telnet.rx = self->rx;
 	self->telnet.rxe = self->rxe;
 }
@@ -131,6 +144,11 @@ void CMResize(CM* self, unsigned int width, unsigned int height)
 	}
 }
 
+void CMClearComm(CM* self)
+{
+	CMResetOSCFilter(self);
+}
+
 void CMSetBaudRate(CM* self, unsigned int rx_rate, unsigned int tx_rate)
 {
 	TTYSetBaudRate(&self->tty, rx_rate, tx_rate);
@@ -200,6 +218,7 @@ void CMConnect(CM* self, int id)
 
 			self->mode = CM_MODE_PTY;
 
+			CMResetOSCFilter(self);
 			VT220CursorHome(vt);
 			VT220EraseScreen(vt);
 			VT220SaveCursor(vt);

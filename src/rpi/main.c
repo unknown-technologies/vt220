@@ -100,6 +100,11 @@ static void cm_resize(unsigned int width, unsigned int height)
 	CMResize(&cm, width, height);
 }
 
+static void cm_clear_comm(void)
+{
+	CMClearComm(&cm);
+}
+
 static void cm_update_baudrate(unsigned int rx, unsigned int tx)
 {
 	CMSetBaudRate(&cm, rx, tx);
@@ -371,6 +376,7 @@ int main(int argc, char** argv, char** envp)
 	vt.rx = cm_tx;
 	vt.brk = cm_brk;
 	vt.resize = cm_resize;
+	vt.clear_comm = cm_clear_comm;
 	vt.save_config = CFGSaveState;
 	vt.flowcontrol = vt_flowcontrol_nop;
 	vt.update_baudrate = cm_update_baudrate;

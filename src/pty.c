@@ -222,7 +222,7 @@ void PTYOpen(PTY* pty, char** argv, char** envp)
 void PTYRxString(PTY* pty, const char* s)
 {
 	for(; *s; s++) {
-		pty->rx(*s);
+		pty->rx(pty->userdata, *s);
 	}
 }
 
@@ -368,8 +368,8 @@ void PTYPoll(PTY* pty)
 
 	if(pty->rxe && pty->rx) {
 		while(pty->bufrd < pty->bufsz) {
-			if(pty->rxe()) {
-				pty->rx(pty->buf[pty->bufrd++]);
+			if(pty->rxe(pty->userdata)) {
+				pty->rx(pty->userdata, pty->buf[pty->bufrd++]);
 			} else {
 				break;
 			}
@@ -419,15 +419,15 @@ void PTYPoll(PTY* pty)
 				pty->bufsz = n;
 				pty->bufrd = 0;
 				while(pty->bufrd < pty->bufsz) {
-					if(pty->rxe()) {
-						pty->rx(pty->buf[pty->bufrd++]);
+					if(pty->rxe(pty->userdata)) {
+						pty->rx(pty->userdata, pty->buf[pty->bufrd++]);
 					} else {
 						break;
 					}
 				}
 			} else {
 				for(ssize_t i = 0; i < n; i++) {
-					pty->rx(pty->buf[i]);
+					pty->rx(pty->userdata, pty->buf[i]);
 				}
 			}
 		}
@@ -486,5 +486,10 @@ void PTYClose(PTY* pty)
 bool PTYIsAlive(PTY* pty)
 {
 	return pty->master != -1 && pty->pid != -1;
+}
+
+void PTYSetUserData(PTY* pty, void* userdata)
+{
+	pty->userdata = userdata;
 }
 #endif

@@ -20,8 +20,10 @@ typedef struct {
 	int		write_ptr;
 	int		count;
 
-	void		(*rx)(unsigned char c);
-	int		(*rxe)(void);
+	void*		userdata;
+
+	void		(*rx)(void*, unsigned char c);
+	int		(*rxe)(void*);
 } PTY;
 
 void	PTYInit(PTY* pty);
@@ -32,6 +34,7 @@ void	PTYPoll(PTY* pty);
 void	PTYResize(PTY* pty, unsigned int width, unsigned int height);
 void	PTYClose(PTY* pty);
 bool	PTYIsAlive(PTY* pty);
+void	PTYSetUserData(PTY* pty, void* userdata);
 
 void	PTYRxString(PTY* pty, const char* s);
 void	PTYRxError(PTY* pty, const char* what, const char* msg);

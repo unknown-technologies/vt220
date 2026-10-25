@@ -101,6 +101,7 @@ void VT220Init(VT220* vt)
 	vt->flowcontrol = NULL;
 	vt->resize = NULL;
 	vt->print_rx = NULL;
+	vt->clear_comm = NULL;
 	vt->update_baudrate = NULL;
 	vt->update_flowcontrol = NULL;
 	vt->update_format = NULL;
@@ -1283,6 +1284,10 @@ void VT220ClearComm(VT220* vt)
 		vt->flowcontrol(1);
 	} else if(vt->use_xoff) {
 		VT220Send(vt, DC1);
+	}
+
+	if(vt->clear_comm) {
+		vt->clear_comm();
 	}
 }
 

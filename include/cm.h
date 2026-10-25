@@ -37,6 +37,8 @@ struct CM {
 	PTY		pty;
 	TELNET		telnet;
 
+	int		osc_state;
+
 	int		visible;
 	SPF		spf;
 
@@ -61,6 +63,7 @@ void	CMConnect(CM* self, int id);
 void	CMSend(CM* self, unsigned char c);
 void	CMBreak(CM* self);
 void	CMResize(CM* self, unsigned int width, unsigned int height);
+void	CMClearComm(CM* self);
 
 void	CMSetBaudRate(CM* self, unsigned int rx_rate, unsigned int tx_rate);
 void	CMSetFlowControl(CM* self, bool enable_xoff);
@@ -84,6 +87,10 @@ void	CMLoadState(CM* cm);
 void	CMSaveState(const CM* cm);
 
 /******************************************************************************/
+void	CMInitOSCFilter(CM* self);
+void	CMResetOSCFilter(CM* self);
+void	CMOSCReceive(CM* self, unsigned char c);
+
 void	CMiInitUI(CM* self, VT220* vt);
 
 void	CMiCreateConnectionMenu(CM* self);
