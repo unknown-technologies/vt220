@@ -94,6 +94,10 @@ void SSHConnect(SSH* self, const char* hostname, int port, const char* username)
 
 void SSHDisconnect(SSH* self)
 {
+	if(self->hostkey_hash) {
+		ssh_clean_pubkey_hash(&self->hostkey_hash);
+	}
+
 	if(self->session) {
 		if(self->state != STATE_DISCONNECTED) {
 			if(self->pty) {
@@ -111,6 +115,11 @@ void SSHDisconnect(SSH* self)
 
 		SSHRxString(self, "Disconnected\r\n");
 	}
+}
+
+void SSHSetUserData(SSH* self, void* userdata)
+{
+	self->userdata = userdata;
 }
 
 void SSHRxString(SSH* self, const char* s)
@@ -146,6 +155,35 @@ void SSHSend(SSH* self, unsigned char c)
 {
 	int result;
 	switch(self->state) {
+		case STATE_SERVER_PUBKEY:
+			switch(c) {
+				case 'y':
+				case 'Y':
+					self->input_buffer[0] = 'Y';
+					SSHRxString(self, "Y\b");
+					break;
+				case 'n':
+				case 'N':
+					self->input_buffer[0] = 'N';
+					SSHRxString(self, "N\b");
+					break;
+				case CR:
+				case LF:
+					SSHRxString(self, "\r\n");
+					if(self->input_buffer[0] == 'Y') {
+						self->state = STATE_AUTH_NONE;
+						if(self->add_hostkey) {
+							self->add_hostkey(self->userdata, self->hostkey_hash,
+									self->hostkey_len);
+						}
+						ssh_clean_pubkey_hash(&self->hostkey_hash);
+					} else {
+						ssh_clean_pubkey_hash(&self->hostkey_hash);
+						SSHDisconnect(self);
+					}
+					break;
+			}
+			break;
 		case STATE_AUTH_PASS_INPUT:
 			switch(c) {
 				case VTCTRL('U'):
@@ -266,14 +304,47 @@ void SSHPoll(SSH* self)
 						SSHDisconnect(self);
 						return;
 					} else {
-						SSHRxString(self, "Server key: ");
-						for(size_t i = 0; i < hlen; i++) {
-							char buf[4];
-							sprintf(buf, "%02X", hash[i]);
-							SSHRxString(self, buf);
+						if(self->hostkey) {
+							result = self->hostkey(self->userdata, hash, hlen);
+						} else {
+							result = SSH_KNOWN_HOSTS_UNKNOWN;
 						}
-						SSHRxString(self, "\r\n");
-						ssh_clean_pubkey_hash(&hash);
+						switch(result) {
+							case SSH_KNOWN_HOSTS_OK:
+								/* the host key was accepted, no need to bother
+								 * the user */
+								self->state = STATE_AUTH_NONE;
+								ssh_clean_pubkey_hash(&hash);
+								break;
+							case SSH_KNOWN_HOSTS_CHANGED:
+								SSHRxString(self, "Server key changed. The new server key is now:\r\n");
+								for(size_t i = 0; i < hlen; i++) {
+									char buf[4];
+									sprintf(buf, "%02X", hash[i]);
+									SSHRxString(self, buf);
+								}
+								SSHRxString(self, "\r\nFor security reasons, the connection will be terminated.\r\n");
+								ssh_clean_pubkey_hash(&hash);
+								SSHDisconnect(self);
+								return;
+							case SSH_KNOWN_HOSTS_OTHER:
+							case SSH_KNOWN_HOSTS_NOT_FOUND:
+							case SSH_KNOWN_HOSTS_UNKNOWN:
+								/* host key was not accepted or there is no hostkey function,
+								 * ask the user what to do */
+								SSHRxString(self, "The server is unknown. Carefully check the host key hash.\r\n");
+								SSHRxString(self, "Host key hash: ");
+								for(size_t i = 0; i < hlen; i++) {
+									char buf[4];
+									sprintf(buf, "%02X", hash[i]);
+									SSHRxString(self, buf);
+								}
+								SSHRxString(self, "\r\nTrust host? [N]\b\b");
+								memset(self->input_buffer, 0, BUFFER_SIZE);
+								self->hostkey_hash = hash;
+								self->hostkey_len = hlen;
+								break;
+						}
 					}
 					ssh_key_free(key);
 				}
@@ -282,7 +353,6 @@ void SSHPoll(SSH* self)
 			break;
 		case STATE_SERVER_PUBKEY:
 			/* we wait here until we are allowed to proceed */
-			self->state = STATE_AUTH_NONE;
 			break;
 		case STATE_AUTH_NONE:
 			result = ssh_userauth_none(self->session, NULL);

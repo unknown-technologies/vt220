@@ -24,14 +24,22 @@ typedef struct {
 	unsigned int	bufsz;
 	unsigned int	bufrd;
 
+	void*		userdata;
+
+	unsigned char*	hostkey_hash;
+	size_t		hostkey_len;
+
 	void		(*rx)(unsigned char c);
 	int		(*rxe)(void);
+	BOOL		(*hostkey)(void* userdata, unsigned char* key, int len);
+	void		(*add_hostkey)(void* userdata, unsigned char* key, int len);
 } SSH;
 
 void	SSHInit(SSH* self);
 void	SSHDestroy(SSH* self);
 void	SSHConnect(SSH* self, const char* hostname, int port, const char* username);
 void	SSHDisconnect(SSH* self);
+void	SSHSetUserData(SSH* self, void* userdata);
 
 void	SSHSend(SSH* self, unsigned char c);
 void	SSHBreak(SSH* self);

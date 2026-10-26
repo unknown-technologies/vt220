@@ -123,6 +123,10 @@ void CMConnectionCustomizationMenuEnter(SPFPanel* self)
 
 	if((this->input[0] == 'c' || this->input[0] == 'C') && !this->input[1]) {
 		/* create new connection */
+		if(cm->mode != CM_MODE_NONE) {
+			SPFPrintAt(self, 20, 2, "Cannot create new connections while connected", 0);
+			return;
+		}
 		if(cm->connections_cnt >= cm->connections_max) {
 			SPFPrintAt(self, 20, 2, "Cannot create any more connections", 0);
 			return;

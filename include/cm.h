@@ -20,6 +20,8 @@
 
 #define	CM_NONE		-1
 
+#define	CM_HAS_HOSTKEY	_BV(0)
+
 typedef struct {
 	u16		port;
 	u16		status;
@@ -27,6 +29,7 @@ typedef struct {
 	char		name[25];
 	char		target[134];
 	char		username[64];
+	unsigned char	hostkey[32];
 } CMCONN;
 
 typedef struct CM CM;
@@ -43,6 +46,8 @@ struct CM {
 
 	int		visible;
 	SPF		spf;
+
+	int		current_connection;
 
 	CMCONN*		connections;
 	int		connections_cnt;

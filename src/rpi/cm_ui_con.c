@@ -175,20 +175,55 @@ void CMConnectionEditMenuDraw(SPFPanel* self)
 {
 	CM* cm = (CM*) SPFGetUserData(SPFGet(self));
 	CMConnectionEditMenu* this = (CMConnectionEditMenu*) SPFGetPanelUserData(self);
+	CMCONN* con = &cm->connections[this->id];
 
 	SPFPrintAt(self, 1, 2, "Connection ID=", 0);
 	SPFPrintNumber(self, this->id + 1, 3, 0, 0);
 
-	int onethird = SPFGetWidth(self) / 3;
-	int twothirds = SPFGetWidth(self) * 2 / 3;
+	if(con->mode == CM_MODE_SSH) {
+		SPFPrintAt(self, 9, 2, "Key:", 0);
+		if(con->status & CM_HAS_HOSTKEY) {
+			char buf[65];
+			for(int i = 0; i < 32; i++) {
+				unsigned char c = con->hostkey[i];
+				char a = c >> 4;
+				if(a < 10) {
+					a += '0';
+				} else {
+					a += 'A' - 10;
+				}
+				char b = c & 0x0F;
+				if(b < 10) {
+					b += '0';
+				} else {
+					b += 'A' - 10;
+				}
+				buf[2 * i + 0] = a;
+				buf[2 * i + 1] = b;
+			}
+			buf[64] = 0;
+			SPFFieldAt(self, 9, 10, buf, 64, SGR_UNDERSCORE);
+		} else {
+			SPFFieldAt(self, 9, 10, "<not set>", 64, SGR_UNDERSCORE);
+		}
+	}
+
+	int onequarter = SPFGetWidth(self) / 4;
+	int twoquarters = SPFGetWidth(self) * 2 / 4;
+	int threequarters = SPFGetWidth(self) * 3 / 4;
 
 	SPFPrintAt(self, 21, 2, "F4=End", 0);
 	if(CMGetAutoConnect(cm) == this->id) {
-		SPFPrintAt(self, 21, onethird - 11, "F10=Unmark Autoconnect", 0);
+		SPFPrintAt(self, 21, onequarter - 11, "F9=Unmark Autoconnect", 0);
 	} else {
-		SPFPrintAt(self, 21, onethird - 10, "F10=Mark Autoconnect", 0);
+		SPFPrintAt(self, 21, onequarter - 10, "F9=Mark Autoconnect", 0);
 	}
-	SPFPrintAt(self, 21, twothirds - 5, "F11=Delete", 0);
+	if(cm->mode == CM_MODE_NONE) {
+		SPFPrintAt(self, 21, twoquarters - 5, "F10=Delete", 0);
+	}
+	if(con->mode == CM_MODE_SSH && (con->status & CM_HAS_HOSTKEY)) {
+		SPFPrintAt(self, 21, threequarters - 7, "F11=Clear Key", 0);
+	}
 	SPFPrintAt(self, 21, SPFGetWidth(self) - 8, "F12=Back", 0);
 }
 
@@ -196,9 +231,10 @@ void CMConnectionEditMenuProcess(SPFPanel* self, u16 key)
 {
 	CM* cm = (CM*) SPFGetUserData(SPFGet(self));
 	CMConnectionEditMenu* this = (CMConnectionEditMenu*) SPFGetPanelUserData(self);
+	CMCONN* con = &cm->connections[this->id];
 
 	switch(key) {
-		case VT220_KEY_F10:
+		case VT220_KEY_F9:
 			if(CMGetAutoConnect(cm) == this->id) {
 				CMSetAutoConnect(cm, CM_NONE);
 			} else {
@@ -206,12 +242,21 @@ void CMConnectionEditMenuProcess(SPFPanel* self, u16 key)
 			}
 			SPFRepaint(SPFGet(self));
 			break;
-		case VT220_KEY_F11: {
-			int id = this->id;
-			SPFDestroyPanel(self);
-			CMDeleteConnection(cm, id);
+		case VT220_KEY_F10: {
+			if(cm->mode == CM_MODE_NONE) {
+				int id = this->id;
+				SPFDestroyPanel(self);
+				CMDeleteConnection(cm, id);
+			}
 			break;
 		}
+		case VT220_KEY_F11:
+			if(con->mode == CM_MODE_SSH && (con->status & CM_HAS_HOSTKEY)) {
+				con->status &= ~CM_HAS_HOSTKEY;
+				memset(con->hostkey, 0, sizeof(con->hostkey));
+				SPFRepaint(SPFGet(self));
+			}
+			break;
 		case VT220_KEY_F12:
 			SPFDestroyPanel(self);
 			break;

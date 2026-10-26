@@ -1,6 +1,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <libssh/libssh.h>
 
 #include "cm.h"
 #include "tty.h"
@@ -16,6 +17,39 @@ static int CMPTYRXE(void* ptr)
 	} else {
 		return 0;
 	}
+}
+
+static int CMHostKeyCheck(void* ptr, unsigned char* hostkey, int len)
+{
+	ASSERT(ptr);
+	CM* self = (CM*) ptr;
+	CMCONN* con = &self->connections[self->current_connection];
+	ASSERT(con->mode == CM_MODE_SSH);
+	if(!(con->status & CM_HAS_HOSTKEY)) {
+		return SSH_KNOWN_HOSTS_UNKNOWN;
+	} else if(len != 32) {
+		return SSH_KNOWN_HOSTS_OTHER;
+	} else if(!memcmp(con->hostkey, hostkey, len)) {
+		return SSH_KNOWN_HOSTS_OK;
+	} else {
+		return SSH_KNOWN_HOSTS_CHANGED;
+	}
+}
+
+static void CMHostKeyAdd(void* ptr, unsigned char* hostkey, int len)
+{
+	ASSERT(ptr);
+	CM* self = (CM*) ptr;
+	CMCONN* con = &self->connections[self->current_connection];
+	ASSERT(con->mode == CM_MODE_SSH);
+	if(len != 32) {
+		return;
+	}
+	memcpy(con->hostkey, hostkey, len);
+	con->status |= CM_HAS_HOSTKEY;
+
+	/* important: save the new host key to disk */
+	CMSaveState(self);
 }
 
 void CMInit(CM* self, VT220* vt, char** envp)
@@ -43,6 +77,10 @@ void CMInit(CM* self, VT220* vt, char** envp)
 	PTYSetUserData(&self->pty, (void*) self);
 	self->pty.rx = (void (*)(void*, unsigned char)) CMOSCReceive;
 	self->pty.rxe = CMPTYRXE;
+
+	SSHSetUserData(&self->ssh, (void*) self);
+	self->ssh.hostkey = CMHostKeyCheck;
+	self->ssh.add_hostkey = CMHostKeyAdd;
 
 	CMiInitUI(self, vt);
 	CMInitOSCFilter(self);
@@ -221,6 +259,8 @@ void CMConnect(CM* self, int id)
 	VT220* vt = SPFGetVT(&self->spf);
 
 	CMDisconnect(self);
+
+	self->current_connection = id;
 
 	switch(con->mode) {
 		case CM_MODE_PTY: {
