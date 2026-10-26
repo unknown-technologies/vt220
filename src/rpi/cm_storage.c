@@ -108,7 +108,8 @@ void CMLoadState(CM* cm)
 					CMSetAutoConnect(cm, hdr.autoconnect);
 				}
 			} else {
-				printf("[CM] failed to read config file: %s\n", strerror(errno));
+				printf("[CM] failed to read config file\n");
+				free(conns);
 			}
 		}
 	} else {
