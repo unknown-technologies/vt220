@@ -5138,6 +5138,10 @@ void VT220LoadDefaults(VT220* vt)
 	vt->config.local_echo = VT220_NO_LOCAL_ECHO;
 	vt->config.auto_repeat = VT220_AUTO_REPEAT;
 
+#ifdef RPI
+	vt->config.keyboard = VT220_KEYBOARD_NORTH_AMERICAN;
+#endif
+
 	memset(vt->config.tabstops, 0x80, sizeof(vt->config.tabstops));
 
 	VT220iHardReset(vt, &vt->config);

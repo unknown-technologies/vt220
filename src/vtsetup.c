@@ -2101,6 +2101,11 @@ void VT220SetupDirectoryEnter(VT220* vt)
 					break;
 				case 1: /* Keyboard language */
 					vt->config.keyboard = (vt->config.keyboard + 1) % VT220_KEYBOARD_COUNT;
+#ifdef RPI
+					if(vt->config.keyboard == VT220_KEYBOARD_UNKNOWN) {
+						vt->config.keyboard = VT220_KEYBOARD_NORTH_AMERICAN;
+					}
+#endif
 					VT220SetupShow(vt);
 					break;
 				case 2: /* Defaults */
