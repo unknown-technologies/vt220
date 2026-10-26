@@ -69,6 +69,7 @@ void SSHConnect(SSH* self, const char* hostname, int port, const char* username)
 
 	int nodelay = 1;
 	int timeout = 10;
+	int config = 0;
 
 	ssh_options_set(self->session, SSH_OPTIONS_HOST, hostname);
 	ssh_options_set(self->session, SSH_OPTIONS_PORT, &port);
@@ -76,6 +77,11 @@ void SSHConnect(SSH* self, const char* hostname, int port, const char* username)
 	ssh_options_set(self->session, SSH_OPTIONS_NODELAY, &nodelay);
 	ssh_options_set(self->session, SSH_OPTIONS_ADDRESS_FAMILY, SSH_ADDRESS_FAMILY_ANY);
 	ssh_options_set(self->session, SSH_OPTIONS_TIMEOUT, &timeout);
+	ssh_options_set(self->session, SSH_OPTIONS_PROCESS_CONFIG, &config);
+#ifdef DEBUG
+	int verbosity = SSH_LOG_PROTOCOL;
+	ssh_options_set(self->session, SSH_OPTIONS_LOG_VERBOSITY, &verbosity);
+#endif
 	ssh_set_blocking(self->session, 0);
 
 	self->state = STATE_CONNECTING;
