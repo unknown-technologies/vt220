@@ -53,6 +53,17 @@ void SPFDraw(SPF* self)
 
 	SPFPanel* panel = SPFGetCurrentPanel(self);
 	if(panel) {
+		if(SPFIsDialog(panel)) {
+			/* draw all panels below this one first */
+			for(int i = 0; i < self->current_panel; i++) {
+				/* clear title line again */
+				SPFScreenSetOffset(self, 0, 0);
+				SPFScreenGoto(self, 1, 1);
+				SPFScreenFill(self, 0x20, self->vt->columns, 0);
+				SPFDrawPanel(&self->panels[i]);
+			}
+		}
+
 		SPFDrawPanel(panel);
 	}
 }
@@ -75,7 +86,7 @@ void SPFProcessKey(SPF* self, u16 key)
 		return;
 	}
 
-	SPFScreenSetOffset(self, 2, 0);
+	SPFSetPanelOffset(panel);
 
 	BOOL done = FALSE;
 	if(!done && panel->widgets && panel->focus) {
@@ -101,9 +112,11 @@ void SPFResize(SPF* self, int width, int height)
 
 	for(int i = 0; i <= self->current_panel; i++) {
 		SPFPanel* panel = &self->panels[i];
-		SPFSetSize(panel, height - 2, width);
-		if(panel->proto->resize) {
-			panel->proto->resize(panel, width, height - 2);
+		if(!SPFIsDialog(panel)) {
+			SPFSetSize(panel, height - 2, width);
+			if(panel->proto->resize) {
+				panel->proto->resize(panel, width, height - 2);
+			}
 		}
 	}
 

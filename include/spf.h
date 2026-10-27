@@ -7,15 +7,15 @@
 #include "vt.h"
 #include "renderer.h"
 
-#define	VTCTRL(x)	((x) - 0x40)
+#define	VTCTRL(x)		((x) - 0x40)
 
-#define	SPF_MAX_PANELS	8
+#define	SPF_MAX_PANELS		8
 
-#define	SPF_FLAG_ACTIVE	_BV(0)
-#define	SPF_FLAG_CURSOR	_BV(1)
-#define	SPF_FLAG_OPAQUE	_BV(2)
-#define	SPF_FLAG_DIALOG	_BV(3)
-#define	SPF_FLAG_DESTROY _BV(4)
+#define	SPF_FLAG_ACTIVE		_BV(0)
+#define	SPF_FLAG_CURSOR		_BV(1)
+#define	SPF_FLAG_OPAQUE		_BV(2)
+#define	SPF_FLAG_DIALOG		_BV(3)
+#define	SPF_FLAG_DESTROY	_BV(4)
 
 #define SPF_WIDGET_CHECKBOX	0
 #define SPF_WIDGET_INPUT_STR	1
@@ -143,6 +143,7 @@ SPFPanel* SPFCreatePanel(SPF* self, const SPFPanelDefinition* panel);
 void	SPFDestroyPanel(SPFPanel* self);
 void	SPFDrawPanel(SPFPanel* self);
 void	SPFSetWidgets(SPFPanel* self, SPFWidget** widgets);
+void	SPFSetPanelOffset(SPFPanel* self);
 
 
 /******************************************************************************/
@@ -221,6 +222,13 @@ static inline const char* SPFGetCurrentPanelTitle(SPF* self)
 	} else {
 		return NULL;
 	}
+}
+
+static inline const char* SPFGetPanelTitle(SPFPanel* self)
+{
+	ASSERT(self);
+
+	return self->title;
 }
 
 static inline void SPFSetPanelTitle(SPFPanel* self, const char* title)

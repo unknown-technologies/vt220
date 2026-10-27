@@ -105,5 +105,6 @@ void	CMiCreateSetupMenu(CM* self);
 void	CMiCreateDiagnosticsMenu(CM* self);
 void	CMiCreateConnectionCustomizationMenu(CM* self);
 void	CMiCreateConnectionEditMenu(CM* self, int id);
+void	CMiCreateMessageBox(CM* self, const char* title, const char* message, void (*callback)(void*, BOOL), void* userdata);
 
 #endif

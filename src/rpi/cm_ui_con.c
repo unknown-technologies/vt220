@@ -227,6 +227,37 @@ void CMConnectionEditMenuDraw(SPFPanel* self)
 	SPFPrintAt(self, 21, SPFGetWidth(self) - 8, "F12=Back", 0);
 }
 
+static void CMiConnectionEditMenuDelete(void* ptr, BOOL confirm)
+{
+	if(!confirm) {
+		return;
+	}
+
+	SPFPanel* self = (SPFPanel*) ptr;
+	CM* cm = (CM*) SPFGetUserData(SPFGet(self));
+	CMConnectionEditMenu* this = (CMConnectionEditMenu*) SPFGetPanelUserData(self);
+
+	int id = this->id;
+	SPFDestroyPanel(self);
+	CMDeleteConnection(cm, id);
+}
+
+static void CMiConnectionEditMenuDeleteKey(void* ptr, BOOL confirm)
+{
+	if(!confirm) {
+		return;
+	}
+
+	SPFPanel* self = (SPFPanel*) ptr;
+	CM* cm = (CM*) SPFGetUserData(SPFGet(self));
+	CMConnectionEditMenu* this = (CMConnectionEditMenu*) SPFGetPanelUserData(self);
+	CMCONN* con = &cm->connections[this->id];
+
+	con->status &= ~CM_HAS_HOSTKEY;
+	memset(con->hostkey, 0, sizeof(con->hostkey));
+	SPFRepaint(SPFGet(self));
+}
+
 void CMConnectionEditMenuProcess(SPFPanel* self, u16 key)
 {
 	CM* cm = (CM*) SPFGetUserData(SPFGet(self));
@@ -244,17 +275,15 @@ void CMConnectionEditMenuProcess(SPFPanel* self, u16 key)
 			break;
 		case VT220_KEY_F10: {
 			if(cm->mode == CM_MODE_NONE) {
-				int id = this->id;
-				SPFDestroyPanel(self);
-				CMDeleteConnection(cm, id);
+				CMiCreateMessageBox(cm, "Confirm", "Do you really want to delete this connection (Y/N)?",
+						CMiConnectionEditMenuDelete, self);
 			}
 			break;
 		}
 		case VT220_KEY_F11:
 			if(con->mode == CM_MODE_SSH && (con->status & CM_HAS_HOSTKEY)) {
-				con->status &= ~CM_HAS_HOSTKEY;
-				memset(con->hostkey, 0, sizeof(con->hostkey));
-				SPFRepaint(SPFGet(self));
+				CMiCreateMessageBox(cm, "Confirm", "Do you really want to delete the host key (Y/N)?",
+						CMiConnectionEditMenuDeleteKey, self);
 			}
 			break;
 		case VT220_KEY_F12:
