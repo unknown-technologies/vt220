@@ -246,6 +246,9 @@ void PTYEnqueueTX(PTY* pty, unsigned char c)
 {
 	if(pty->count >= PTY_TX_BUFFER_SIZE) {
 		/* the TX buffer is full; drop this byte */
+#ifdef DEBUG
+		printf("[PTY] TX buffer full, dropping c=0x%02X\n", c);
+#endif
 		return;
 	}
 
