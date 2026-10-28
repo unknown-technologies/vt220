@@ -199,10 +199,15 @@ void TELNETDestroy(TELNET* telnet)
 	free(telnet->rxbuf);
 }
 
+void TELNETSetUserData(TELNET* telnet, void* userdata)
+{
+	telnet->userdata = userdata;
+}
+
 void TELNETRxString(TELNET* telnet, const char* s)
 {
 	for(; *s; s++) {
-		telnet->rx(*s);
+		telnet->rx(telnet->userdata, *s);
 	}
 }
 
@@ -630,7 +635,7 @@ void TELNETProcess(TELNET* telnet, unsigned char c)
 					telnet->state = STATE_IAC;
 					break;
 				default:
-					telnet->rx(c);
+					telnet->rx(telnet->userdata, c);
 					break;
 			}
 			break;
@@ -638,7 +643,7 @@ void TELNETProcess(TELNET* telnet, unsigned char c)
 			switch(c) {
 				case IAC:
 					telnet->state = STATE_TEXT;
-					telnet->rx(c);
+					telnet->rx(telnet->userdata, c);
 					break;
 				case WILL:
 					telnet->state = STATE_WILL;
@@ -760,7 +765,7 @@ void TELNETPoll(TELNET* telnet)
 {
 	if(telnet->rxe && telnet->rx) {
 		while(telnet->bufrd < telnet->bufsz) {
-			if(telnet->rxe()) {
+			if(telnet->rxe(telnet->userdata)) {
 				TELNETProcess(telnet, telnet->rxbuf[telnet->bufrd++]);
 			} else {
 				break;
@@ -809,7 +814,7 @@ void TELNETPoll(TELNET* telnet)
 		telnet->bufsz = n;
 		telnet->bufrd = 0;
 		while(telnet->bufrd < telnet->bufsz) {
-			if(telnet->rxe()) {
+			if(telnet->rxe(telnet->userdata)) {
 				TELNETProcess(telnet, telnet->rxbuf[telnet->bufrd++]);
 			} else {
 				break;

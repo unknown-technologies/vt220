@@ -389,13 +389,15 @@ void display_func(void)
 	GL_ERROR();
 }
 
-static void vt_rx(unsigned char c)
+static void vt_rx(void* ptr, unsigned char c)
 {
+	(void) ptr;
 	VT220Receive(&vt, c);
 }
 
-static int vt_rxe(void)
+static int vt_rxe(void* ptr)
 {
+	(void) ptr;
 	return VT220CanReceive(&vt);
 }
 

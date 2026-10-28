@@ -41,8 +41,9 @@ typedef struct {
 	unsigned int	fmt_stop;
 	unsigned int	fmt_parity;
 
-	void		(*rx)(unsigned char c);
-	int		(*rxe)(void);
+	void*		userdata;
+	void		(*rx)(void* userdata, unsigned char c);
+	int		(*rxe)(void* userdata);
 } TTY;
 
 void	TTYInit(TTY* tty);
@@ -52,6 +53,7 @@ void	TTYBreak(TTY* tty);
 void	TTYPoll(TTY* tty);
 void	TTYResize(TTY* tty, unsigned int width, unsigned int height);
 void	TTYClose(TTY* tty);
+void	TTYSetUserData(TTY* tty, void* userdata);
 
 void	TTYSetBaudRate(TTY* tty, unsigned int rx_rate, unsigned int tx_rate);
 void	TTYSetFlowControl(TTY* tty, bool enable_xoff);

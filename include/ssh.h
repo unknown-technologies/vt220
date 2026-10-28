@@ -29,8 +29,8 @@ typedef struct {
 	unsigned char*	hostkey_hash;
 	size_t		hostkey_len;
 
-	void		(*rx)(unsigned char c);
-	int		(*rxe)(void);
+	void		(*rx)(void* userdata, unsigned char c);
+	int		(*rxe)(void* userdata);
 	BOOL		(*hostkey)(void* userdata, unsigned char* key, int len);
 	void		(*add_hostkey)(void* userdata, unsigned char* key, int len);
 } SSH;

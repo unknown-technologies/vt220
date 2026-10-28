@@ -386,8 +386,6 @@ int main(int argc, char** argv, char** envp)
 	vt.datatalk = cm_datatalk;
 	vt.disconnect = cm_disconnect;
 
-	CMUpdateHandlers(&cm);
-
 	CFGLoadState(&vt);
 
 	VT220ShowInitScreen(&vt);

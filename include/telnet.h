@@ -30,8 +30,9 @@ typedef struct {
 	unsigned int	bufsz;
 	unsigned int	bufrd;
 
-	void		(*rx)(unsigned char c);
-	int		(*rxe)(void);
+	void*		userdata;
+	void		(*rx)(void* userdata, unsigned char c);
+	int		(*rxe)(void* userdata);
 } TELNET;
 
 void TELNETInit(TELNET* telnet);
@@ -39,6 +40,7 @@ void TELNETDestroy(TELNET* telnet);
 void TELNETConnect(TELNET* telnet, const char* hostname, int port);
 void TELNETConnectTo(TELNET* telnet, struct sockaddr* target, int addr_size);
 void TELNETDisconnect(TELNET* telnet);
+void TELNETSetUserData(TELNET* telnet, void* userdata);
 void TELNETSend(TELNET* telnet, unsigned char c);
 void TELNETBreak(TELNET* telnet);
 void TELNETResize(TELNET* telnet, unsigned int width, unsigned int height);

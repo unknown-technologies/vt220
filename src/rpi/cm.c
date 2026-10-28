@@ -9,7 +9,7 @@
 #include "ssh.h"
 #include "telnet.h"
 
-static int CMPTYRXE(void* ptr)
+static int CMRXE(void* ptr)
 {
 	CM* self = (CM*) ptr;
 	if(self->rxe) {
@@ -19,13 +19,19 @@ static int CMPTYRXE(void* ptr)
 	}
 }
 
+static void CMRX(void* ptr, unsigned char c)
+{
+	CM* self = (CM*) ptr;
+	CMOSCReceive(self, c);
+}
+
 static int CMHostKeyCheck(void* ptr, unsigned char* hostkey, int len)
 {
 	ASSERT(ptr);
 	CM* self = (CM*) ptr;
 	CMCONN* con = &self->connections[self->current_connection];
 	ASSERT(con->mode == CM_MODE_SSH);
-	if(!(con->status & CM_HAS_HOSTKEY)) {
+	if(!(con->flags & CM_HAS_HOSTKEY)) {
 		return SSH_KNOWN_HOSTS_UNKNOWN;
 	} else if(len != 32) {
 		return SSH_KNOWN_HOSTS_OTHER;
@@ -46,7 +52,7 @@ static void CMHostKeyAdd(void* ptr, unsigned char* hostkey, int len)
 		return;
 	}
 	memcpy(con->hostkey, hostkey, len);
-	con->status |= CM_HAS_HOSTKEY;
+	con->flags |= CM_HAS_HOSTKEY;
 
 	/* important: save the new host key to disk */
 	CMSaveState(self);
@@ -75,10 +81,20 @@ void CMInit(CM* self, VT220* vt, char** envp)
 	strcpy(self->connections[0].name, "LOCAL SHELL");
 
 	PTYSetUserData(&self->pty, (void*) self);
-	self->pty.rx = (void (*)(void*, unsigned char)) CMOSCReceive;
-	self->pty.rxe = CMPTYRXE;
+	self->pty.rx = CMRX;
+	self->pty.rxe = CMRXE;
+
+	TTYSetUserData(&self->tty, (void*) self);
+	self->tty.rx = CMRX;
+	self->tty.rxe = CMRXE;
+
+	TELNETSetUserData(&self->telnet, (void*) self);
+	self->telnet.rx = CMRX;
+	self->telnet.rxe = CMRXE;
 
 	SSHSetUserData(&self->ssh, (void*) self);
+	self->ssh.rx = CMRX;
+	self->ssh.rxe = CMRXE;
 	self->ssh.hostkey = CMHostKeyCheck;
 	self->ssh.add_hostkey = CMHostKeyAdd;
 
@@ -96,16 +112,6 @@ void CMDestroy(CM* self)
 	TELNETDestroy(&self->telnet);
 
 	SPFDestroy(&self->spf);
-}
-
-void CMUpdateHandlers(CM* self)
-{
-	self->tty.rx = self->rx;
-	self->tty.rxe = self->rxe;
-	self->telnet.rx = self->rx;
-	self->telnet.rxe = self->rxe;
-	self->ssh.rx = self->rx;
-	self->ssh.rxe = self->rxe;
 }
 
 void CMDisconnect(CM* self)
@@ -205,6 +211,7 @@ void CMResize(CM* self, unsigned int width, unsigned int height)
 void CMClearComm(CM* self)
 {
 	CMResetOSCFilter(self);
+	CMResetUTF8(self);
 }
 
 void CMSetBaudRate(CM* self, unsigned int rx_rate, unsigned int tx_rate)
@@ -262,6 +269,12 @@ void CMConnect(CM* self, int id)
 
 	self->current_connection = id;
 
+	CMResetUTF8(self);
+	CMSetUTF8Enabled(self, !!(con->flags & CM_FLAG_UTF8));
+
+	CMResetOSCFilter(self);
+	CMSetOSCEnabled(self, !!(con->flags & CM_FLAG_OSC));
+
 	switch(con->mode) {
 		case CM_MODE_PTY: {
 			char* argv_agetty[] = { "/bin/agetty", "-8", "-s", "--local-line", "--noreset", "--noclear", "-",
@@ -278,7 +291,6 @@ void CMConnect(CM* self, int id)
 
 			self->mode = CM_MODE_PTY;
 
-			CMResetOSCFilter(self);
 			VT220CursorHome(vt);
 			VT220EraseScreen(vt);
 			VT220SaveCursor(vt);

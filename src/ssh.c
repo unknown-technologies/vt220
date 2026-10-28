@@ -125,7 +125,7 @@ void SSHSetUserData(SSH* self, void* userdata)
 void SSHRxString(SSH* self, const char* s)
 {
 	for(; *s; s++) {
-		self->rx(*s);
+		self->rx(self->userdata, *s);
 	}
 }
 
@@ -133,10 +133,10 @@ void SSHRxUnixString(SSH* self, const char* s)
 {
 	for(; *s; s++) {
 		if(*s == '\n') {
-			self->rx('\r');
-			self->rx('\n');
+			self->rx(self->userdata, '\r');
+			self->rx(self->userdata, '\n');
 		} else {
-			self->rx(*s);
+			self->rx(self->userdata, *s);
 		}
 	}
 }
@@ -259,8 +259,8 @@ void SSHPoll(SSH* self)
 {
 	if(self->rxe && self->rx) {
 		while(self->bufrd < self->bufsz) {
-			if(self->rxe()) {
-				self->rx(self->rxbuf[self->bufrd++]);
+			if(self->rxe(self->userdata)) {
+				self->rx(self->userdata, self->rxbuf[self->bufrd++]);
 			} else {
 				break;
 			}
@@ -519,8 +519,8 @@ void SSHPoll(SSH* self)
 							self->bufsz = result;
 							self->bufrd = 0;
 							while(self->bufrd < self->bufsz) {
-								if(self->rxe()) {
-									self->rx(self->rxbuf[self->bufrd++]);
+								if(self->rxe(self->userdata)) {
+									self->rx(self->userdata, self->rxbuf[self->bufrd++]);
 								} else {
 									break;
 								}

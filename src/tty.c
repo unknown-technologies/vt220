@@ -265,10 +265,15 @@ void TTYSetFormat(TTY* tty, unsigned int data, unsigned int stop, unsigned int p
 	TTYiSetFormat(tty, data, stop, parity);
 }
 
+void TTYSetUserData(TTY* tty, void* userdata)
+{
+	tty->userdata = userdata;
+}
+
 void TTYRxString(TTY* tty, const char* s)
 {
 	for(; *s; s++) {
-		tty->rx(*s);
+		tty->rx(tty->userdata, *s);
 	}
 }
 
@@ -387,8 +392,8 @@ void TTYPoll(TTY* tty)
 
 	if(tty->rxe && tty->rx) {
 		while(tty->bufrd < tty->bufsz) {
-			if(tty->rxe()) {
-				tty->rx(tty->buf[tty->bufrd++]);
+			if(tty->rxe(tty->userdata)) {
+				tty->rx(tty->userdata, tty->buf[tty->bufrd++]);
 			} else {
 				break;
 			}
@@ -433,15 +438,15 @@ void TTYPoll(TTY* tty)
 				tty->bufsz = n;
 				tty->bufrd = 0;
 				while(tty->bufrd < tty->bufsz) {
-					if(tty->rxe()) {
-						tty->rx(tty->buf[tty->bufrd++]);
+					if(tty->rxe(tty->userdata)) {
+						tty->rx(tty->userdata, tty->buf[tty->bufrd++]);
 					} else {
 						break;
 					}
 				}
 			} else {
 				for(ssize_t i = 0; i < n; i++) {
-					tty->rx(tty->buf[i]);
+					tty->rx(tty->userdata, tty->buf[i]);
 				}
 			}
 		}

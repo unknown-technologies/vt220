@@ -1,10 +1,6 @@
-#include <string.h>
-#include <stdlib.h>
-#include <unistd.h>
-
 #include "cm.h"
-#include "pty.h"
 
+#define	STATE_BYPASS	-1
 #define	STATE_NORMAL	0
 #define	STATE_ESC	1
 #define	STATE_OSC	2
@@ -33,36 +29,49 @@
 
 void CMInitOSCFilter(CM* self)
 {
-	CMResetOSCFilter(self);
+	self->osc_state = STATE_BYPASS;
 }
 
 void CMResetOSCFilter(CM* self)
 {
-	self->osc_state = STATE_NORMAL;
+	if(self->osc_state != STATE_BYPASS) {
+		self->osc_state = STATE_NORMAL;
+	}
+}
+
+void CMSetOSCEnabled(CM* self, BOOL enabled)
+{
+	if(enabled) {
+		self->osc_state = STATE_NORMAL;
+	} else {
+		self->osc_state = STATE_BYPASS;
+	}
 }
 
 void CMOSCReceive(CM* self, unsigned char c)
 {
 	switch(self->osc_state) {
+		case STATE_BYPASS:
+			CMUTF8Receive(self, c);
+			break;
 		case STATE_NORMAL:
 			if(c == ESC) {
 				self->osc_state = STATE_ESC;
-			} else if(c == OSC) {
+			} else if(c == OSC && self->utf8_state == -1) {
+				/* C1 codes must not be recognized in UTF-8 mode */
 				self->osc_state = STATE_OSC;
-			} else if(self->rx) {
-				self->rx(c);
+			} else {
+				CMUTF8Receive(self, c);
 			}
 			break;
 		case STATE_ESC:
 			if(c == ESC) {
-				if(self->rx) {
-					self->rx(c);
-				}
+				CMUTF8Receive(self, c);
 			} else if(c == ']') {
 				self->osc_state = STATE_OSC;
 			} else if(self->rx) {
-				self->rx(ESC);
-				self->rx(c);
+				CMUTF8Receive(self, ESC);
+				CMUTF8Receive(self, c);
 				self->osc_state = STATE_NORMAL;
 			}
 			break;

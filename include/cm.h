@@ -21,10 +21,12 @@
 #define	CM_NONE		-1
 
 #define	CM_HAS_HOSTKEY	_BV(0)
+#define	CM_FLAG_OSC	_BV(1)
+#define	CM_FLAG_UTF8	_BV(2)
 
 typedef struct {
 	u16		port;
-	u16		status;
+	u16		flags;
 	unsigned char	mode;
 	char		name[25];
 	char		target[134];
@@ -43,6 +45,8 @@ struct CM {
 	TELNET		telnet;
 
 	int		osc_state;
+	int		utf8_state;
+	u32		utf8_char;
 
 	int		visible;
 	SPF		spf;
@@ -60,7 +64,6 @@ struct CM {
 
 void	CMInit(CM* self, VT220* vt, char** envp);
 void	CMDestroy(CM* self);
-void	CMUpdateHandlers(CM* self);
 void	CMDisconnect(CM* self);
 void	CMPoll(CM* self);
 void	CMProcess(CM* self);
@@ -96,7 +99,12 @@ void	CMSaveState(const CM* cm);
 /******************************************************************************/
 void	CMInitOSCFilter(CM* self);
 void	CMResetOSCFilter(CM* self);
+void	CMSetOSCEnabled(CM* self, BOOL enabled);
 void	CMOSCReceive(CM* self, unsigned char c);
+
+void	CMResetUTF8(CM* self);
+void	CMSetUTF8Enabled(CM* self, BOOL enabled);
+void	CMUTF8Receive(CM* self, unsigned char c);
 
 void	CMiInitUI(CM* self, VT220* vt);
 
