@@ -37,6 +37,11 @@ void CMSetUTF8Enabled(CM* self, BOOL enabled)
 	}
 }
 
+BOOL CMIsUTF8Enabled(CM* self)
+{
+	return self->utf8_state != STATE_BYPASS;
+}
+
 static inline void CMiFinishUTF8(CM* self)
 {
 	u32 utf8_value = self->utf8_char;
@@ -377,5 +382,39 @@ void CMUTF8Receive(CM* self, unsigned char c)
 				self->rx(SUB);
 			}
 		}
+	}
+}
+
+void CMUTF8Transmit(CM* self, unsigned char c)
+{
+	u16 result;
+	switch(c) {
+		case 0xA8:
+			result = 0xA4;
+			break;
+		case 0xD7:
+			result = 0x152;
+			break;
+		case 0xDD:
+			result = 0x178;
+			break;
+		case 0xF7:
+			result = 0x153;
+			break;
+		case 0xFD:
+			result = 0xFF;
+			break;
+		default:
+			result = c;
+			break;
+	}
+
+	if(result < 0x80) {
+		CMiSend(self, result);
+	} else {
+		unsigned char high = (result >> 6) | 0xC0;
+		unsigned char low = (result & 0x3F) | 0x80;
+		CMiSend(self, high);
+		CMiSend(self, low);
 	}
 }

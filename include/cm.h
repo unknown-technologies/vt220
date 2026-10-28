@@ -93,10 +93,12 @@ void	CMSetAutoConnect(CM* self, int id);
 int	CMGetAutoConnect(CM* self);
 void	CMAutoConnect(CM* self);
 
-void	CMLoadState(CM* cm);
-void	CMSaveState(const CM* cm);
+void	CMLoadState(CM* self);
+void	CMSaveState(const CM* self);
 
 /******************************************************************************/
+void	CMiSend(CM* self, unsigned char c);
+
 void	CMInitOSCFilter(CM* self);
 void	CMResetOSCFilter(CM* self);
 void	CMSetOSCEnabled(CM* self, BOOL enabled);
@@ -104,7 +106,9 @@ void	CMOSCReceive(CM* self, unsigned char c);
 
 void	CMResetUTF8(CM* self);
 void	CMSetUTF8Enabled(CM* self, BOOL enabled);
+BOOL	CMIsUTF8Enabled(CM* self);
 void	CMUTF8Receive(CM* self, unsigned char c);
+void	CMUTF8Transmit(CM* self, unsigned char c);
 
 void	CMiInitUI(CM* self, VT220* vt);
 

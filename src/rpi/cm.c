@@ -152,7 +152,7 @@ void CMPoll(CM* self)
 	}
 }
 
-void CMSend(CM* self, unsigned char c)
+void CMiSend(CM* self, unsigned char c)
 {
 	switch(self->mode) {
 		case CM_MODE_TTY:
@@ -167,6 +167,15 @@ void CMSend(CM* self, unsigned char c)
 		case CM_MODE_SSH:
 			SSHSend(&self->ssh, c);
 			break;
+	}
+}
+
+void CMSend(CM* self, unsigned char c)
+{
+	if(CMIsUTF8Enabled(self)) {
+		CMUTF8Transmit(self, c);
+	} else {
+		CMiSend(self, c);
 	}
 }
 
