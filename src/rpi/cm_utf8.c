@@ -8,7 +8,8 @@
  *
  * Since UTF-8 cannot encode C1 characters, this module automatically
  * translates C1 characters to S7C1T encoding. This is never a problem for the
- * VT220 since it always accepts 7-bit escaped C1 characters.
+ * VT220 since it always accepts 7-bit escaped C1 characters and software
+ * should support reception of 7-bit escaped C1 characters too.
  *
  * This translation ONLY works if the default character set mapping is left
  * unchanged, which means: G0 = ASCII, G1 = DEC Supplemental, GL = G0, GR = G1
@@ -405,6 +406,12 @@ void CMUTF8Transmit(CM* self, unsigned char c)
 			result = 0xFF;
 			break;
 		default:
+			if(c >= 0x80 && c <= 0x9F) {
+				/* encode as S7C1T */
+				CMiSend(self, 0x1B);
+				CMiSend(self, c - 0x40);
+				return;
+			}
 			result = c;
 			break;
 	}
