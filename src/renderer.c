@@ -102,10 +102,10 @@ static const float quad_vertices[] = {
 
 static const GLfloat vt220_colors[3][3] = {
 	/* phosphor color: green */
-	{ 0.25f, 1.00f, 0.25f },
+	{ 0.10f, 0.90f, 0.10f },
 
 	/* phosphor color: white */
-	{ 1.00f, 1.00f, 1.00f },
+	{ 0.90f, 0.90f, 0.90f },
 
 	/* phosphor color: amber */
 	{ 1.00f, 0.658824f, 0.00f }
