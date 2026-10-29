@@ -23,6 +23,18 @@
 #define	CM_HAS_HOSTKEY	_BV(0)
 #define	CM_FLAG_OSC	_BV(1)
 #define	CM_FLAG_UTF8	_BV(2)
+#define	CM_FLAG_CLOSE	_BV(3)
+#define	CM_FLAG_FLIP	_BV(4)
+#define	CM_FLAG_CMASK	(_BV(5) | _BV(6))
+#define	CM_FLAG_CAMBER	0
+#define	CM_FLAG_CGREEN	_BV(5)
+#define	CM_FLAG_CWHITE	_BV(6)
+#define	CM_FLAG_RAW	_BV(7)
+
+#define	CM_ROTATION_0	0
+#define	CM_ROTATION_90	1
+#define	CM_ROTATION_180	2
+#define	CM_ROTATION_270	3
 
 typedef struct {
 	u16		port;
@@ -37,6 +49,7 @@ typedef struct {
 typedef struct CM CM;
 struct CM {
 	int		mode;
+	int		flags;
 	char**		envp;
 
 	TTY		tty;
@@ -60,6 +73,9 @@ struct CM {
 
 	void		(*rx)(unsigned char c);
 	int		(*rxe)(void);
+
+	void		(*screen_rotation)(int rotation);
+	void		(*screen_raw)(BOOL raw);
 };
 
 void	CMInit(CM* self, VT220* vt, char** envp);
@@ -86,6 +102,13 @@ void	CMProcessKey(CM* self, u16 key);
 void	CMSetVisible(CM* self, int visible);
 int	CMIsVisible(CM* self);
 VTScreen* CMGetScreen(CM* self);
+
+void	CMSetFlipScreen(CM* self, BOOL flipped);
+void	CMUpdateScreenRotation(CM* self);
+void	CMSetPhosphorColor(CM* self, int color);
+void	CMUpdatePhosphorColor(CM* self);
+void	CMSetRawScreen(CM* self, BOOL raw);
+void	CMUpdateRawScreen(CM* self);
 
 void	CMDeleteConnection(CM* self, int id);
 
@@ -114,8 +137,9 @@ void	CMiInitUI(CM* self, VT220* vt);
 
 void	CMiCreateConnectionMenu(CM* self);
 void	CMiCreateSetupMenu(CM* self);
-void	CMiCreateDiagnosticsMenu(CM* self);
 void	CMiCreateConnectionCustomizationMenu(CM* self);
+void	CMiCreateSystemConfigMenu(CM* self);
+void	CMiCreateDiagnosticsMenu(CM* self);
 void	CMiCreateConnectionEditMenu(CM* self, int id);
 void	CMiCreateMessageBox(CM* self, const char* title, const char* message, void (*callback)(void*, BOOL), void* userdata);
 

@@ -46,5 +46,6 @@ void TELNETBreak(TELNET* telnet);
 void TELNETResize(TELNET* telnet, unsigned int width, unsigned int height);
 void TELNETSendRaw(TELNET* telnet, unsigned char c, int immediate);
 void TELNETPoll(TELNET* telnet);
+BOOL TELNETIsConnected(TELNET* telnet);
 
 #endif

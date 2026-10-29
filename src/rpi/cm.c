@@ -69,6 +69,7 @@ void CMInit(CM* self, VT220* vt, char** envp)
 
 	self->envp = envp;
 
+	self->flags = CM_FLAG_CLOSE | CM_FLAG_CAMBER;
 	self->autoconnect = -1;
 
 	self->connections_max = 28;
@@ -79,6 +80,7 @@ void CMInit(CM* self, VT220* vt, char** envp)
 	self->connections_cnt = 1;
 	self->connections[0].mode = CM_MODE_PTY;
 	strcpy(self->connections[0].name, "LOCAL SHELL");
+	self->connections[0].flags = CM_FLAG_OSC | CM_FLAG_UTF8;
 
 	PTYSetUserData(&self->pty, (void*) self);
 	self->pty.rx = CMRX;
@@ -134,20 +136,41 @@ void CMDisconnect(CM* self)
 	self->mode = CM_MODE_NONE;
 }
 
+void CMiDisconnected(CM* self)
+{
+	self->mode = CM_MODE_NONE;
+
+	if(self->flags & CM_FLAG_CLOSE) {
+		CMSetVisible(self, 1);
+	}
+}
+
 void CMPoll(CM* self)
 {
 	switch(self->mode) {
 		case CM_MODE_TTY:
 			TTYPoll(&self->tty);
+			if(!TTYIsOpen(&self->tty)) {
+				CMiDisconnected(self);
+			}
 			break;
 		case CM_MODE_PTY:
 			PTYPoll(&self->pty);
+			if(!PTYIsAlive(&self->pty)) {
+				CMiDisconnected(self);
+			}
 			break;
 		case CM_MODE_TELNET:
 			TELNETPoll(&self->telnet);
+			if(!TELNETIsConnected(&self->telnet)) {
+				CMiDisconnected(self);
+			}
 			break;
 		case CM_MODE_SSH:
 			SSHPoll(&self->ssh);
+			if(!SSHIsConnected(&self->ssh)) {
+				CMiDisconnected(self);
+			}
 			break;
 	}
 }
@@ -398,4 +421,65 @@ void CMDeleteConnection(CM* self, int id)
 		memmove(con, &con[1], (self->connections_cnt - id) * sizeof(CMCONN));
 		self->connections_cnt--;
 	}
+}
+
+void CMUpdateScreenRotation(CM* self)
+{
+	if(self->screen_rotation) {
+		self->screen_rotation((self->flags & CM_FLAG_FLIP) ? CM_ROTATION_180 : CM_ROTATION_0);
+	}
+}
+
+void CMSetFlipScreen(CM* self, BOOL flipped)
+{
+	if(flipped) {
+		self->flags |= CM_FLAG_FLIP;
+	} else {
+		self->flags &= ~CM_FLAG_FLIP;
+	}
+
+	CMUpdateScreenRotation(self);
+}
+
+void CMUpdatePhosphorColor(CM* self)
+{
+	int color;
+	switch(self->flags & CM_FLAG_CMASK) {
+		default:
+		case CM_FLAG_CAMBER:
+			color = VT220_SCREEN_COLOR_AMBER;
+			break;
+		case CM_FLAG_CGREEN:
+			color = VT220_SCREEN_COLOR_GREEN;
+			break;
+		case CM_FLAG_CWHITE:
+			color = VT220_SCREEN_COLOR_WHITE;
+			break;
+	}
+	VT220SetScreenColor(SPFGetVT(&self->spf), color);
+}
+
+void CMSetPhosphorColor(CM* self, int color)
+{
+	self->flags = (self->flags & ~CM_FLAG_CMASK) | (color & CM_FLAG_CMASK);
+
+	CMUpdatePhosphorColor(self);
+}
+
+void CMUpdateRawScreen(CM* self)
+{
+	if(self->screen_raw) {
+		self->screen_raw(!!(self->flags & CM_FLAG_RAW));
+	}
+}
+
+void CMSetRawScreen(CM* self, BOOL raw)
+{
+	if(raw) {
+		self->flags |= CM_FLAG_RAW;
+	} else {
+		self->flags &= ~CM_FLAG_RAW;
+	}
+
+	CMUpdateRawScreen(self);
 }

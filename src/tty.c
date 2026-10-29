@@ -483,4 +483,9 @@ void TTYClose(TTY* tty)
 		tty->fd = -1;
 	}
 }
+
+BOOL TTYIsOpen(TTY* tty)
+{
+	return tty->fd != -1;
+}
 #endif

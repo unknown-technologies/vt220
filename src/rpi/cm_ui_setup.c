@@ -50,8 +50,9 @@ void CMSetupMenuDraw(SPFPanel* self)
 	SPFMoveRightN(self, 3);
 	SPFPrint(self, "Description", SGR_BOLD);
 	SPFPrintAt(self,  8, 5,   "1      Customize Connections", 0);
-	SPFPrintAt(self,  9, 5,   "2      Key Management", 0);
-	SPFPrintAt(self, 10, 5,   "3      Diagnostics", 0);
+	SPFPrintAt(self,  9, 5,   "2      System Configuration", 0);
+	SPFPrintAt(self, 10, 5,   "3      Key Management", 0);
+	SPFPrintAt(self, 11, 5,   "4      Diagnostics", 0);
 
 	SPFPrintAt(self, 17, 2, "Select ===> ", 0);
 	SPFPrint(self, this->input, 0);
@@ -95,7 +96,7 @@ void CMSetupMenuProcess(SPFPanel* self, u16 key)
 		case CR:
 		case VT220_KEY_KP_ENTER:
 			if(this->input[0]) {
-				if(this->input[1] || this->input[0] < '1' || this->input[0] > '3') {
+				if(this->input[1] || this->input[0] < '1' || this->input[0] > '4') {
 					SPFPrintAt(self, 19, 2, "Invalid option", 0);
 				} else {
 					int id = this->input[0] - '0';
@@ -103,7 +104,10 @@ void CMSetupMenuProcess(SPFPanel* self, u16 key)
 						case 1:
 							CMiCreateConnectionCustomizationMenu(cm);
 							break;
-						case 3:
+						case 2:
+							CMiCreateSystemConfigMenu(cm);
+							break;
+						case 4:
 							CMiCreateDiagnosticsMenu(cm);
 							break;
 					}

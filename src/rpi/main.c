@@ -20,6 +20,8 @@ static VT220 vt;
 static VTRenderer renderer;
 static CM cm;
 
+static bool flip = false;
+
 static unsigned long current_time = 0;
 
 static volatile bool quit = false;
@@ -193,6 +195,34 @@ static void cm_key(u16 key)
 	CMProcessKey(&cm, key);
 }
 
+static void cm_screen_rotation(int rotation)
+{
+	if(flip) {
+		switch(rotation) {
+			case CM_ROTATION_0:
+				VTSetFlipped(&renderer, true);
+				break;
+			case CM_ROTATION_180:
+				VTSetFlipped(&renderer, false);
+				break;
+		}
+	} else {
+		switch(rotation) {
+			case CM_ROTATION_0:
+				VTSetFlipped(&renderer, false);
+				break;
+			case CM_ROTATION_180:
+				VTSetFlipped(&renderer, true);
+				break;
+		}
+	}
+}
+
+static void cm_screen_raw(int raw)
+{
+	VTSetRaw(&renderer, raw);
+}
+
 static void kb_down(KB* kb, int code)
 {
 	(void) kb;
@@ -216,13 +246,9 @@ static void print_usage(const char* self)
 		"  -h            Show this help message\n"
 		"  -v            Show version and exit\n"
 		"  -g            Disable glow effect\n"
-		"  -cg           Screen color: green\n"
-		"  -cw           Screen color: white\n"
-		"  -ca           Screen color: amber\n"
 		"  -f 0.75       Electron beam focus\n"
 		"  -i 1.0        Electron beam intensity (brightness)\n"
 		"  -p            Use simple linear phosphor emulation model\n"
-		"  -r            Raw mode, deactivates all post processing; implies -g\n"
 		"  -z            Rotate screen by 180 degrees\n"
 		"  -y /dev/ttyS0 Connect the terminal to the serial line /dev/ttyS0\n"
 		"  -yr 9600      Set baud rate to 9600\n"
@@ -243,14 +269,10 @@ int main(int argc, char** argv, char** envp)
 	const char* serial = NULL;
 	float focus = 0.75f;
 	float intensity = 1.0f;
-	bool rawmode = false;
 	bool simple_phosphor = false;
 	bool buffering = false;
 	bool enable_glow = true;
 	int baud = -1;
-	bool flip = false;
-
-	unsigned int color = VT220_SCREEN_COLOR_AMBER;
 
 	argc--;
 	argv++;
@@ -258,12 +280,6 @@ int main(int argc, char** argv, char** envp)
 		char* arg = argv[i];
 		if(!strcmp(arg, "-g")) {
 			enable_glow = false;
-		} else if(!strcmp(arg, "-cw")) {
-			color = VT220_SCREEN_COLOR_WHITE;
-		} else if(!strcmp(arg, "-cg")) {
-			color = VT220_SCREEN_COLOR_GREEN;
-		} else if(!strcmp(arg, "-ca")) {
-			color = VT220_SCREEN_COLOR_AMBER;
 		} else if(!strcmp(arg, "-h") || !strcmp(arg, "--help")) {
 			print_usage(self);
 			return 0;
@@ -286,8 +302,6 @@ int main(int argc, char** argv, char** envp)
 				intensity = atof(argv[i + 1]);
 				i += 1;
 			}
-		} else if(!strcmp(arg, "-r")) {
-			rawmode = true;
 		} else if(!strcmp(arg, "-p")) {
 			simple_phosphor = true;
 		} else if(!strcmp(arg, "-b")) {
@@ -363,7 +377,7 @@ int main(int argc, char** argv, char** envp)
 	EGLInit(&egl, drm, gbm, 0);
 
 	VT220Init(&vt);
-	VT220SetScreenColor(&vt, color);
+	VT220SetScreenColor(&vt, VT220_SCREEN_COLOR_AMBER);
 	VT220SetBuffering(&vt, buffering);
 
 	VTInitRenderer(&renderer, &vt);
@@ -373,6 +387,8 @@ int main(int argc, char** argv, char** envp)
 
 	cm.rx = vt_rx;
 	cm.rxe = vt_rxe;
+	cm.screen_rotation = cm_screen_rotation;
+	cm.screen_raw = cm_screen_raw;
 	vt.rx = cm_tx;
 	vt.brk = cm_brk;
 	vt.resize = cm_resize;
@@ -391,11 +407,15 @@ int main(int argc, char** argv, char** envp)
 	VT220ShowInitScreen(&vt);
 
 	VTEnableGlow(&renderer, enable_glow);
-	VTSetRaw(&renderer, rawmode);
+	VTSetRaw(&renderer, false);
 	VTSetSimplePhosphor(&renderer, simple_phosphor);
 	VTSetFocus(&renderer, focus);
 	VTSetIntensity(&renderer, intensity);
 	VTSetFlipped(&renderer, flip);
+
+	CMUpdateScreenRotation(&cm);
+	CMUpdatePhosphorColor(&cm);
+	CMUpdateRawScreen(&cm);
 
 	KBSetDown(&kb, kb_down);
 	KBSetUp(&kb, kb_up);

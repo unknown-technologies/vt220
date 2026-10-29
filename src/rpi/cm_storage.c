@@ -13,6 +13,7 @@ static const char MAGIC[4] = { 'C', 'M', 'C', 'D' }; /* CM Customization Data */
 typedef struct {
 	char	magic[4];
 	int	version;
+	int	flags;
 	int	autoconnect;
 	int	connection_count;
 } CMHDR;
@@ -107,6 +108,7 @@ void CMLoadState(CM* cm)
 				} else {
 					CMSetAutoConnect(cm, hdr.autoconnect);
 				}
+				cm->flags = hdr.flags;
 			} else {
 				printf("[CM] failed to read config file\n");
 				free(conns);
@@ -143,6 +145,7 @@ void CMSaveState(const CM* cm)
 	CMHDR hdr = {
 		.magic = { MAGIC[0], MAGIC[1], MAGIC[2], MAGIC[3] },
 		.version = CM_CURRENT_VERSION,
+		.flags = cm->flags,
 		.autoconnect = cm->autoconnect,
 		.connection_count = cm->connections_cnt
 	};

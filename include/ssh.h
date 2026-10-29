@@ -39,6 +39,7 @@ void	SSHInit(SSH* self);
 void	SSHDestroy(SSH* self);
 void	SSHConnect(SSH* self, const char* hostname, int port, const char* username);
 void	SSHDisconnect(SSH* self);
+BOOL	SSHIsConnected(SSH* self);
 void	SSHSetUserData(SSH* self, void* userdata);
 
 void	SSHSend(SSH* self, unsigned char c);

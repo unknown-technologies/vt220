@@ -54,6 +54,7 @@ void	TTYPoll(TTY* tty);
 void	TTYResize(TTY* tty, unsigned int width, unsigned int height);
 void	TTYClose(TTY* tty);
 void	TTYSetUserData(TTY* tty, void* userdata);
+BOOL	TTYIsOpen(TTY* tty);
 
 void	TTYSetBaudRate(TTY* tty, unsigned int rx_rate, unsigned int tx_rate);
 void	TTYSetFlowControl(TTY* tty, bool enable_xoff);
