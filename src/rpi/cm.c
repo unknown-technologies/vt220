@@ -140,7 +140,7 @@ void CMiDisconnected(CM* self)
 {
 	self->mode = CM_MODE_NONE;
 
-	if(self->flags & CM_FLAG_CLOSE) {
+	if(self->input_received && self->flags & CM_FLAG_CLOSE) {
 		CMSetVisible(self, 1);
 	}
 }
@@ -195,6 +195,8 @@ void CMiSend(CM* self, unsigned char c)
 
 void CMSend(CM* self, unsigned char c)
 {
+	self->input_received = TRUE;
+
 	if(CMIsUTF8Enabled(self)) {
 		CMUTF8Transmit(self, c);
 	} else {
@@ -300,6 +302,7 @@ void CMConnect(CM* self, int id)
 	CMDisconnect(self);
 
 	self->current_connection = id;
+	self->input_received = 0;
 
 	CMResetUTF8(self);
 	CMSetUTF8Enabled(self, !!(con->flags & CM_FLAG_UTF8));

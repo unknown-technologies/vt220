@@ -64,6 +64,8 @@ struct CM {
 	int		visible;
 	SPF		spf;
 
+	BOOL		input_received;
+
 	int		current_connection;
 
 	CMCONN*		connections;
