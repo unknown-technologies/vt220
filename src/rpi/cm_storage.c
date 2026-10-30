@@ -21,7 +21,7 @@ typedef struct {
 /* we try /var/lib/vt220/conmgr, $XDG_STATE_HOME/vt220.cm, $HOME/.vt220.cm */
 static char* get_state_path(void)
 {
-	if(!access("/var/lib/vt220/conmgr", R_OK | W_OK)) {
+	if(!access("/var/lib/vt220/conmgr", R_OK | W_OK) || !access("/var/lib/vt220", R_OK | W_OK)) {
 		return strdup("/var/lib/vt220/conmgr");
 	} else {
 		char* xdg_state_home = getenv("XDG_STATE_HOME");

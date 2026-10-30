@@ -15,7 +15,7 @@
 /* on Linux we try /var/lib/vt220/nvr, $XDG_STATE_HOME/vt220.nvr, $HOME/.vt220.nvr */
 static char* get_state_path(void)
 {
-	if(!access("/var/lib/vt220/nvr", R_OK | W_OK)) {
+	if(!access("/var/lib/vt220/nvr", R_OK | W_OK) || !access("/var/lib/vt220", R_OK | W_OK)) {
 		return strdup("/var/lib/vt220/nvr");
 	} else {
 		char* xdg_state_home = getenv("XDG_STATE_HOME");
