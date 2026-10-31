@@ -287,6 +287,8 @@ void SSHPoll(SSH* self)
 				printf("[SSH] connected\n");
 #endif
 				self->state = STATE_SERVER_PUBKEY;
+				self->input_buffer[0] = 'N';
+
 				ssh_key key;
 				if(ssh_get_server_publickey(self->session, &key) != SSH_OK) {
 					SSHRxError(self, "ssh_connect", ssh_get_error(self->session));
