@@ -27,7 +27,7 @@ typedef struct {
 } PTY;
 
 void	PTYInit(PTY* pty);
-void	PTYOpen(PTY* pty, char** argv, char** envp);
+bool	PTYOpen(PTY* pty, char** argv, char** envp);
 void	PTYSend(PTY* pty, unsigned char c);
 void	PTYBreak(PTY* pty);
 void	PTYPoll(PTY* pty);

@@ -30,59 +30,59 @@ void PTYInit(PTY* pty)
 	pty->pid = -1;
 }
 
-void PTYOpen(PTY* pty, char** argv, char** envp)
+bool PTYOpen(PTY* pty, char** argv, char** envp)
 {
 	pty->master = posix_openpt(O_RDWR | O_NOCTTY | O_CLOEXEC);
 	if(pty->master == -1) {
 		PTYError(pty, "posix_openpt");
-		exit(1);
+		return false;
 	}
 
 	/* make master pty nonblocking */
 	int fl = fcntl(pty->master, F_GETFL);
 	if(fl == -1) {
 		PTYError(pty, "fcntl");
-		exit(1);
+		return false;
 	}
 	if(fcntl(pty->master, F_SETFL, fl | O_NONBLOCK)) {
 		PTYError(pty, "fcntl");
-		exit(1);
+		return false;
 	}
 
 	if(grantpt(pty->master) == -1) {
 		PTYError(pty, "grantpt");
-		exit(1);
+		return false;
 	}
 
 	if(unlockpt(pty->master) == -1) {
 		PTYError(pty, "unlockpt");
-		exit(1);
+		return false;
 	}
 
 #ifndef USE_FORK
 	char* slave_filename = ptsname(pty->master);
 	if(!slave_filename) {
 		PTYError(pty, "ptsname");
-		exit(1);
+		return false;
 	}
 
 	int slave = open(slave_filename, O_RDWR);
 	if(slave == -1) {
 		PTYError(pty, "open");
-		exit(1);
+		return false;
 	}
 
 	struct termios ttyattrs;
 	if(tcgetattr(slave, &ttyattrs)) {
 		PTYError(pty, "tcgetattr");
-		exit(1);
+		return false;
 	}
 
 	ttyattrs.c_lflag |= ECHO;
 
 	if(tcsetattr(slave, TCSANOW, &ttyattrs)) {
 		PTYError(pty, "tcsetattr");
-		exit(1);
+		return false;
 	}
 
 	posix_spawn_file_actions_t fd_actions;
@@ -128,14 +128,13 @@ void PTYOpen(PTY* pty, char** argv, char** envp)
 #ifndef USE_FORK
 	if(posix_spawnp(&pty->pid, *argv, &fd_actions, &attrs, argv, env)) {
 		PTYError(pty, "posix_spawnp");
-		exit(1);
+		return false;
 	}
 #else
 	pid_t pid = fork();
 	if(pid == -1) {
-		// TODO: exit on error or print it to the VT instead?
-		printf("[PTY] failed to fork: %s\n", strerror(errno));
-		exit(1);
+		PTYError(pty, "fork");
+		return false;
 	} else if(pid) {
 		// parent
 		pty->pid = pid;
@@ -217,6 +216,8 @@ void PTYOpen(PTY* pty, char** argv, char** envp)
 #ifndef USE_FORK
 	close(slave);
 #endif
+
+	return true;
 }
 
 void PTYRxString(PTY* pty, const char* s)
