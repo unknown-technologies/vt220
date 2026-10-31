@@ -418,11 +418,11 @@ void CMDeleteConnection(CM* self, int id)
 		self->autoconnect--;
 	}
 
-	if(id + 1 == self->connections_cnt) {
-		self->connections_cnt--;
-	} else {
+	self->connections_cnt--;
+	if(id < self->connections_cnt) {
+		/* NOTE: this works because the original connections_cnt - id - 1 happens to be the current
+		 * connections_cnt - id now; without the -1 we would copy one element too much */
 		memmove(con, &con[1], (self->connections_cnt - id) * sizeof(CMCONN));
-		self->connections_cnt--;
 	}
 }
 
