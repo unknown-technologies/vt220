@@ -299,6 +299,11 @@ static int init_drm(DRM* drm, const char* device, const char* mode_str,
 	for(i = 0; i < resources->count_connectors; i++) {
 		connector = drmModeGetConnector(drm->fd,
 				resources->connectors[i]);
+		if(connector == NULL) {
+			fprintf(stderr, "drmModeGetConnector failed: %s\n",
+					strerror(errno));
+			return -1;
+		}
 		if(connector->connection == DRM_MODE_CONNECTED) {
 			/* it's connected, let's use this! */
 			break;
@@ -357,8 +362,13 @@ static int init_drm(DRM* drm, const char* device, const char* mode_str,
 	/* find encoder */
 	for(i = 0; i < resources->count_encoders; i++) {
 		encoder = drmModeGetEncoder(drm->fd, resources->encoders[i]);
-		if(encoder->encoder_id == connector->encoder_id)
+		if(!encoder) {
+			fprintf(stderr, "failed to get encoder!\n");
+			return -1;
+		}
+		if(encoder->encoder_id == connector->encoder_id) {
 			break;
+		}
 		drmModeFreeEncoder(encoder);
 		encoder = NULL;
 	}
@@ -529,8 +539,9 @@ struct drm_fb* drm_fb_get_from_bo(struct gbm_bo* bo)
 
 	int ret = -1;
 
-	if(fb)
+	if(fb) {
 		return fb;
+	}
 
 	fb = calloc(1, sizeof(struct drm_fb));
 	fb->bo = bo;
@@ -545,7 +556,10 @@ struct drm_fb* drm_fb_get_from_bo(struct gbm_bo* bo)
 		u64 modifiers[4] = { 0 };
 		modifiers[0] = gbm_bo_get_modifier(bo);
 		const int num_planes = gbm_bo_get_plane_count(bo);
-		assert(num_planes <= 4);
+		if(num_planes > 4) {
+			fprintf(stderr, "Too many planes: %d\n", num_planes);
+			return NULL;
+		}
 		for(int i = 0; i < num_planes; i++) {
 			handles[i] = gbm_bo_get_handle_for_plane(bo, i).u32;
 			strides[i] = gbm_bo_get_stride_for_plane(bo, i);
