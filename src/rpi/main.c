@@ -360,6 +360,7 @@ int main(int argc, char** argv, char** envp)
 	DRM* drm = DRMInit(NULL, NULL, 0);
 	if(!drm) {
 		fprintf(stderr, "failed to initialize DRM\n");
+		KBClose(&kb);
 		return 1;
 	}
 
@@ -368,13 +369,21 @@ int main(int argc, char** argv, char** envp)
 			DRM_FORMAT_MOD_LINEAR, false);
 	if(!gbm) {
 		fprintf(stderr, "failed to initialize GBM\n");
+		DRMDestroy(drm);
+		KBClose(&kb);
 		return 1;
 	}
 
 	printf("Screen size: %dx%d\n", drm->mode->hdisplay,
 			drm->mode->vdisplay);
 
-	EGLInit(&egl, drm, gbm, 0);
+	if(EGLInit(&egl, drm, gbm, 0)) {
+		fprintf(stderr, "failed to initialize EGL\n");
+		GBMDestroy(gbm);
+		DRMDestroy(drm);
+		KBClose(&kb);
+		return 1;
+	}
 
 	VT220Init(&vt);
 	VT220SetScreenColor(&vt, VT220_SCREEN_COLOR_AMBER);

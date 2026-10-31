@@ -234,7 +234,7 @@ int EGLInit(EGL* egl, DRM* drm, const GBM* gbm, int samples)
 	}
 
 	if(!eglInitialize(egl->display, &major, &minor)) {
-		fprintf(stderr, "failed to initialize\n");
+		fprintf(stderr, "failed to initialize egl\n");
 		return -1;
 	}
 
@@ -264,7 +264,7 @@ int EGLInit(EGL* egl, DRM* drm, const GBM* gbm, int samples)
 	printf("===================================\n");
 
 	if(!eglBindAPI(EGL_OPENGL_ES_API)) {
-		fprintf(stderr, "failed to bind api EGL_OPENGL_ES_API\n");
+		fprintf(stderr, "failed to bind API EGL_OPENGL_ES_API\n");
 		return -1;
 	}
 
