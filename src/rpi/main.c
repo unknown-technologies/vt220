@@ -352,11 +352,6 @@ int main(int argc, char** argv, char** envp)
 		printf("WARNING: failed to set SIGTERM signal handler\n");
 	}
 
-	if(!KBInit(&kb)) {
-		fprintf(stderr, "failed to initialize keyboard\n");
-		return 1;
-	}
-
 	DRM* drm = DRMInit(NULL, NULL, 0);
 	if(!drm) {
 		fprintf(stderr, "failed to initialize DRM\n");
@@ -414,6 +409,11 @@ int main(int argc, char** argv, char** envp)
 	CFGLoadState(&vt);
 
 	VT220ShowInitScreen(&vt);
+
+	if(!KBInit(&kb)) {
+		printf("no keyboard found\n");
+		VT220SelfTestFail(&vt, "VT220 Keyboard Error - 4");
+	}
 
 	VTEnableGlow(&renderer, enable_glow);
 	VTSetRaw(&renderer, false);

@@ -138,6 +138,10 @@ static inline void VT220iPutText(VT220* vt, const int line, const int column, co
 		unsigned char ch = (unsigned char) *c;
 		if(ch == 0x20) {
 			ch = 0;
+		} else if(ch == '\n') {
+			y++;
+			x = column - 1;
+			continue;
 		}
 		vt->text[y * vt->columns + x].text = ch;
 		vt->text[y * vt->columns + x].attr = sgr;
@@ -172,6 +176,13 @@ void VT220ShowInitScreen(VT220* vt)
 	vt->text[12 * vt->columns + 30].attr = 0;
 	vt->text[12 * vt->columns + 49].text = 0x0B;
 	vt->text[12 * vt->columns + 49].attr = 0;
+}
+
+void VT220SelfTestFail(VT220* vt, const char* message)
+{
+	vt->mode |= DECINIT;
+	VT220EraseScreen(vt);
+	VT220iPutText(vt, 1, 1, message, 0);
 }
 
 static inline void VT220iClearInit(VT220* vt)

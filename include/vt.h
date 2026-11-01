@@ -664,6 +664,7 @@ void VT220SetBaudRate(VT220* vt, unsigned int rx, unsigned int tx);
 void VT220LoadDefaults(VT220* vt);
 void VT220SaveConfig(VT220* vt);
 int  VT220LoadConfig(VT220* vt, const VT220NVR* nvr);
+void VT220SelfTestFail(VT220* vt, const char* message);
 void VT220ClearInit(VT220* vt);
 void VT220ResetCursorTime(VT220* vt);
 

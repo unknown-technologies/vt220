@@ -41,10 +41,12 @@ static inline void KBSetUp(KB* kb, void (*cb)(KB*, int)) {
 }
 
 BOOL KBInit(KB* kb);
-BOOL KBOpen(KB* kb, const char* filename);
+BOOL KBOpen(KB* kb);
 void KBClose(KB* kb);
 
 void KBSetLEDs(KB* kb);
 void KBPoll(KB* kb);
+
+BOOL KBiOpen(KB* kb, const char* filename);
 
 #endif

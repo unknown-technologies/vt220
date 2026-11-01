@@ -12,10 +12,18 @@ static void KBiProcess(KB* kb, struct input_event* event);
 
 BOOL KBInit(KB* kb)
 {
+	memset(kb, 0, sizeof(KB));
+	return KBOpen(kb);
+}
+
+BOOL KBOpen(KB* kb)
+{
+	kb->fd = -1;
+
 	char buf[256];
 	FILE* f = fopen("/proc/bus/input/devices", "rt");
 	if(!f) {
-		printf("Failed to open device list: %s\n", strerror(errno));
+		printf("[KB] Failed to open device list: %s\n", strerror(errno));
 		return FALSE;
 	}
 
@@ -71,24 +79,23 @@ found:
 	fclose(f);
 
 #ifdef DEBUG
-	printf("name: \"%s\", device=%s\n", name, dev);
+	printf("[KB] name: \"%s\", device=%s\n", name, dev);
 #endif
-	return KBOpen(kb, dev);
+	return KBiOpen(kb, dev);
 }
 
-BOOL KBOpen(KB* kb, const char* filename)
+BOOL KBiOpen(KB* kb, const char* filename)
 {
-	memset(kb, 0, sizeof(KB));
-
 	kb->fd = open(filename, O_RDWR | O_NONBLOCK);
 	if(kb->fd < 0) {
-		printf("Failed to open input device: %s\n", strerror(errno));
+		printf("[KB] Failed to open input device: %s\n", strerror(errno));
 		return FALSE;
 	}
 
 	if(ioctl(kb->fd, EVIOCGRAB, 1) == -1) {
-		printf("Failed to grab keyboard: %s\n", strerror(errno));
+		printf("[KB] Failed to grab keyboard: %s\n", strerror(errno));
 		close(kb->fd);
+		kb->fd = -1;
 		return FALSE;
 	}
 
@@ -111,11 +118,18 @@ void KBClose(KB* kb)
 	}
 }
 
-#define	BUFSZ	128
+#define	BUFSZ	256
 void KBPoll(KB* kb)
 {
 	if(kb->fd < 0) {
-		return;
+		/* try to re-initialize the keyboard */
+		if(!KBOpen(kb)) {
+			return;
+#ifdef DEBUG
+		} else {
+			printf("[KB] keyboard attached\n");
+#endif
+		}
 	}
 
 	struct input_event events[BUFSZ];
@@ -124,11 +138,18 @@ void KBPoll(KB* kb)
 	ssize_t sz = read(kb->fd, events, sizeof(events));
 	if(sz == 0) {
 		return;
-	} else if(sz == -1 && errno == EAGAIN) {
-		return;
-	} else if(sz < 0) {
-		printf("read failed: %s\n", strerror(errno));
-		return;
+	} else if(sz == -1) {
+		switch(errno) {
+			case EAGAIN:
+				return;
+			case ENODEV:
+				printf("[KB] keyboard disconnected\n");
+				KBClose(kb);
+				return;
+			default:
+				printf("[KB] read failed: %s\n", strerror(errno));
+				return;
+		}
 	}
 
 	size_t eventcnt = sz / sizeof(struct input_event);
@@ -168,7 +189,11 @@ static void KBiProcess(KB* kb, struct input_event* event)
  */
 void KBSetLEDs(KB* kb)
 {
-	struct input_event event[4];
+	struct input_event event[3];
+
+	if(kb->fd < 0) {
+		return;
+	}
 
 	event[0].type = EV_LED;
 	event[0].code = LED_NUML;
@@ -182,5 +207,13 @@ void KBSetLEDs(KB* kb)
 	event[2].code = LED_SCROLLL;
 	event[2].value = (kb->leds & KB_LED_HOLD) ? 1 : 0;
 
-	write(kb->fd, &event, sizeof(event));
+	ssize_t n = write(kb->fd, &event, sizeof(event));
+	if(n == -1) {
+		/* ignore ENODEV, this is most likely coming from KBClose */
+		if(errno != ENODEV) {
+			printf("[KB] failed to update LED status: %s\n", strerror(errno));
+		}
+	} else if(n != sizeof(event)) {
+		printf("[KB] failed to update LED status: partial write\n");
+	}
 }
