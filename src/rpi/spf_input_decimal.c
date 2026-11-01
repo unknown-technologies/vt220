@@ -20,6 +20,8 @@ void SPFCreateInputDec(SPFInputDec* self, unsigned int id, unsigned int line, un
 	ASSERT(self->len <= self->max_len);
 	self->cursor = self->len; /* cursor is at the end of the field by default */
 	self->callback = callback;
+	self->min = min;
+	self->max = max;
 }
 
 void SPFDrawInputDec(SPFInputDec* self)
@@ -51,6 +53,16 @@ static void SPFInputDecEnter(SPFInputDec* self)
 {
 	ASSERT(self);
 	ASSERT(self->widget.type == SPF_WIDGET_INPUT_DEC);
+
+	/* validate input */
+	int value = SPFGetInputDecValue(self);
+	if(value < self->min) {
+		SPFSetInputDecValue(self, self->min);
+		SPFRepaint(SPFGet(SPFGetWidgetPanel(&self->widget)));
+	} else if(value > self->max) {
+		SPFSetInputDecValue(self, self->max);
+		SPFRepaint(SPFGet(SPFGetWidgetPanel(&self->widget)));
+	}
 
 	if(self->callback) {
 		self->callback(self);
@@ -195,8 +207,8 @@ void SPFSetInputDecValue(SPFInputDec* self, int value)
 
 	memset(self->input, 0, sizeof(self->input));
 	sprintf(self->input, "%d", value);
-	self->cursor = 0;
 	self->len = strlen(self->input);
+	self->cursor = self->len;
 
 	/* panel can be NULL if the widget is not yet on a panel */
 	SPFPanel* panel = SPFGetWidgetPanel(&self->widget);
