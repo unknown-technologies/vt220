@@ -138,6 +138,9 @@ bool PTYOpen(PTY* pty, char** argv, char** envp)
 	} else if(pid) {
 		// parent
 		pty->pid = pid;
+#ifdef DEBUG
+		printf("[PTY] child process PID is %d\n", pty->pid);
+#endif
 	} else {
 		// child
 		if(setsid() == (pid_t) -1) {
@@ -459,7 +462,13 @@ void PTYResize(PTY* pty, unsigned int width, unsigned int height)
 	}
 
 	if(kill(pty->pid, SIGWINCH) == -1) {
-		printf("[PTY] failed to send SIGWINCH: %s\n", strerror(errno));
+		/* If our child process is running as a different user (for
+		 * example if it is a SETUID program), we cannot send the
+		 * SIGWINCH signal. Just ignore this error, since the ioctl
+		 * might be enough already. */
+		if(errno != EPERM) {
+			printf("[PTY] failed to send SIGWINCH: %s\n", strerror(errno));
+		}
 	}
 }
 
