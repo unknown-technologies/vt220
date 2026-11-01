@@ -463,6 +463,7 @@ void PTYResize(PTY* pty, unsigned int width, unsigned int height)
 	}
 }
 
+/* TODO: this may block forever if the child cannot be killed, like in case of a "D" state */
 void PTYClose(PTY* pty)
 {
 	if(pty->pid != -1) {
