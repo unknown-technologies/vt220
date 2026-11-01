@@ -266,6 +266,10 @@ void CMSetFormat(CM* self, unsigned int data, unsigned int stop, unsigned int pa
 void CMOpenTTY(CM* self, const char* path)
 {
 	TTYClose(&self->tty);
+
+	self->mode = CM_MODE_TTY;
+	VT220ClearComm(SPFGetVT(&self->spf));
+
 	TTYOpen(&self->tty, path);
 }
 
