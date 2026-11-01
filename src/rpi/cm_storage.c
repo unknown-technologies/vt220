@@ -98,7 +98,18 @@ void CMLoadState(CM* cm)
 			CMCONN* conns = (CMCONN*) malloc(hdr.connection_count * sizeof(CMCONN));
 			if(!conns) {
 				printf("[CM] failed to allocate memory\n");
-			} else if(fread(conns, hdr.connection_count * sizeof(CMCONN), 1, file) == 1) {
+			} else if(hdr.connection_count == 0 ||
+					fread(conns, hdr.connection_count * sizeof(CMCONN), 1, file) == 1) {
+				/* make sure all string fields are NUL terminated */
+				for(int i = 0; i < hdr.connection_count; i++) {
+					if(conns[i].name[sizeof(conns[i].name) - 1]
+							|| conns[i].target[sizeof(conns[i].target) - 1]
+							|| conns[i].username[sizeof(conns[i].username) - 1]) {
+						printf("[CM] corrupt config file: string not terminated\n");
+						free(conns);
+						return;
+					}
+				}
 				memset(cm->connections, 0, cm->connections_max * sizeof(CMCONN));
 				memcpy(cm->connections, conns, hdr.connection_count * sizeof(CMCONN));
 				cm->connections_cnt = hdr.connection_count;
