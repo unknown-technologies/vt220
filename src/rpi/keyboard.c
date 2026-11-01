@@ -145,6 +145,10 @@ u16 VT220TranslateKey(VT220* vt, int scancode)
 		case KEY_LEFTSHIFT:
 		case KEY_RIGHTSHIFT:
 			return VT220_KEY_SHIFT;
+		case KEY_LEFTMETA:
+		case KEY_RIGHTMETA:
+		case KEY_COMPOSE:
+			return VT220_KEY_COMPOSE;
 		case KEY_ENTER:
 			return CR;
 			/* keypad */
@@ -488,25 +492,25 @@ u16 VT220KeyboardTranslateKey3(VT220* vt, int key)
 		case KEY_GRAVE:
 			return shift ? '~' : '`';
 		case KEY_1:
-			return shift ? '1' : '&';
+			return shift ? '&' : '1';
 		case KEY_2:
-			return shift ? '2' : 0xE9;
+			return shift ? 0xE9 : '2';
 		case KEY_3:
-			return shift ? '3' : '"';
+			return shift ? '"' : '3';
 		case KEY_4:
-			return shift ? '4' : '\'';
+			return shift ? '\'' : '4';
 		case KEY_5:
-			return shift ? '5' : '(';
+			return shift ? '(' : '5';
 		case KEY_6:
-			return shift ? '6' : (typewriter ? 0xA7 : '[');
+			return shift ? (typewriter ? 0xA7 : '[') : '6';
 		case KEY_7:
-			return shift ? '7' : (typewriter ? 0xE8 : ']');
+			return shift ? (typewriter ? 0xE8 : ']') : '7';
 		case KEY_8:
-			return shift ? '8' : '!';
+			return shift ? '!' : '8';
 		case KEY_9:
-			return shift ? '9' : 0xE7;
+			return shift ? '9' : '9';
 		case KEY_0:
-			return shift ? '0' : 0xE0;
+			return shift ? 0xE0 : '0';
 		case KEY_MINUS:
 			return shift ? ')' : 0xB0;
 		case KEY_EQUAL:
@@ -938,7 +942,7 @@ u16 VT220KeyboardTranslateKey7(VT220* vt, int key)
 	switch(key) {
 		/* Row 0 */
 		case KEY_GRAVE:
-			return shift ? '^' : '~';
+			return shift ? VT220_KEY_CIRCUMFLEX : '~';
 		case KEY_1:
 			return shift ? '!' : '1';
 		case KEY_2:
@@ -962,7 +966,7 @@ u16 VT220KeyboardTranslateKey7(VT220* vt, int key)
 		case KEY_MINUS:
 			return shift ? '?' : 0xDF;
 		case KEY_EQUAL:
-			return shift ? '`' : 0xFFFF; // TODO: dead key
+			return shift ? VT220_KEY_GRAVE : VT220_KEY_ACUTE;
 		/* Row 1 */
 		case KEY_Q:
 			return caps ? 'Q' : 'q';
@@ -1018,6 +1022,910 @@ u16 VT220KeyboardTranslateKey7(VT220* vt, int key)
 			return shift ? '>' : '<';
 		case KEY_Z:
 			return caps ? 'Y' : 'y';
+		case KEY_X:
+			return caps ? 'X' : 'x';
+		case KEY_C:
+			return caps ? 'C' : 'c';
+		case KEY_V:
+			return caps ? 'V' : 'v';
+		case KEY_B:
+			return caps ? 'B' : 'b';
+		case KEY_N:
+			return caps ? 'N' : 'n';
+		case KEY_M:
+			return caps ? 'M' : 'm';
+		case KEY_COMMA:
+			return shift ? ';' : ',';
+		case KEY_DOT:
+			return shift ? ':' : '.';
+		case KEY_SLASH:
+			return shift ? '_' : '-';
+		default:
+			return VT220TranslateKey(vt, key);
+	}
+}
+
+// Dutch Keyboard
+u16 VT220KeyboardTranslateKey8(VT220* vt, int key)
+{
+	bool shift = VT220KeyboardIsShift(vt);
+	bool caps = VT220KeyboardIsCaps(vt);
+	bool typewriter = vt->config.keys == VT220_KEYS_TYPEWRITER;
+
+	switch(key) {
+		/* Row 0 */
+		case KEY_GRAVE:
+			return shift ? '\xB0' : '~';
+		case KEY_1:
+			return shift ? '\xBC' : '1';
+		case KEY_2:
+			return shift ? (typewriter ? '[' : '\xBD') : '2';
+		case KEY_3:
+			return shift ? (typewriter ? ']' : '\xA3') : '3';
+		case KEY_4:
+			return shift ? '$' : '4';
+		case KEY_5:
+			return shift ? '%' : '5';
+		case KEY_6:
+			return shift ? '#' : '6';
+		case KEY_7:
+			return shift ? '&' : '7';
+		case KEY_8:
+			return shift ? '(' : '8';
+		case KEY_9:
+			return shift ? ')' : '9';
+		case KEY_0:
+			return shift ? (typewriter ? '\xA7' : '\\') : '0';
+		case KEY_MINUS:
+			return shift ? '"' : '\'';
+		case KEY_EQUAL:
+			return shift ? ':' : '/';
+		/* Row 1 */
+		case KEY_Q:
+			return caps ? 'Q' : 'q';
+		case KEY_W:
+			return caps ? 'W' : 'w';
+		case KEY_E:
+			return caps ? 'E' : 'e';
+		case KEY_R:
+			return caps ? 'R' : 'r';
+		case KEY_T:
+			return caps ? 'T' : 't';
+		case KEY_Y:
+			return caps ? 'Y' : 'y';
+		case KEY_U:
+			return caps ? 'U' : 'u';
+		case KEY_I:
+			return caps ? 'I' : 'i';
+		case KEY_O:
+			return caps ? 'O' : 'o';
+		case KEY_P:
+			return caps ? 'P' : 'p';
+		case KEY_LEFTBRACE:
+			return shift ? VT220_KEY_UMLAUT : '^'; // TODO: dead key
+		case KEY_RIGHTBRACE:
+			return shift ? '!' : '*';
+		/* Row 2 */
+		case KEY_A:
+			return caps ? 'A' : 'a';
+		case KEY_S:
+			return caps ? 'S' : 's';
+		case KEY_D:
+			return caps ? 'D' : 'd';
+		case KEY_F:
+			return caps ? 'F' : 'f';
+		case KEY_G:
+			return caps ? 'G' : 'g';
+		case KEY_H:
+			return caps ? 'H' : 'h';
+		case KEY_J:
+			return caps ? 'J' : 'j';
+		case KEY_K:
+			return caps ? 'K' : 'k';
+		case KEY_L:
+			return caps ? 'L' : 'l';
+		case KEY_SEMICOLON:
+			return shift ? '_' : '-';
+		case KEY_APOSTROPHE:
+			return shift ? '\'' : '`'; // TODO: dead key
+		case KEY_BACKSLASH:
+			return shift ? '|' : '@';
+		/* Row 3 */
+		case KEY_102ND:
+			return shift ? '>' : '<';
+		case KEY_Z:
+			return caps ? 'Z' : 'z';
+		case KEY_X:
+			return caps ? 'X' : 'x';
+		case KEY_C:
+			return caps ? 'C' : 'c';
+		case KEY_V:
+			return caps ? 'V' : 'v';
+		case KEY_B:
+			return caps ? 'B' : 'b';
+		case KEY_N:
+			return caps ? 'N' : 'n';
+		case KEY_M:
+			return caps ? 'M' : 'm';
+		case KEY_COMMA:
+			return shift ? '?' : ',';
+		case KEY_DOT:
+			return shift ? ';' : '.';
+		case KEY_SLASH:
+			return shift ? '=' : '+';
+		default:
+			return VT220TranslateKey(vt, key);
+	}
+}
+
+// Italian Keyboard
+u16 VT220KeyboardTranslateKey9(VT220* vt, int key)
+{
+	bool shift = VT220KeyboardIsShift(vt);
+	bool caps = VT220KeyboardIsCaps(vt);
+	bool typewriter = vt->config.keys == VT220_KEYS_TYPEWRITER;
+
+	switch(key) {
+		/* Row 0 */
+		case KEY_GRAVE:
+			return shift ? '~' : '`'; // TODO: dead key?
+		case KEY_1:
+			return shift ? '1' : (typewriter ? '\xA3' : '@');
+		case KEY_2:
+			return shift ? '2' : (typewriter ? '\xE9' : '#');
+		case KEY_3:
+			return shift ? '3' : '"';
+		case KEY_4:
+			return shift ? '4' : '\''; // TODO: dead key?
+		case KEY_5:
+			return shift ? '5' : '(';
+		case KEY_6:
+			return shift ? '6' : '_';
+		case KEY_7:
+			return shift ? '7' : '\xE8';
+		case KEY_8:
+			return shift ? '8' : '^'; // TODO: dead key?
+		case KEY_9:
+			return shift ? '9' : (typewriter ? '\xE7' : '[');
+		case KEY_0:
+			return shift ? '0' : (typewriter ? '\xE0' : ']');
+		case KEY_MINUS:
+			return shift ? '\xB0' : ')';
+		case KEY_EQUAL:
+			return shift ? '+' : '-';
+		/* Row 1 */
+		case KEY_Q:
+			return caps ? 'Q' : 'q';
+		case KEY_W:
+			return caps ? 'Z' : 'z';
+		case KEY_E:
+			return caps ? 'E' : 'e';
+		case KEY_R:
+			return caps ? 'R' : 'r';
+		case KEY_T:
+			return caps ? 'T' : 't';
+		case KEY_Y:
+			return caps ? 'Y' : 'y';
+		case KEY_U:
+			return caps ? 'U' : 'u';
+		case KEY_I:
+			return caps ? 'I' : 'i';
+		case KEY_O:
+			return caps ? 'O' : 'o';
+		case KEY_P:
+			return caps ? 'P' : 'p';
+		case KEY_LEFTBRACE:
+			return shift ? '=' : '\xEC';
+		case KEY_RIGHTBRACE:
+			return shift ? '&' : '$';
+		/* Row 2 */
+		case KEY_A:
+			return caps ? 'A' : 'a';
+		case KEY_S:
+			return caps ? 'S' : 's';
+		case KEY_D:
+			return caps ? 'D' : 'd';
+		case KEY_F:
+			return caps ? 'F' : 'f';
+		case KEY_G:
+			return caps ? 'G' : 'g';
+		case KEY_H:
+			return caps ? 'H' : 'h';
+		case KEY_J:
+			return caps ? 'J' : 'j';
+		case KEY_K:
+			return caps ? 'K' : 'k';
+		case KEY_L:
+			return caps ? 'L' : 'l';
+		case KEY_SEMICOLON:
+			return caps ? 'M' : 'm';
+		case KEY_APOSTROPHE:
+			return shift ? '%' : '\xF9';
+		case KEY_BACKSLASH:
+			return shift ? (typewriter ? '\xA7' : '\\') : '*';
+		/* Row 3 */
+		case KEY_102ND:
+			return shift ? '>' : '<';
+		case KEY_Z:
+			return caps ? 'W' : 'w';
+		case KEY_X:
+			return caps ? 'X' : 'x';
+		case KEY_C:
+			return caps ? 'C' : 'c';
+		case KEY_V:
+			return caps ? 'V' : 'v';
+		case KEY_B:
+			return caps ? 'B' : 'b';
+		case KEY_N:
+			return caps ? 'N' : 'n';
+		case KEY_M:
+			return shift ? '?' : '\'';
+		case KEY_COMMA:
+			return shift ? ',' : ';';
+		case KEY_DOT:
+			return shift ? '/' : ':';
+		case KEY_SLASH:
+			return shift ? '!' : '\xF2';
+		default:
+			return VT220TranslateKey(vt, key);
+	}
+}
+
+// Swiss (French) Keyboard
+u16 VT220KeyboardTranslateKey10(VT220* vt, int key)
+{
+	bool shift = VT220KeyboardIsShift(vt);
+	bool caps = VT220KeyboardIsCaps(vt);
+	bool typewriter = vt->config.keys == VT220_KEYS_TYPEWRITER;
+
+	switch(key) {
+		/* Row 0 */
+		case KEY_GRAVE:
+			return shift ? '\xB0' : '!';
+		case KEY_1:
+			return shift ? '+' : '1';
+		case KEY_2:
+			return shift ? '"' : '2';
+		case KEY_3:
+			return shift ? '*' : '3';
+		case KEY_4:
+			return shift ? (typewriter ? '\xE7' : '@') : '4';
+		case KEY_5:
+			return shift ? '%' : '5';
+		case KEY_6:
+			return shift ? '&' : '6';
+		case KEY_7:
+			return shift ? '/' : '7';
+		case KEY_8:
+			return shift ? '(' : '8';
+		case KEY_9:
+			return shift ? ')' : '9';
+		case KEY_0:
+			return shift ? '=' : '0';
+		case KEY_MINUS:
+			return shift ? '?' : '\''; // TODO: dead key?
+		case KEY_EQUAL:
+			return shift ? '`' : '^'; // TODO: dead key?
+		/* Row 1 */
+		case KEY_Q:
+			return caps ? 'Q' : 'q';
+		case KEY_W:
+			return caps ? 'W' : 'w';
+		case KEY_E:
+			return caps ? 'E' : 'e';
+		case KEY_R:
+			return caps ? 'R' : 'r';
+		case KEY_T:
+			return caps ? 'T' : 't';
+		case KEY_Y:
+			return caps ? 'Z' : 'z';
+		case KEY_U:
+			return caps ? 'U' : 'u';
+		case KEY_I:
+			return caps ? 'I' : 'i';
+		case KEY_O:
+			return caps ? 'O' : 'o';
+		case KEY_P:
+			return caps ? 'P' : 'p';
+		case KEY_LEFTBRACE:
+			return shift ? (typewriter ? '\xFC' : '\\') : '\xE8';
+		case KEY_RIGHTBRACE:
+			return shift ? '~' : VT220_KEY_UMLAUT;
+		/* Row 2 */
+		case KEY_A:
+			return caps ? 'A' : 'a';
+		case KEY_S:
+			return caps ? 'S' : 's';
+		case KEY_D:
+			return caps ? 'D' : 'd';
+		case KEY_F:
+			return caps ? 'F' : 'f';
+		case KEY_G:
+			return caps ? 'G' : 'g';
+		case KEY_H:
+			return caps ? 'H' : 'h';
+		case KEY_J:
+			return caps ? 'J' : 'j';
+		case KEY_K:
+			return caps ? 'K' : 'k';
+		case KEY_L:
+			return caps ? 'L' : 'l';
+		case KEY_SEMICOLON:
+			return shift ? (typewriter ? '\xF6' : '[') : '\xE9';
+		case KEY_APOSTROPHE:
+			return shift ? (typewriter ? '\xE4' : ']') : '\xE0';
+		case KEY_BACKSLASH:
+			return shift ? (typewriter ? '\xA3' : '#') : '$';
+		/* Row 3 */
+		case KEY_102ND:
+			return shift ? '>' : '<';
+		case KEY_Z:
+			return caps ? 'Y' : 'y';
+		case KEY_X:
+			return caps ? 'X' : 'x';
+		case KEY_C:
+			return caps ? 'C' : 'c';
+		case KEY_V:
+			return caps ? 'V' : 'v';
+		case KEY_B:
+			return caps ? 'B' : 'b';
+		case KEY_N:
+			return caps ? 'N' : 'n';
+		case KEY_M:
+			return caps ? 'M' : 'm';
+		case KEY_COMMA:
+			return shift ? ';' : ',';
+		case KEY_DOT:
+			return shift ? ':' : '.';
+		case KEY_SLASH:
+			return shift ? '_' : '-';
+		default:
+			return VT220TranslateKey(vt, key);
+	}
+}
+
+// Swiss (German) Keyboard
+u16 VT220KeyboardTranslateKey11(VT220* vt, int key)
+{
+	bool shift = VT220KeyboardIsShift(vt);
+	bool caps = VT220KeyboardIsCaps(vt);
+	bool typewriter = vt->config.keys == VT220_KEYS_TYPEWRITER;
+
+	switch(key) {
+		/* Row 0 */
+		case KEY_GRAVE:
+			return shift ? '\xB0' : '!';
+		case KEY_1:
+			return shift ? '+' : '1';
+		case KEY_2:
+			return shift ? '"' : '2';
+		case KEY_3:
+			return shift ? '*' : '3';
+		case KEY_4:
+			return shift ? (typewriter ? '\xE7' : '@') : '4';
+		case KEY_5:
+			return shift ? '%' : '5';
+		case KEY_6:
+			return shift ? '&' : '6';
+		case KEY_7:
+			return shift ? '/' : '7';
+		case KEY_8:
+			return shift ? '(' : '8';
+		case KEY_9:
+			return shift ? ')' : '9';
+		case KEY_0:
+			return shift ? '=' : '0';
+		case KEY_MINUS:
+			return shift ? '?' : '\''; // TODO: dead key?
+		case KEY_EQUAL:
+			return shift ? '`' : '^'; // TODO: dead key?
+		/* Row 1 */
+		case KEY_Q:
+			return caps ? 'Q' : 'q';
+		case KEY_W:
+			return caps ? 'W' : 'w';
+		case KEY_E:
+			return caps ? 'E' : 'e';
+		case KEY_R:
+			return caps ? 'R' : 'r';
+		case KEY_T:
+			return caps ? 'T' : 't';
+		case KEY_Y:
+			return caps ? 'Z' : 'z';
+		case KEY_U:
+			return caps ? 'U' : 'u';
+		case KEY_I:
+			return caps ? 'I' : 'i';
+		case KEY_O:
+			return caps ? 'O' : 'o';
+		case KEY_P:
+			return caps ? 'P' : 'p';
+		case KEY_LEFTBRACE:
+			return shift ? (typewriter ? '\xE8' : '\\') : '\xFC';
+		case KEY_RIGHTBRACE:
+			return shift ? '~' : VT220_KEY_UMLAUT;
+		/* Row 2 */
+		case KEY_A:
+			return caps ? 'A' : 'a';
+		case KEY_S:
+			return caps ? 'S' : 's';
+		case KEY_D:
+			return caps ? 'D' : 'd';
+		case KEY_F:
+			return caps ? 'F' : 'f';
+		case KEY_G:
+			return caps ? 'G' : 'g';
+		case KEY_H:
+			return caps ? 'H' : 'h';
+		case KEY_J:
+			return caps ? 'J' : 'j';
+		case KEY_K:
+			return caps ? 'K' : 'k';
+		case KEY_L:
+			return caps ? 'L' : 'l';
+		case KEY_SEMICOLON:
+			return shift ? (typewriter ? '\xE9' : '[') : '\xF6';
+		case KEY_APOSTROPHE:
+			return shift ? (typewriter ? '\xE0' : ']') : '\xE4';
+		case KEY_BACKSLASH:
+			return shift ? (typewriter ? '\xA3' : '#') : '$';
+		/* Row 3 */
+		case KEY_102ND:
+			return shift ? '>' : '<';
+		case KEY_Z:
+			return caps ? 'Y' : 'y';
+		case KEY_X:
+			return caps ? 'X' : 'x';
+		case KEY_C:
+			return caps ? 'C' : 'c';
+		case KEY_V:
+			return caps ? 'V' : 'v';
+		case KEY_B:
+			return caps ? 'B' : 'b';
+		case KEY_N:
+			return caps ? 'N' : 'n';
+		case KEY_M:
+			return caps ? 'M' : 'm';
+		case KEY_COMMA:
+			return shift ? ';' : ',';
+		case KEY_DOT:
+			return shift ? ':' : '.';
+		case KEY_SLASH:
+			return shift ? '_' : '-';
+		default:
+			return VT220TranslateKey(vt, key);
+	}
+}
+
+// Swedish Keyboard
+u16 VT220KeyboardTranslateKey12(VT220* vt, int key)
+{
+	bool shift = VT220KeyboardIsShift(vt);
+	bool caps = VT220KeyboardIsCaps(vt);
+	bool typewriter = vt->config.keys == VT220_KEYS_TYPEWRITER;
+
+	switch(key) {
+		/* Row 0 */
+		case KEY_GRAVE:
+			return shift ? '\xB0' : '~'; // TODO: dead key?
+		case KEY_1:
+			return shift ? '!' : '1';
+		case KEY_2:
+			return shift ? '"' : '2';
+		case KEY_3:
+			return shift ? (typewriter ? '\xA7' : '@') : '3';
+		case KEY_4:
+			return shift ? '$' : '4';
+		case KEY_5:
+			return shift ? '%' : '5';
+		case KEY_6:
+			return shift ? '&' : '6';
+		case KEY_7:
+			return shift ? '/' : '7';
+		case KEY_8:
+			return shift ? '(' : '8';
+		case KEY_9:
+			return shift ? ')' : '9';
+		case KEY_0:
+			return shift ? '=' : '0';
+		case KEY_MINUS:
+			return shift ? '?' : '+';
+		case KEY_EQUAL:
+			return shift ? '`' : '^'; // TODO: dead key?
+		/* Row 1 */
+		case KEY_Q:
+			return caps ? 'Q' : 'q';
+		case KEY_W:
+			return caps ? 'W' : 'w';
+		case KEY_E:
+			return caps ? 'E' : 'e';
+		case KEY_R:
+			return caps ? 'R' : 'r';
+		case KEY_T:
+			return caps ? 'T' : 't';
+		case KEY_Y:
+			return caps ? 'Y' : 'y';
+		case KEY_U:
+			return caps ? 'U' : 'u';
+		case KEY_I:
+			return caps ? 'I' : 'i';
+		case KEY_O:
+			return caps ? 'O' : 'o';
+		case KEY_P:
+			return caps ? 'P' : 'p';
+		case KEY_LEFTBRACE:
+			return typewriter ? (caps ? '\xC5' : '\xE5') : (shift ? '[' : ']');
+		case KEY_RIGHTBRACE:
+			return typewriter ? (caps ? '\xDC' : '\xFC') : (shift ? '\\' : '#');
+		/* Row 2 */
+		case KEY_A:
+			return caps ? 'A' : 'a';
+		case KEY_S:
+			return caps ? 'S' : 's';
+		case KEY_D:
+			return caps ? 'D' : 'd';
+		case KEY_F:
+			return caps ? 'F' : 'f';
+		case KEY_G:
+			return caps ? 'G' : 'g';
+		case KEY_H:
+			return caps ? 'H' : 'h';
+		case KEY_J:
+			return caps ? 'J' : 'j';
+		case KEY_K:
+			return caps ? 'K' : 'k';
+		case KEY_L:
+			return caps ? 'L' : 'l';
+		case KEY_SEMICOLON:
+			return caps ? '\xD6' : '\xF6';
+		case KEY_APOSTROPHE:
+			return caps ? '\xC4' : '\xE4';
+		case KEY_BACKSLASH:
+			return shift ? '*' : '\''; // TODO: dead key?
+		/* Row 3 */
+		case KEY_102ND:
+			return shift ? '>' : '<';
+		case KEY_Z:
+			return caps ? 'Z' : 'z';
+		case KEY_X:
+			return caps ? 'X' : 'x';
+		case KEY_C:
+			return caps ? 'C' : 'c';
+		case KEY_V:
+			return caps ? 'V' : 'v';
+		case KEY_B:
+			return caps ? 'B' : 'b';
+		case KEY_N:
+			return caps ? 'N' : 'n';
+		case KEY_M:
+			return caps ? 'M' : 'm';
+		case KEY_COMMA:
+			return shift ? ';' : ',';
+		case KEY_DOT:
+			return shift ? ':' : '.';
+		case KEY_SLASH:
+			return shift ? '_' : '-';
+		default:
+			return VT220TranslateKey(vt, key);
+	}
+}
+
+// Norwegian Keyboard
+u16 VT220KeyboardTranslateKey13(VT220* vt, int key)
+{
+	bool shift = VT220KeyboardIsShift(vt);
+	bool caps = VT220KeyboardIsCaps(vt);
+	bool typewriter = vt->config.keys == VT220_KEYS_TYPEWRITER;
+
+	switch(key) {
+		/* Row 0 */
+		case KEY_GRAVE:
+			return shift ? '~' : '\xB0';
+		case KEY_1:
+			return shift ? '!' : '1';
+		case KEY_2:
+			return shift ? '"' : '2';
+		case KEY_3:
+			return shift ? (typewriter ? '\xA7' : '@') : '3';
+		case KEY_4:
+			return shift ? '$' : '4';
+		case KEY_5:
+			return shift ? '%' : '5';
+		case KEY_6:
+			return shift ? '&' : '6';
+		case KEY_7:
+			return shift ? '/' : '7';
+		case KEY_8:
+			return shift ? '(' : '8';
+		case KEY_9:
+			return shift ? ')' : '9';
+		case KEY_0:
+			return shift ? '=' : '0';
+		case KEY_MINUS:
+			return shift ? '?' : '+';
+		case KEY_EQUAL:
+			return shift ? '`' : '\''; // TODO: dead key
+		/* Row 1 */
+		case KEY_Q:
+			return caps ? 'Q' : 'q';
+		case KEY_W:
+			return caps ? 'W' : 'w';
+		case KEY_E:
+			return caps ? 'E' : 'e';
+		case KEY_R:
+			return caps ? 'R' : 'r';
+		case KEY_T:
+			return caps ? 'T' : 't';
+		case KEY_Y:
+			return caps ? 'Y' : 'y';
+		case KEY_U:
+			return caps ? 'U' : 'u';
+		case KEY_I:
+			return caps ? 'I' : 'i';
+		case KEY_O:
+			return caps ? 'O' : 'o';
+		case KEY_P:
+			return caps ? 'P' : 'p';
+		case KEY_LEFTBRACE:
+			return typewriter ? (caps ? '\xC5' : '\xE5') : (shift ? '[' : ']');
+		case KEY_RIGHTBRACE:
+			return shift ? VT220_KEY_CIRCUMFLEX : VT220_KEY_UMLAUT;
+		/* Row 2 */
+		case KEY_A:
+			return caps ? 'A' : 'a';
+		case KEY_S:
+			return caps ? 'S' : 's';
+		case KEY_D:
+			return caps ? 'D' : 'd';
+		case KEY_F:
+			return caps ? 'F' : 'f';
+		case KEY_G:
+			return caps ? 'G' : 'g';
+		case KEY_H:
+			return caps ? 'H' : 'h';
+		case KEY_J:
+			return caps ? 'J' : 'j';
+		case KEY_K:
+			return caps ? 'K' : 'k';
+		case KEY_L:
+			return caps ? 'L' : 'l';
+		case KEY_SEMICOLON:
+			return caps ? '\xD8' : '\xF8';
+		case KEY_APOSTROPHE:
+			return typewriter ? (caps ? '\xC6' : '\xE6') : (shift ? '\\' : '#');
+		case KEY_BACKSLASH:
+			return shift ? '*' : '\'';
+		/* Row 3 */
+		case KEY_102ND:
+			return shift ? '>' : '<';
+		case KEY_Z:
+			return caps ? 'Z' : 'z';
+		case KEY_X:
+			return caps ? 'X' : 'x';
+		case KEY_C:
+			return caps ? 'C' : 'c';
+		case KEY_V:
+			return caps ? 'V' : 'v';
+		case KEY_B:
+			return caps ? 'B' : 'b';
+		case KEY_N:
+			return caps ? 'N' : 'n';
+		case KEY_M:
+			return caps ? 'M' : 'm';
+		case KEY_COMMA:
+			return shift ? ';' : ',';
+		case KEY_DOT:
+			return shift ? ':' : '.';
+		case KEY_SLASH:
+			return shift ? '_' : '-';
+		default:
+			return VT220TranslateKey(vt, key);
+	}
+}
+
+// French Keyboard
+u16 VT220KeyboardTranslateKey14(VT220* vt, int key)
+{
+	bool shift = VT220KeyboardIsShift(vt);
+	bool caps = VT220KeyboardIsCaps(vt);
+	bool typewriter = vt->config.keys == VT220_KEYS_TYPEWRITER;
+
+	switch(key) {
+		/* Row 0 */
+		case KEY_GRAVE:
+			return shift ? '~' : '`'; // TODO: dead key?
+		case KEY_1:
+			return shift ? '1' : '&';
+		case KEY_2:
+			return shift ? '2' : '\xE9';
+		case KEY_3:
+			return shift ? '3' : '"';
+		case KEY_4:
+			return shift ? '4' : '\''; // TODO: dead key?
+		case KEY_5:
+			return shift ? '5' : '(';
+		case KEY_6:
+			return shift ? '6' : (typewriter ? '\xA7' : '[');
+		case KEY_7:
+			return shift ? '7' : (typewriter ? '\xE8' : ']');
+		case KEY_8:
+			return shift ? '8' : '!';
+		case KEY_9:
+			return shift ? '9' : '\xE7';
+		case KEY_0:
+			return shift ? '0' : '\xE0';
+		case KEY_MINUS:
+			return shift ? '\xB0' : ')';
+		case KEY_EQUAL:
+			return shift ? '_' : '-';
+		/* Row 1 */
+		case KEY_Q:
+			return caps ? 'A' : 'a';
+		case KEY_W:
+			return caps ? 'Z' : 'z';
+		case KEY_E:
+			return caps ? 'E' : 'e';
+		case KEY_R:
+			return caps ? 'R' : 'r';
+		case KEY_T:
+			return caps ? 'T' : 't';
+		case KEY_Y:
+			return caps ? 'Y' : 'y';
+		case KEY_U:
+			return caps ? 'U' : 'u';
+		case KEY_I:
+			return caps ? 'I' : 'i';
+		case KEY_O:
+			return caps ? 'O' : 'o';
+		case KEY_P:
+			return caps ? 'P' : 'p';
+		case KEY_LEFTBRACE:
+			return shift ? VT220_KEY_UMLAUT : VT220_KEY_CIRCUMFLEX;
+		case KEY_RIGHTBRACE:
+			return shift ? '*' : '$';
+		/* Row 2 */
+		case KEY_A:
+			return caps ? 'Q' : 'q';
+		case KEY_S:
+			return caps ? 'S' : 's';
+		case KEY_D:
+			return caps ? 'D' : 'd';
+		case KEY_F:
+			return caps ? 'F' : 'f';
+		case KEY_G:
+			return caps ? 'G' : 'g';
+		case KEY_H:
+			return caps ? 'H' : 'h';
+		case KEY_J:
+			return caps ? 'J' : 'j';
+		case KEY_K:
+			return caps ? 'K' : 'k';
+		case KEY_L:
+			return caps ? 'L' : 'l';
+		case KEY_SEMICOLON:
+			return shift ? 'M' : 'm';
+		case KEY_APOSTROPHE:
+			return shift ? '%' : (typewriter ? '\xF9' : '\\');
+		case KEY_BACKSLASH:
+			return shift ? '@' : '#';
+		/* Row 3 */
+		case KEY_102ND:
+			return shift ? '>' : '<';
+		case KEY_Z:
+			return caps ? 'W' : 'w';
+		case KEY_X:
+			return caps ? 'X' : 'x';
+		case KEY_C:
+			return caps ? 'C' : 'c';
+		case KEY_V:
+			return caps ? 'V' : 'v';
+		case KEY_B:
+			return caps ? 'B' : 'b';
+		case KEY_N:
+			return caps ? 'N' : 'n';
+		case KEY_M:
+			return shift ? '?' : ',';
+		case KEY_COMMA:
+			return shift ? '.' : ';';
+		case KEY_DOT:
+			return shift ? '/' : ':';
+		case KEY_SLASH:
+			return shift ? '+' : '=';
+		default:
+			return VT220TranslateKey(vt, key);
+	}
+}
+
+// Spanish Keyboard
+u16 VT220KeyboardTranslateKey15(VT220* vt, int key)
+{
+	bool shift = VT220KeyboardIsShift(vt);
+	bool caps = VT220KeyboardIsCaps(vt);
+	bool typewriter = vt->config.keys == VT220_KEYS_TYPEWRITER;
+
+	switch(key) {
+		/* Row 0 */
+		case KEY_GRAVE:
+			return typewriter ? (shift ? '\xA1' : '\xBF') : (shift ? '\\' : '@');
+		case KEY_1:
+			return shift ? '!' : '1';
+		case KEY_2:
+			return shift ? '"' : '2';
+		case KEY_3:
+			return shift ? '#' : '3';
+		case KEY_4:
+			return shift ? '$' : '4';
+		case KEY_5:
+			return shift ? '%' : '5';
+		case KEY_6:
+			return shift ? '&' : '6';
+		case KEY_7:
+			return shift ? '/' : '7';
+		case KEY_8:
+			return shift ? '(' : '8';
+		case KEY_9:
+			return shift ? ')' : '9';
+		case KEY_0:
+			return shift ? '=' : '0';
+		case KEY_MINUS:
+			return shift ? '?' : '\'';
+		case KEY_EQUAL:
+			return typewriter ? (shift ? '\xAA' : '\xBA') : (shift ? '[' : ']');
+		/* Row 1 */
+		case KEY_Q:
+			return caps ? 'Q' : 'q';
+		case KEY_W:
+			return caps ? 'W' : 'w';
+		case KEY_E:
+			return caps ? 'E' : 'e';
+		case KEY_R:
+			return caps ? 'R' : 'r';
+		case KEY_T:
+			return caps ? 'T' : 't';
+		case KEY_Y:
+			return caps ? 'Y' : 'y';
+		case KEY_U:
+			return caps ? 'U' : 'u';
+		case KEY_I:
+			return caps ? 'I' : 'i';
+		case KEY_O:
+			return caps ? 'O' : 'o';
+		case KEY_P:
+			return caps ? 'P' : 'p';
+		case KEY_LEFTBRACE:
+			return shift ? VT220_KEY_CIRCUMFLEX : VT220_KEY_GRAVE;
+		case KEY_RIGHTBRACE:
+			return shift ? '*' : '+';
+		/* Row 2 */
+		case KEY_A:
+			return caps ? 'A' : 'a';
+		case KEY_S:
+			return caps ? 'S' : 's';
+		case KEY_D:
+			return caps ? 'D' : 'd';
+		case KEY_F:
+			return caps ? 'F' : 'f';
+		case KEY_G:
+			return caps ? 'G' : 'g';
+		case KEY_H:
+			return caps ? 'H' : 'h';
+		case KEY_J:
+			return caps ? 'J' : 'j';
+		case KEY_K:
+			return caps ? 'K' : 'k';
+		case KEY_L:
+			return caps ? 'L' : 'l';
+		case KEY_SEMICOLON:
+			return caps ? '\xD1' : '\xF1';
+		case KEY_APOSTROPHE:
+			return shift ? VT220_KEY_UMLAUT : VT220_KEY_ACUTE;
+		case KEY_BACKSLASH:
+			return shift ? VT220_KEY_TILDE : '\xE7';
+		/* Row 3 */
+		case KEY_102ND:
+			return shift ? '>' : '<';
+		case KEY_Z:
+			return caps ? 'Z' : 'z';
 		case KEY_X:
 			return caps ? 'X' : 'x';
 		case KEY_C:
@@ -1099,9 +2007,51 @@ void VT220KeyboardKeyDown(VT220* vt, int key)
 				case VT220_KEYBOARD_GERMAN:
 					translate_key = VT220KeyboardTranslateKey7;
 					break;
+				case VT220_KEYBOARD_DUTCH:
+					translate_key = VT220KeyboardTranslateKey8;
+					break;
+				case VT220_KEYBOARD_ITALIAN:
+					translate_key = VT220KeyboardTranslateKey9;
+					break;
+				case VT220_KEYBOARD_SWISS_FRENCH:
+					translate_key = VT220KeyboardTranslateKey10;
+					break;
+				case VT220_KEYBOARD_SWISS_GERMAN:
+					translate_key = VT220KeyboardTranslateKey11;
+					break;
+				case VT220_KEYBOARD_SWEDISH:
+					translate_key = VT220KeyboardTranslateKey12;
+					break;
+				case VT220_KEYBOARD_NORWEGIAN:
+					translate_key = VT220KeyboardTranslateKey13;
+					break;
+				case VT220_KEYBOARD_FRENCH:
+					translate_key = VT220KeyboardTranslateKey14;
+					break;
+				case VT220_KEYBOARD_SPANISH:
+					translate_key = VT220KeyboardTranslateKey15;
+					break;
 			}
 
 			u16 value = translate_key(vt, key);
+			// TODO: properly implement dead keys
+			switch(value) {
+				case VT220_KEY_UMLAUT:
+					value = '"';
+					break;
+				case VT220_KEY_ACUTE:
+					value = '\'';
+					break;
+				case VT220_KEY_GRAVE:
+					value = '`';
+					break;
+				case VT220_KEY_CIRCUMFLEX:
+					value = '^';
+					break;
+				case VT220_KEY_TILDE:
+					value = '~';
+					break;
+			}
 			if(ctrl) {
 				if((value >= 'A' && value <= 'Z') || (value >= 'a' && value <= 'z')) {
 					value &= ~0x20; // upper case
