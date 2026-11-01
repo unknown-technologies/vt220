@@ -338,12 +338,12 @@ void CMConnect(CM* self, int id)
 		case CM_MODE_TTY:
 			self->mode = CM_MODE_TTY;
 
-			VT220CursorHome(vt);
-			VT220EraseScreen(vt);
-			VT220SaveCursor(vt);
 			VT220ClearComm(vt);
 
-			if(TTYOpen(&self->tty, con->target)) {
+			if(TTYOpen(&self->tty, con->target) && !(vt->mode & DECINIT)) {
+				VT220CursorHome(vt);
+				VT220EraseScreen(vt);
+				VT220SaveCursor(vt);
 				VT220ReceiveText(vt, "READY\r\n");
 			}
 			CMSetVisible(self, 0);
