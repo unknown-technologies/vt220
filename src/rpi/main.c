@@ -223,6 +223,26 @@ static void cm_screen_raw(int raw)
 	VTSetRaw(&renderer, raw);
 }
 
+static void kb_leds(unsigned int leds)
+{
+	int bits = 0;
+
+	if(leds & VT220_LED_HOLD) {
+		bits = KB_LED_HOLD;
+	}
+	if(leds & VT220_LED_LOCK) {
+		bits = KB_LED_LOCK;
+	}
+	if(leds & VT220_LED_WAIT) {
+		bits = KB_LED_WAIT;
+	}
+	if(leds & VT220_LED_COMPOSE) {
+		bits = KB_LED_COMP;
+	}
+
+	KBSetLEDs(&kb, bits);
+}
+
 static void kb_down(KB* kb, int code)
 {
 	(void) kb;
@@ -405,6 +425,7 @@ int main(int argc, char** argv, char** envp)
 	vt.key = cm_key;
 	vt.datatalk = cm_datatalk;
 	vt.disconnect = cm_disconnect;
+	vt.leds = kb_leds;
 
 	CFGLoadState(&vt);
 

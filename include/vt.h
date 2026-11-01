@@ -88,8 +88,14 @@
 
 /* TODO: make RETURN a separate key from CR */
 
-#define	VT220_KEY_CTRL				367
-#define	VT220_KEY_SHIFT				368
+#define	VT220_KEY_COMPOSE			367
+#define	VT220_KEY_UMLAUT			368
+#define	VT220_KEY_ACUTE				369
+#define	VT220_KEY_GRAVE				370
+#define	VT220_KEY_CIRCUMFLEX			371
+
+#define	VT220_KEY_CTRL				372
+#define	VT220_KEY_SHIFT				373
 
 #define	VT220_MODIFIER_SHIFT_L			_BV(0)
 #define	VT220_MODIFIER_SHIFT_R			_BV(1)
@@ -97,6 +103,13 @@
 #define	VT220_MODIFIER_CTRL_R			_BV(3)
 #define	VT220_MODIFIER_ALT_L			_BV(4)
 #define	VT220_MODIFIER_ALT_R			_BV(5)
+#define	VT220_MODIFIER_LOCK			_BV(6)
+#define	VT220_MODIFIER_COMPOSE			_BV(7)
+
+#define	VT220_LED_HOLD				_BV(0)
+#define	VT220_LED_LOCK				_BV(1)
+#define	VT220_LED_WAIT				_BV(2)
+#define	VT220_LED_COMPOSE			_BV(3)
 
 #define	MAX_PARAMETERS				16
 
@@ -462,6 +475,7 @@ typedef struct {
 	void		(*datatalk)(void);
 	void		(*disconnect)(void);
 	void		(*key)(u16 key);
+	void		(*leds)(unsigned int leds);
 } VT220;
 
 #define	CHARSET_ASCII			0
@@ -674,6 +688,7 @@ void VT220KeyboardKeyDown(VT220* vt, int key);
 void VT220KeyboardKeyUp(VT220* vt, int key);
 void VT220KeyboardChar(VT220* vt, unsigned int code);
 void VT220KeyboardProcess(VT220* vt, unsigned long dt);
+void VT220KeyboardUpdateLEDs(VT220* vt);
 void VT220SetKeyboardGrabbed(VT220* vt, int grabbed);
 
 /* setup functions */

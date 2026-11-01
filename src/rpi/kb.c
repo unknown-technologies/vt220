@@ -99,7 +99,7 @@ BOOL KBiOpen(KB* kb, const char* filename)
 		return FALSE;
 	}
 
-	KBSetLEDs(kb);
+	KBUpdateLEDs(kb);
 
 	return TRUE;
 }
@@ -107,9 +107,11 @@ BOOL KBiOpen(KB* kb, const char* filename)
 void KBClose(KB* kb)
 {
 	if(kb->fd >= 0) {
-		/* reset LEDs on exit */
+		/* reset LEDs on exit but keep old state for reconnect */
+		unsigned int old_leds = kb->leds;
 		kb->leds = 0;
-		KBSetLEDs(kb);
+		KBUpdateLEDs(kb);
+		kb->leds = old_leds;
 
 		ioctl(kb->fd, EVIOCGRAB, 0);
 
@@ -185,9 +187,9 @@ static void KBiProcess(KB* kb, struct input_event* event)
 /* LEDs are mapped as follows:
  * - Compose = Num Lock
  * - Lock = Caps Lock
- * - Hold = Scroll Lock
+ * - Hold / Wait = Scroll Lock
  */
-void KBSetLEDs(KB* kb)
+void KBUpdateLEDs(KB* kb)
 {
 	struct input_event event[3];
 
@@ -205,7 +207,7 @@ void KBSetLEDs(KB* kb)
 
 	event[2].type = EV_LED;
 	event[2].code = LED_SCROLLL;
-	event[2].value = (kb->leds & KB_LED_HOLD) ? 1 : 0;
+	event[2].value = ((kb->leds & KB_LED_HOLD) || (kb->leds & KB_LED_WAIT)) ? 1 : 0;
 
 	ssize_t n = write(kb->fd, &event, sizeof(event));
 	if(n == -1) {
@@ -216,4 +218,10 @@ void KBSetLEDs(KB* kb)
 	} else if(n != sizeof(event)) {
 		printf("[KB] failed to update LED status: partial write\n");
 	}
+}
+
+void KBSetLEDs(KB* kb, unsigned int leds)
+{
+	kb->leds = leds;
+	KBUpdateLEDs(kb);
 }

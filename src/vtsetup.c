@@ -1510,7 +1510,7 @@ void VT220SetupShowGeneral(VT220* vt)
 	/* line 3 */
 	VT220SetupGoto(vt, 6, 1);
 	VT220SetupEraseLine(vt);
-	if(vt->mode & KAM) {
+	if(vt->mode & DECKPAM) {
 		VT220SetupWriteField(vt, general_field_names, GENERAL_APPLICATION_KEYPAD, GET_SGR(2, 0));
 	} else {
 		VT220SetupWriteField(vt, general_field_names, GENERAL_NUMERIC_KEYPAD, GET_SGR(2, 0));
@@ -2255,7 +2255,7 @@ void VT220SetupGeneralEnter(VT220* vt)
 		case 2:
 			switch(vt->setup.cursor_x) {
 				case 0: /* Keypad */
-					vt->mode ^= KAM;
+					vt->mode ^= DECKPAM;
 					VT220SetupShowScreen(vt);
 					break;
 				case 1: /* Cursor keys */

@@ -1343,6 +1343,8 @@ void VT220SoftReset(VT220* vt)
 	vt->saved_g[1] = vt->g[1];
 	vt->saved_g[2] = vt->g[2];
 	vt->saved_g[3] = vt->g[3];
+
+	VT220KeyboardUpdateLEDs(vt);
 }
 
 /* RIS */
@@ -1426,9 +1428,9 @@ static void VT220iHardReset(VT220* vt, const VT220NVR* nvr)
 	}
 
 	if(nvr->keypad == VT220_KEYPAD_APPLICATION) {
-		vt->mode |= KAM;
+		vt->mode |= DECKPAM;
 	} else {
-		vt->mode &= ~KAM;
+		vt->mode &= ~DECKPAM;
 	}
 
 	if(nvr->cursor_keys == VT220_CURSOR_KEYS_APPLICATION) {
@@ -1531,6 +1533,8 @@ static void VT220iHardReset(VT220* vt, const VT220NVR* nvr)
 	if(vt->resize && vt->columns != old_columns) {
 		vt->resize(vt->columns, vt->lines);
 	}
+
+	VT220KeyboardUpdateLEDs(vt);
 }
 
 void VT220HardReset(VT220* vt)
@@ -2337,6 +2341,7 @@ void VT220ProcessCharVT220(VT220* vt, unsigned char c)
 							case 2:
 								if(vt->config.user_features == VT220_USER_FEATURES_UNLOCKED) {
 									vt->mode |= KAM;
+									VT220KeyboardUpdateLEDs(vt);
 								}
 								break;
 							case 4:
@@ -2362,6 +2367,7 @@ void VT220ProcessCharVT220(VT220* vt, unsigned char c)
 							case 2:
 								if(vt->config.user_features == VT220_USER_FEATURES_UNLOCKED) {
 									vt->mode &= ~KAM;
+									VT220KeyboardUpdateLEDs(vt);
 								}
 								break;
 							case 4:
@@ -4992,6 +4998,7 @@ void VT220FlowControl(VT220* vt, int start)
 		if(vt->sent_xoff && start) {
 			vt->sent_xoff = 0;
 		}
+		VT220KeyboardUpdateLEDs(vt);
 		return;
 	}
 
@@ -5010,6 +5017,7 @@ void VT220FlowControl(VT220* vt, int start)
 		}
 		vt->sent_xoff = 1;
 	}
+	VT220KeyboardUpdateLEDs(vt);
 }
 
 void VT220PauseInput(VT220* vt, int pause)
@@ -5023,6 +5031,27 @@ int VT220CanReceive(VT220* vt)
 		return !vt->sent_xoff;
 	} else {
 		return !vt->pause_input && !vt->hold_screen && !vt->sent_xoff;
+	}
+}
+
+void VT220KeyboardUpdateLEDs(VT220* vt)
+{
+	if(vt->leds) {
+		unsigned int leds = 0;
+		if(vt->use_xoff && vt->sent_xoff) {
+			leds |= VT220_LED_HOLD;
+		}
+		if(vt->modifiers & VT220_MODIFIER_LOCK) {
+			leds |= VT220_LED_LOCK;
+		}
+		if(vt->mode & KAM) {
+			leds |= VT220_LED_WAIT;
+		}
+		if(vt->modifiers & VT220_MODIFIER_COMPOSE) {
+			leds |= VT220_LED_COMPOSE;
+		}
+
+		vt->leds(leds);
 	}
 }
 
@@ -5097,7 +5126,7 @@ static void VT220iSaveConfig(const VT220* vt, VT220NVR* nvr)
 	nvr->scroll = (vt->mode & DECSCLM) ? VT220_SCROLL_SMOOTH_SCROLL : VT220_SCROLL_JUMP_SCROLL;
 	nvr->text = (vt->mode & DECSCNM) ? VT220_TEXT_DARK_TEXT : VT220_TEXT_LIGHT_TEXT;
 	nvr->columns = (vt->mode & DECCOLM) ? VT220_COLUMNS_132 : VT220_COLUMNS_80;
-	nvr->keypad = (vt->mode & KAM) ? VT220_KEYPAD_APPLICATION : VT220_KEYPAD_NUMERIC;
+	nvr->keypad = (vt->mode & DECKPAM) ? VT220_KEYPAD_APPLICATION : VT220_KEYPAD_NUMERIC;
 	nvr->cursor_keys = (vt->mode & DECCKM) ? VT220_CURSOR_KEYS_APPLICATION : VT220_CURSOR_KEYS_NORMAL;
 	nvr->printer_terminator = (vt->mode & DECPFF) ? VT220_PRINTER_TERMINATOR_FF : VT220_PRINTER_NO_TERMINATOR;
 	nvr->printer_extent = (vt->mode & DECPEX) ? VT220_PRINTER_FULL_PAGE : VT220_PRINTER_SCROLL_REGION;

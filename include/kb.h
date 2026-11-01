@@ -13,7 +13,6 @@ typedef struct KB KB;
 struct KB {
 	int		fd;
 
-	unsigned int	modifiers;
 	unsigned int	leds;
 
 	void*		user;
@@ -44,7 +43,8 @@ BOOL KBInit(KB* kb);
 BOOL KBOpen(KB* kb);
 void KBClose(KB* kb);
 
-void KBSetLEDs(KB* kb);
+void KBSetLEDs(KB* kb, unsigned int leds);
+void KBUpdateLEDs(KB* kb);
 void KBPoll(KB* kb);
 
 BOOL KBiOpen(KB* kb, const char* filename);
