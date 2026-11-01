@@ -5,6 +5,7 @@
 
 #ifndef _WIN32
 #include <unistd.h>
+#include <fcntl.h>
 #endif
 
 #include "config.h"
@@ -101,6 +102,25 @@ void CFGLoadState(VT220* vt)
 #endif
 }
 
+#ifndef _WIN32
+static bool write_all(int fd, const void* data, size_t len)
+{
+	while(len > 0) {
+		ssize_t n = write(fd, data, len);
+		if(n == -1) {
+			return false;
+		} else if(n == 0) {
+			return false;
+		} else {
+			len -= n;
+			data += n;
+		}
+	}
+
+	return true;
+}
+#endif
+
 void CFGSaveState(const VT220NVR* nvr)
 {
 #ifdef _WIN32
@@ -115,17 +135,72 @@ void CFGSaveState(const VT220NVR* nvr)
 	printf("Saving config to %s\n", state_path);
 #endif
 
-	/* TODO: the mode should be 0600 but fopen sets it to 0644 */
-	FILE* file = fopen(state_path, "wb");
-	if(!file) {
-		printf("[CFG] failed to open file %s: %s\n", state_path, strerror(errno));
+	char* tmpfile = (char*) malloc(strlen(state_path) + 5);
+	if(!tmpfile) {
+		printf("[CFG] cannot create temporary file, using non-atomic write instead\n");
+		tmpfile = state_path;
+	} else {
+		strcpy(tmpfile, state_path);
+		strcat(tmpfile, ".tmp");
+	}
+
+	/* O_TRUNC is used to automatically "clean up" any left-over temporary
+	 * files in case there was a power loss / system crash at exactly the
+	 * wrong time (after the write operation, before the rename operation).
+	 *
+	 * Technically, S_IRUSR is sufficient for atomic updates, but in case
+	 * we cannot use that mechanism for some reason, we still want to be
+	 * able to perform a non-atomic update. To make this work, we also set
+	 * the S_IWUSR permission so we can directly write to the file in case
+	 * it is ever necessary. */
+	int file = open(tmpfile, O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
+	if(file == -1) {
+		printf("[CFG] failed to open file %s: %s\n", tmpfile, strerror(errno));
+		if(tmpfile != state_path) {
+			free(tmpfile);
+		}
 		free(state_path);
 		return;
 	}
 
-	fwrite(nvr, sizeof(VT220NVR), 1, file);
+	if(!write_all(file, nvr, sizeof(VT220NVR))) {
+		printf("[CFG] failed to write NVR: %s\n", strerror(errno));
+		goto error;
+	}
 
-	fclose(file);
+	/* make sure everything is written to disk before performing the atomic rename */
+	if(fsync(file) == -1) {
+		printf("[CFG] failed to write NVR to disk: %s\n", strerror(errno));
+		goto error;
+	}
+
+	close(file);
+
+	/* only perform rename if there is in fact a temporary file */
+	if(tmpfile != state_path) {
+		if(rename(tmpfile, state_path) == -1) {
+			printf("[CFG] failed to perform atomic NVR update: %s\n", strerror(errno));
+			if(unlink(tmpfile) == -1) {
+				printf("[CFG] failed to remove temporary NVR file: %s\n", strerror(errno));
+			}
+		}
+
+		free(tmpfile);
+	}
+
+	free(state_path);
+	return;
+
+error:
+	close(file);
+
+	if(tmpfile != state_path) {
+		/* if there is a temporary file, remove it since it is most likely broken */
+		if(unlink(tmpfile) == -1) {
+			printf("[CFG] failed to remove temporary NVR file: %s\n", strerror(errno));
+		}
+		free(tmpfile);
+	}
 
 	free(state_path);
 #endif
