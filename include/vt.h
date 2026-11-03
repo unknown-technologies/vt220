@@ -105,7 +105,6 @@
 #define	VT220_MODIFIER_ALT_L			_BV(4)
 #define	VT220_MODIFIER_ALT_R			_BV(5)
 #define	VT220_MODIFIER_LOCK			_BV(6)
-#define	VT220_MODIFIER_COMPOSE			_BV(7)
 
 #define	VT220_LED_HOLD				_BV(0)
 #define	VT220_LED_LOCK				_BV(1)
@@ -402,6 +401,8 @@ typedef struct {
 	unsigned long	repeat_time;
 	int		repeat_state;
 
+	int		compose_state;
+	u16		compose_keys[2];
 	u32		modifiers;
 	int		last_scancode;
 	u16		repeat_scancode;

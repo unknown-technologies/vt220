@@ -5047,7 +5047,7 @@ void VT220KeyboardUpdateLEDs(VT220* vt)
 		if(vt->mode & KAM) {
 			leds |= VT220_LED_WAIT;
 		}
-		if(vt->modifiers & VT220_MODIFIER_COMPOSE) {
+		if(vt->compose_state != 0) {
 			leds |= VT220_LED_COMPOSE;
 		}
 

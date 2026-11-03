@@ -5,9 +5,14 @@
 
 #define	REPEAT_TIME	(1000 / 30)
 
+#define	COMPOSE_NONE	0
+#define	COMPOSE_FIRST	1
+#define	COMPOSE_SECOND	2
+
 void VT220InitKeyboard(VT220* vt)
 {
 	vt->modifiers = 0;
+	vt->compose_state = COMPOSE_NONE;
 	vt->last_scancode = 0;
 	vt->repeat_scancode = 0;
 	vt->repeat_char = 0xFFFF;
@@ -1952,6 +1957,415 @@ u16 VT220KeyboardTranslateKey15(VT220* vt, int key)
 	}
 }
 
+////////////////////////////////////////////////////////////////////////////////
+u16 VT220KeyboardResolveCompose(VT220* vt)
+{
+	/* order sensitive stuff first */
+	switch(vt->compose_keys[0]) {
+		case '/':
+			switch(vt->compose_keys[1]) {
+				case 'U':
+				case 'u':
+					return '\xB5';
+			}
+			break;
+		case '1':
+			switch(vt->compose_keys[1]) {
+				case '2':
+					return '\xBD';
+				case '4':
+					return '\xBC';
+			}
+			break;
+		case 'A':
+			if(vt->compose_keys[1] == 'E') {
+				return '\xC6';
+			}
+			break;
+		case 'a':
+			if(vt->compose_keys[1] == 'e') {
+				return '\xE6';
+			}
+			break;
+		case 'O':
+			if(vt->compose_keys[1] == 'E') {
+				return '\xD7';
+			}
+			break;
+		case 'o':
+			if(vt->compose_keys[1] == 'e') {
+				return '\xF7';
+			}
+			break;
+	}
+
+	bool swap = vt->compose_keys[0] == SP;
+	switch(vt->compose_keys[1]) {
+		case VT220_KEY_UMLAUT:
+		case VT220_KEY_ACUTE:
+		case VT220_KEY_GRAVE:
+		case VT220_KEY_CIRCUMFLEX:
+		case VT220_KEY_TILDE:
+		case '"':
+		case '\'':
+		case '`':
+		case '^':
+		case '~':
+		case '/':
+		case '|':
+		case '-':
+		case '=':
+		case '!':
+		case ',':
+		case '*':
+		case '\xB0':
+			swap = true;
+			break;
+	}
+
+	if(swap) {
+		/* swap keys[0] and keys[1] */
+		u16 tmp = vt->compose_keys[0];
+		vt->compose_keys[0] = vt->compose_keys[1];
+		vt->compose_keys[1] = tmp;
+	}
+
+	switch(vt->compose_keys[0]) {
+		case '"':
+		case VT220_KEY_UMLAUT:
+			switch(vt->compose_keys[1]) {
+				case ' ':
+					return '"';
+				case 'A':
+					return '\xC4';
+				case 'E':
+					return '\xCB';
+				case 'I':
+					return '\xCF';
+				case 'O':
+					return '\xD6';
+				case 'U':
+					return '\xDC';
+				case 'Y':
+					return '\xDD';
+				case 'a':
+					return '\xE4';
+				case 'e':
+					return '\xEB';
+				case 'i':
+					return '\xEF';
+				case 'o':
+					return '\xF6';
+				case 'u':
+					return '\xFC';
+				case 'y':
+					return '\xFD';
+			}
+			break;
+		case '\'':
+		case VT220_KEY_ACUTE:
+			switch(vt->compose_keys[1]) {
+				case ' ':
+					return '\'';
+				case 'A':
+					return '\xC1';
+				case 'E':
+					return '\xC9';
+				case 'I':
+					return '\xCD';
+				case 'O':
+					return '\xD3';
+				case 'U':
+					return '\xDA';
+				case 'a':
+					return '\xE1';
+				case 'e':
+					return '\xE9';
+				case 'i':
+					return '\xED';
+				case 'o':
+					return '\xF3';
+				case 'u':
+					return '\xFA';
+			}
+			break;
+		case '`':
+		case VT220_KEY_GRAVE:
+			switch(vt->compose_keys[1]) {
+				case ' ':
+					return '`';
+				case 'A':
+					return '\xC0';
+				case 'E':
+					return '\xC8';
+				case 'I':
+					return '\xCC';
+				case 'O':
+					return '\xD2';
+				case 'U':
+					return '\xD9';
+				case 'a':
+					return '\xE0';
+				case 'e':
+					return '\xE8';
+				case 'i':
+					return '\xEC';
+				case 'o':
+					return '\xF2';
+				case 'u':
+					return '\xF9';
+			}
+			break;
+		case '^':
+			switch(vt->compose_keys[1]) {
+				case '/':
+					return '|';
+				case '.':
+					return '\xB7';
+				case '0':
+					return '\xB0';
+				case '1':
+					return '\xB9';
+				case '2':
+					return '\xB2';
+				case '3':
+					return '\xB3';
+			}
+			/* fallthrough */
+		case VT220_KEY_CIRCUMFLEX:
+			switch(vt->compose_keys[1]) {
+				case ' ':
+					return '^';
+				case 'A':
+					return '\xC2';
+				case 'E':
+					return '\xCA';
+				case 'I':
+					return '\xCE';
+				case 'O':
+					return '\xD4';
+				case 'U':
+					return '\xDB';
+				case 'a':
+					return '\xE2';
+				case 'e':
+					return '\xEA';
+				case 'i':
+					return '\xEE';
+				case 'o':
+					return '\xF4';
+				case 'u':
+					return '\xFB';
+			}
+			break;
+		case '~':
+		case VT220_KEY_TILDE:
+			switch(vt->compose_keys[1]) {
+				case ' ':
+					return '~';
+				case 'A':
+					return '\xC3';
+				case 'N':
+					return '\xD1';
+				case 'a':
+					return '\xE3';
+				case 'n':
+					return '\xF1';
+			}
+			break;
+		case '*':
+		case 0xB0: /* ring */
+			switch(vt->compose_keys[1]) {
+				case 'A':
+					return '\xC5';
+				case 'a':
+					return '\xE5';
+			}
+			break;
+		case ' ':
+			switch(vt->compose_keys[1]) {
+				case '#':
+				case 0xB0:
+					return '\xB0';
+			}
+			break;
+		case ',':
+			switch(vt->compose_keys[1]) {
+				case 'C':
+					return '\xC7';
+				case 'c':
+					return '\xE7';
+			}
+			break;
+		case '+':
+			switch(vt->compose_keys[1]) {
+				case '+':
+					return '#';
+			}
+			break;
+		case 'A':
+			switch(vt->compose_keys[1]) {
+				case 'A':
+					return '@';
+			}
+			break;
+		case 'a':
+			switch(vt->compose_keys[1]) {
+				case 'a':
+					return '@';
+			}
+			break;
+		case '/':
+			switch(vt->compose_keys[1]) {
+				case '/':
+				case '<':
+					return '\\';
+				case '^':
+					return '|';
+				case 'c':
+				case 'C':
+					return '\xA2';
+				case 'O':
+					return '\xD8';
+				case 'o':
+					return '\xF8';
+			}
+			break;
+		case '|':
+			switch(vt->compose_keys[1]) {
+				case 'c':
+				case 'C':
+					return '\xA2';
+			}
+			break;
+		case '-':
+			switch(vt->compose_keys[1]) {
+				case '(':
+					return '{';
+				case ')':
+					return '}';
+				case 'l':
+				case 'L':
+					return '\xA3';
+				case 'y':
+				case 'Y':
+					return '\xA5';
+				case 'a':
+				case 'A':
+					return '\xAA';
+				case 'o':
+				case 'O':
+					return '\xBA';
+				case '+':
+					return '\xB1';
+			}
+			break;
+		case '=':
+			switch(vt->compose_keys[1]) {
+				case 'l':
+				case 'L':
+					return '\xA3';
+				case 'y':
+				case 'Y':
+					return '\xA5';
+			}
+			break;
+		case '(':
+			switch(vt->compose_keys[1]) {
+				case '(':
+					return '[';
+				case '-':
+					return '{';
+			}
+			break;
+		case ')':
+			switch(vt->compose_keys[1]) {
+				case ')':
+					return ']';
+				case '-':
+					return '}';
+			}
+			break;
+		case '!':
+			switch(vt->compose_keys[1]) {
+				case '!':
+					return '\xA1';
+				case 'S':
+				case 's':
+					return '\xA7';
+				case 'P':
+				case 'p':
+					return '\xB6';
+			}
+			break;
+		case '<':
+			switch(vt->compose_keys[1]) {
+				case '<':
+					return '\xAB';
+			}
+			break;
+		case '>':
+			switch(vt->compose_keys[1]) {
+				case '>':
+					return '\xBB';
+			}
+			break;
+		case '?':
+			switch(vt->compose_keys[1]) {
+				case '?':
+					return '\xBF';
+			}
+			break;
+		case 'X':
+		case 'x':
+			switch(vt->compose_keys[1]) {
+				case 'O':
+				case 'o':
+					return '\xA8';
+			}
+			break;
+		case 'C':
+		case 'c':
+			switch(vt->compose_keys[1]) {
+				case 'O':
+				case 'o':
+					return '\xA9';
+			}
+			break;
+		case 'S':
+			switch(vt->compose_keys[1]) {
+				case 'O':
+				case 'o':
+					return '\xA7';
+			}
+			break;
+		case 's':
+			switch(vt->compose_keys[1]) {
+				case 'O':
+				case 'o':
+					return '\xA7';
+				case 's':
+					return '\xDF';
+			}
+			break;
+		case 'O':
+		case 'o':
+		case '0':
+			switch(vt->compose_keys[1]) {
+				case 'C':
+				case 'c':
+					return '\xA9';
+				case 'S':
+				case 's':
+					return '\xA7';
+			}
+			break;
+	}
+
+	VT220Bell(vt);
+	return 0xFFFF;
+}
+
 void VT220KeyboardKeyDown(VT220* vt, int key)
 {
 	u32 last_modifiers = vt->modifiers;
@@ -2037,24 +2451,105 @@ void VT220KeyboardKeyDown(VT220* vt, int key)
 			}
 
 			u16 value = translate_key(vt, key);
-			// TODO: properly implement dead keys
+
 			switch(value) {
-				case VT220_KEY_UMLAUT:
-					value = '"';
+				case VT220_KEY_COMPOSE:
+					vt->compose_state = COMPOSE_FIRST;
+					VT220KeyboardUpdateLEDs(vt);
 					break;
-				case VT220_KEY_ACUTE:
-					value = '\'';
+				case CR:
+				case VT220_KEY_F6:
+				case VT220_KEY_F7:
+				case VT220_KEY_F8:
+				case VT220_KEY_F9:
+				case VT220_KEY_F10:
+				case VT220_KEY_F11:
+				case VT220_KEY_F12:
+				case VT220_KEY_F13:
+				case VT220_KEY_F14:
+				case VT220_KEY_F15:
+				case VT220_KEY_F16:
+				case VT220_KEY_F17:
+				case VT220_KEY_F18:
+				case VT220_KEY_F19:
+				case VT220_KEY_F20:
+				case VT220_KEY_F6_UDK:
+				case VT220_KEY_F7_UDK:
+				case VT220_KEY_F8_UDK:
+				case VT220_KEY_F9_UDK:
+				case VT220_KEY_F10_UDK:
+				case VT220_KEY_F11_UDK:
+				case VT220_KEY_F12_UDK:
+				case VT220_KEY_F13_UDK:
+				case VT220_KEY_F14_UDK:
+				case VT220_KEY_F15_UDK:
+				case VT220_KEY_F16_UDK:
+				case VT220_KEY_F17_UDK:
+				case VT220_KEY_F18_UDK:
+				case VT220_KEY_F19_UDK:
+				case VT220_KEY_F20_UDK:
+				case VT220_KEY_KP_0:
+				case VT220_KEY_KP_1:
+				case VT220_KEY_KP_2:
+				case VT220_KEY_KP_3:
+				case VT220_KEY_KP_4:
+				case VT220_KEY_KP_5:
+				case VT220_KEY_KP_6:
+				case VT220_KEY_KP_7:
+				case VT220_KEY_KP_8:
+				case VT220_KEY_KP_9:
+				case VT220_KEY_KP_PF1:
+				case VT220_KEY_KP_PF2:
+				case VT220_KEY_KP_PF3:
+				case VT220_KEY_KP_PF4:
+				case VT220_KEY_KP_MINUS:
+				case VT220_KEY_KP_PERIOD:
+				case VT220_KEY_KP_COMMA:
+				case VT220_KEY_KP_ENTER:
+					vt->compose_state = COMPOSE_NONE;
+					VT220KeyboardUpdateLEDs(vt);
 					break;
-				case VT220_KEY_GRAVE:
-					value = '`';
-					break;
-				case VT220_KEY_CIRCUMFLEX:
-					value = '^';
-					break;
-				case VT220_KEY_TILDE:
-					value = '~';
+				default:
+					/* DEL cancels any compose sequence without sending anything to the host */
+					if(vt->compose_state != COMPOSE_NONE && value == DEL) {
+						vt->compose_state = COMPOSE_NONE;
+						VT220KeyboardUpdateLEDs(vt);
+						return;
+					} else if(vt->compose_state == COMPOSE_NONE) {
+						/* a dead key starts a two-stroke compose sequence (only if there is no
+						 * active sequence) */
+						switch(value) {
+							case VT220_KEY_ACUTE:
+							case VT220_KEY_GRAVE:
+							case VT220_KEY_CIRCUMFLEX:
+							case VT220_KEY_UMLAUT:
+							case VT220_KEY_TILDE:
+								vt->compose_state = COMPOSE_SECOND;
+								vt->compose_keys[0] = value;
+								VT220KeyboardUpdateLEDs(vt);
+								break;
+						}
+					} else if(vt->compose_state == COMPOSE_FIRST) {
+						/* the first character in the sequence */
+						vt->compose_keys[0] = value;
+						vt->compose_state = COMPOSE_SECOND;
+					} else if(vt->compose_state == COMPOSE_SECOND) {
+						/* the second and final character in the sequence */
+						vt->compose_keys[1] = value;
+						vt->compose_state = COMPOSE_NONE;
+						VT220KeyboardUpdateLEDs(vt);
+						value = VT220KeyboardResolveCompose(vt);
+						if(value == 0xFFFF) {
+							return;
+						}
+					}
 					break;
 			}
+
+			if(vt->compose_state != COMPOSE_NONE) {
+				return;
+			}
+
 			if(ctrl) {
 				if((value >= 'A' && value <= 'Z') || (value >= 'a' && value <= 'z')) {
 					value &= ~0x20; // upper case
