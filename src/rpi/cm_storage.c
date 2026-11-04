@@ -108,6 +108,8 @@ void CMLoadState(CM* cm)
 							|| conns[i].username[sizeof(conns[i].username) - 1]) {
 						printf("[CM] corrupt config file: string not terminated\n");
 						free(conns);
+						free(state_path);
+						fclose(file);
 						return;
 					}
 				}
