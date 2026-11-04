@@ -435,6 +435,10 @@ void CMDeleteConnection(CM* self, int id)
 		/* NOTE: this works because the original connections_cnt - id - 1 happens to be the current
 		 * connections_cnt - id now; without the -1 we would copy one element too much */
 		memmove(con, &con[1], (self->connections_cnt - id) * sizeof(CMCONN));
+
+		/* clear the now free entry in the connection table */
+		CMCONN* deleted = &self->connections[self->connections_cnt];
+		memset(deleted, 0, sizeof(CMCONN));
 	}
 
 	/* adjust current connection */
