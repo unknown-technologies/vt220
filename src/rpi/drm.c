@@ -199,7 +199,7 @@ static u32 find_crtc_for_connector(const DRM* drm, const drmModeRes* resources,
 					encoder);
 
 			drmModeFreeEncoder(encoder);
-			if(crtc_id) {
+			if(crtc_id != (u32) -1) {
 				return crtc_id;
 			}
 		}
@@ -377,7 +377,7 @@ static int init_drm(DRM* drm, const char* device, const char* mode_str,
 		drm->crtc_id = encoder->crtc_id;
 	} else {
 		u32 crtc_id = find_crtc_for_connector(drm, resources, connector);
-		if(!crtc_id) {
+		if(crtc_id == (u32) -1) {
 			fprintf(stderr, "no crtc found!\n");
 			return -1;
 		}
