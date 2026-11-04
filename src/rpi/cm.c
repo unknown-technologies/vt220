@@ -134,11 +134,13 @@ void CMDisconnect(CM* self)
 	}
 
 	self->mode = CM_MODE_NONE;
+	self->current_connection = -1;
 }
 
 void CMiDisconnected(CM* self)
 {
 	self->mode = CM_MODE_NONE;
+	self->current_connection = -1;
 
 	if(self->input_received && self->flags & CM_FLAG_CLOSE) {
 		CMSetVisible(self, 1);
@@ -412,6 +414,11 @@ void CMDeleteConnection(CM* self, int id)
 		return;
 	}
 
+	/* cannot delete the currently active connection */
+	if(id == self->current_connection) {
+		return;
+	}
+
 	CMCONN* con = &self->connections[id];
 	memset(con, 0, sizeof(CMCONN));
 
@@ -427,6 +434,13 @@ void CMDeleteConnection(CM* self, int id)
 		/* NOTE: this works because the original connections_cnt - id - 1 happens to be the current
 		 * connections_cnt - id now; without the -1 we would copy one element too much */
 		memmove(con, &con[1], (self->connections_cnt - id) * sizeof(CMCONN));
+	}
+
+	/* adjust current connection */
+	if(id == self->current_connection) {
+		self->current_connection = -1;
+	} else if(id < self->current_connection) {
+		self->current_connection--;
 	}
 }
 
