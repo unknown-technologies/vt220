@@ -143,6 +143,10 @@ void KBPoll(KB* kb)
 	} else if(sz == -1) {
 		switch(errno) {
 			case EAGAIN:
+				/* TODO: ideally we would read until we get
+				 * EAGAIN, but practically this has to be done
+				 * carefully to avoid potentially long delays
+				 * here */
 				return;
 			case ENODEV:
 				printf("[KB] keyboard disconnected\n");
