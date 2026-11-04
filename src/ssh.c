@@ -219,7 +219,10 @@ void SSHSend(SSH* self, unsigned char c)
 			}
 
 			result = ssh_channel_write(self->pty, &c, 1);
-			if(result != 1) {
+			if(result == SSH_AGAIN) {
+				/* TODO: implement TX ringbuffer here? */
+				printf("[SSH] ssh_channel_write blocked, dropped character\n");
+			} else if(result != 1) {
 				SSHRxError(self, "ssh_channel_write", ssh_get_error(self->session));
 				SSHDisconnect(self);
 				return;
