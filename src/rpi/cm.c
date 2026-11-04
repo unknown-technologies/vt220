@@ -29,6 +29,7 @@ static int CMHostKeyCheck(void* ptr, unsigned char* hostkey, int len)
 {
 	ASSERT(ptr);
 	CM* self = (CM*) ptr;
+	ASSERT(self->current_connection >= 0 && self->current_connection < self->connections_cnt);
 	CMCONN* con = &self->connections[self->current_connection];
 	ASSERT(con->mode == CM_MODE_SSH);
 	if(!(con->flags & CM_HAS_HOSTKEY)) {
