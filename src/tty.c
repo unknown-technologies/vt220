@@ -272,8 +272,10 @@ void TTYSetUserData(TTY* tty, void* userdata)
 
 void TTYRxString(TTY* tty, const char* s)
 {
-	for(; *s; s++) {
-		tty->rx(tty->userdata, *s);
+	if(tty->rx) {
+		for(; *s; s++) {
+			tty->rx(tty->userdata, *s);
+		}
 	}
 }
 
