@@ -93,6 +93,8 @@ void CMLoadState(CM* cm)
 			printf("[CM] corrupt config file, ignored\n");
 		} else if(hdr.version != CM_CURRENT_VERSION) {
 			printf("[CM] unknown config file version, ignored\n");
+		} else if(hdr.connection_count < 0) {
+			printf("[CM] invalid connection connection count in config file, ignored\n");
 		} else if(hdr.connection_count > cm->connections_max) {
 			printf("[CM] too many connections in config file, ignored\n");
 		} else {
