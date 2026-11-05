@@ -295,8 +295,14 @@ static void CMiConnectionEditMenuDelete(void* ptr, bool confirm)
 	CMConnectionEditMenu* this = (CMConnectionEditMenu*) SPFGetPanelUserData(self);
 
 	int id = this->id;
+	int mode = cm->connections[id].mode;
+
 	SPFDestroyPanel(self);
-	CMDeleteConnection(cm, id);
+
+	/* Destroy already deleted this connection if it was of mode NONE */
+	if(mode != CM_MODE_NONE) {
+		CMDeleteConnection(cm, id);
+	}
 }
 
 static void CMiConnectionEditMenuDeleteKey(void* ptr, bool confirm)
