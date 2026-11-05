@@ -45,6 +45,7 @@ CFLAGS		+=	$(OPT) -Wall -Wextra -Wformat -Werror=format-security \
 			-DCOMMIT=\"$(COMMIT)\" \
 			-DBUILDDATE=\"$(BUILDDATE)\" \
 			-DBUILDTIME=\"$(BUILDTIME)\" \
+			-pipe \
 			$(DEBUG) $(ASANFLG)
 
 LIBS		:=	-lGL -lglfw
