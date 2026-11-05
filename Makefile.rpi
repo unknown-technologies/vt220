@@ -82,6 +82,7 @@ clean:
 	@rm -rf $(BUILD) $(TFILES) $(OFILES) $(TARGET)
 
 suid-helper: src/helper/vt220-agetty.c
+	@echo "[CCLD]  $(notdir $@)"
 	@$(CC) $(CFLAGS) $(LDFLAGS) $< -o $@
 
 else
