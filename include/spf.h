@@ -122,13 +122,15 @@ struct SPF {
 	SPFPanel	panels[SPF_MAX_PANELS];
 	int		current_panel;
 
+	const char*	error_message;
+
 	BOOL		dirty;
 };
 
 /******************************************************************************/
 /* SPF Routines                                                               */
 /******************************************************************************/
-void	SPFInit(SPF* self, VT220* vt);
+bool	SPFInit(SPF* self, VT220* vt);
 void	SPFDestroy(SPF* self);
 void	SPFDraw(SPF* self);
 void	SPFProcess(SPF* self);
@@ -171,6 +173,16 @@ static inline VTScreen* SPFGetScreen(SPF* self)
 	ASSERT(self);
 
 	return &self->screen;
+}
+
+static inline void SPFShowError(SPF* self, const char* message)
+{
+	ASSERT(self);
+	ASSERT(message);
+
+	self->error_message = message;
+
+	SPFRepaint(self);
 }
 
 static inline SPF* SPFGet(SPFPanel* self)

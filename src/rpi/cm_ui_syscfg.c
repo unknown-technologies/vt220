@@ -31,7 +31,12 @@ static void CMiSystemConfigMenuInitWidgets(SPFPanel* self);
 void CMSystemConfigMenuCreate(SPFPanel* self)
 {
 	CMSystemConfigMenu* this = (CMSystemConfigMenu*) malloc(sizeof(CMSystemConfigMenu));
-	ASSERT(this);
+	if(!this) {
+		SPFDestroyPanel(self);
+		SPFShowError(SPFGet(self), "Cannot allocate memory for system menu");
+		return;
+	}
+
 	memset(this, 0, sizeof(CMSystemConfigMenu));
 	SPFSetPanelUserData(self, (void*) this);
 

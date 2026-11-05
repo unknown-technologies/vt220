@@ -20,7 +20,12 @@ typedef struct {
 void CMDiagnosticsMenuCreate(SPFPanel* self)
 {
 	CMDiagnosticsMenu* this = (CMDiagnosticsMenu*) malloc(sizeof(CMDiagnosticsMenu));
-	ASSERT(this);
+	if(!this) {
+		SPFDestroyPanel(self);
+		SPFShowError(SPFGet(self), "Cannot allocate memory for diagnostics menu");
+		return;
+	}
+
 	memset(this, 0, sizeof(CMDiagnosticsMenu));
 
 	getifaddrs(&this->addrs);

@@ -402,6 +402,7 @@ static int init_drm(DRM* drm, const char* device, const char* mode_str,
 	return 0;
 }
 
+/* TODO: properly clean up on error to avoid leaks */
 DRM* DRMInit(const char* device, const char* mode_str,
 		unsigned int vrefresh)
 {
@@ -409,13 +410,18 @@ DRM* DRMInit(const char* device, const char* mode_str,
 	int ret;
 
 	DRM* drm = (DRM*) malloc(sizeof(DRM));
+	if(!drm) {
+		return NULL;
+	}
+
 	memset(drm, 0, sizeof(DRM));
 
 	drm->kms_out_fence_fd = -1;
 
 	ret = init_drm(drm, device, mode_str, vrefresh);
-	if(ret)
+	if(ret) {
 		return NULL;
+	}
 
 	ret = drmSetClientCap(drm->fd, DRM_CLIENT_CAP_ATOMIC, 1);
 	if(ret) {
@@ -439,6 +445,9 @@ DRM* DRMInit(const char* device, const char* mode_str,
 	drm->plane = (Plane*) malloc(sizeof(Plane));
 	drm->crtc = (CRTC*) malloc(sizeof(CRTC));
 	drm->connector = (Connector*) malloc(sizeof(Connector));
+	if(!drm->plane || !drm->crtc || !drm->connector) {
+		return NULL;
+	}
 
 #define get_resource(type, Type, id) {					       \
 		drm->type->type = drmModeGet##Type(drm->fd, id);	       \
@@ -506,8 +515,9 @@ void DRMDestroy(DRM* drm)
 	free(drm->crtc);
 	free(drm->plane);
 
-	if(drm->fd >= 0)
+	if(drm->fd >= 0) {
 		close(drm->fd);
+	}
 
 	free(drm);
 }
@@ -518,8 +528,9 @@ drm_fb_destroy_callback(struct gbm_bo *bo, void *data)
 	int drm_fd = gbm_device_get_fd(gbm_bo_get_device(bo));
 	struct drm_fb *fb = data;
 
-	if(fb->fb_id)
+	if(fb->fb_id) {
 		drmModeRmFB(drm_fd, fb->fb_id);
+	}
 
 	free(fb);
 }

@@ -15,7 +15,12 @@ typedef struct {
 void CMConnectionCustomizationMenuCreate(SPFPanel* self)
 {
 	CMConnectionCustomizationMenu* this = (CMConnectionCustomizationMenu*) malloc(sizeof(CMConnectionCustomizationMenu));
-	ASSERT(this);
+	if(!this) {
+		SPFDestroyPanel(self);
+		SPFShowError(SPFGet(self), "Cannot allocate memory for connection customization menu");
+		return;
+	}
+
 	memset(this, 0, sizeof(CMConnectionCustomizationMenu));
 	SPFSetPanelUserData(self, (void*) this);
 

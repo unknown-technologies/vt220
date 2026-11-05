@@ -71,6 +71,9 @@ GBM* GBMInit(int drm_fd, int w, int h, u32 format, u64 modifier,
 		bool surfaceless)
 {
 	GBM* gbm = (GBM*) malloc(sizeof(GBM));
+	if(!gbm) {
+		return NULL;
+	}
 
 	memset(gbm, 0, sizeof(GBM));
 

@@ -15,7 +15,12 @@ typedef struct {
 void CMSetupMenuCreate(SPFPanel* self)
 {
 	CMSetupMenu* this = (CMSetupMenu*) malloc(sizeof(CMSetupMenu));
-	ASSERT(this);
+	if(!this) {
+		SPFDestroyPanel(self);
+		SPFShowError(SPFGet(self), "Cannot allocate memory for setup menu");
+		return;
+	}
+
 	memset(this, 0, sizeof(CMSetupMenu));
 	SPFSetPanelUserData(self, (void*) this);
 

@@ -59,9 +59,22 @@ static void CMHostKeyAdd(void* ptr, unsigned char* hostkey, int len)
 	CMSaveState(self);
 }
 
-void CMInit(CM* self, VT220* vt, char** envp)
+bool CMInit(CM* self, VT220* vt, char** envp)
 {
 	memset(self, 0, sizeof(CM));
+
+	self->connections_max = 28;
+	self->connections = (CMCONN*) malloc(self->connections_max * sizeof(CMCONN));
+	if(!self->connections) {
+		return false;
+	}
+
+	memset(self->connections, 0, self->connections_max * sizeof(CMCONN));
+
+	if(!CMiInitUI(self, vt)) {
+		free(self->connections);
+		return false;
+	}
 
 	TTYInit(&self->tty);
 	PTYInit(&self->pty);
@@ -72,10 +85,6 @@ void CMInit(CM* self, VT220* vt, char** envp)
 
 	self->flags = CM_FLAG_CLOSE | CM_FLAG_CAMBER;
 	self->autoconnect = -1;
-
-	self->connections_max = 28;
-	self->connections = (CMCONN*) malloc(self->connections_max * sizeof(CMCONN));
-	memset(self->connections, 0, self->connections_max * sizeof(CMCONN));
 
 	/* default connections */
 	self->connections_cnt = 1;
@@ -101,10 +110,11 @@ void CMInit(CM* self, VT220* vt, char** envp)
 	self->ssh.hostkey = CMHostKeyCheck;
 	self->ssh.add_hostkey = CMHostKeyAdd;
 
-	CMiInitUI(self, vt);
 	CMInitOSCFilter(self);
 
 	CMLoadState(self);
+
+	return true;
 }
 
 void CMDestroy(CM* self)
@@ -115,6 +125,8 @@ void CMDestroy(CM* self)
 	TELNETDestroy(&self->telnet);
 
 	SPFDestroy(&self->spf);
+
+	free(self->connections);
 }
 
 void CMDisconnect(CM* self)

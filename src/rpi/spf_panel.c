@@ -8,6 +8,7 @@ SPFPanel* SPFCreatePanel(SPF* self, const SPFPanelDefinition* def)
 	ASSERT(def);
 
 	if(self->current_panel + 1 >= SPF_MAX_PANELS) {
+		SPFShowError(self, "Cannot open new panel: out of resources");
 		return NULL;
 	}
 

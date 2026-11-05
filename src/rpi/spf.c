@@ -8,7 +8,7 @@
 #define	SPF_MAX_LINES	24
 #define	SPF_MAX_COLUMNS	132
 
-void SPFInit(SPF* self, VT220* vt)
+bool SPFInit(SPF* self, VT220* vt)
 {
 	ASSERT(self);
 	ASSERT(vt);
@@ -18,7 +18,15 @@ void SPFInit(SPF* self, VT220* vt)
 	self->vt = vt;
 
 	self->screen.text = (VT220CELL*) malloc(SPF_MAX_COLUMNS * SPF_MAX_LINES * sizeof(VT220CELL));
+	if(!self->screen.text) {
+		return false;
+	}
+
 	self->screen.lineattr = malloc(SPF_MAX_LINES);
+	if(!self->screen.lineattr) {
+		free(self->screen.text);
+		return false;
+	}
 
 	memset(self->screen.text, 0, SPF_MAX_COLUMNS * SPF_MAX_LINES * sizeof(VT220CELL));
 	memset(self->screen.lineattr, 0, SPF_MAX_LINES);
@@ -26,6 +34,8 @@ void SPFInit(SPF* self, VT220* vt)
 	self->current_panel = -1;
 
 	self->dirty = 1;
+
+	return true;
 }
 
 void SPFDestroy(SPF* self)
@@ -66,6 +76,63 @@ void SPFDraw(SPF* self)
 
 		SPFDrawPanel(panel);
 	}
+
+	if(self->error_message) {
+		int columns = strlen(self->error_message) + 4;
+		int lines = 3;
+
+		int screen_columns = self->vt->columns;
+		int screen_lines = self->vt->lines;
+
+		int off_x = (screen_columns - columns) / 2;
+		int off_y = (screen_lines - lines) / 2;
+
+		SPFScreenSetOffset(self, off_y, off_x);
+
+		SPFScreenGoto(self, 1, 1);
+		SPFScreenPutc(self, 0x0D, 0, FALSE);
+		SPFScreenGoto(self, 1, columns);
+		SPFScreenPutc(self, 0x0C, 0, FALSE);
+		SPFScreenGoto(self, lines, 1);
+		SPFScreenPutc(self, 0x0E, 0, FALSE);
+		SPFScreenGoto(self, lines, columns);
+		SPFScreenPutc(self, 0x0B, 0, FALSE);
+
+		SPFScreenGoto(self, 2, 1);
+		SPFScreenPutc(self, 0x19, 0, FALSE);
+		SPFScreenGoto(self, 2, columns);
+		SPFScreenPutc(self, 0x19, 0, FALSE);
+
+		SPFScreenGoto(self, 1, 2);
+		SPFScreenFill(self, 0x12, columns - 2, 0);
+		SPFScreenGoto(self, 3, 2);
+		SPFScreenFill(self, 0x12, columns - 2, 0);
+
+		/* for now we have a fixed title */
+		const char* title = "Error";
+		if(title) {
+			size_t len = strlen(title);
+			if(len + 4 > (size_t) columns) {
+				SPFScreenGoto(self, 1, 2);
+				SPFScreenPutc(self, 0x20, 0, FALSE);
+				for(int i = 0; i < columns - 4; i++) {
+					SPFScreenPutc(self, title[i], 0, FALSE);
+				}
+				SPFScreenPutc(self, 0x20, 0, FALSE);
+			} else {
+				int off = (columns - len) / 2;
+				SPFScreenGoto(self, 1, off);
+				SPFScreenPutc(self, 0x20, 0, FALSE);
+				SPFScreenPrint(self, title, 0);
+				SPFScreenPutc(self, 0x20, 0, FALSE);
+			}
+		}
+
+		SPFScreenGoto(self, 2, 3);
+		SPFScreenPrint(self, self->error_message, 0);
+
+		SPFScreenHideCursor(self);
+	}
 }
 
 void SPFProcess(SPF* self)
@@ -76,6 +143,19 @@ void SPFProcess(SPF* self)
 void SPFProcessKey(SPF* self, u16 key)
 {
 	ASSERT(self);
+
+	if(self->error_message) {
+		if(key != 0xFFFF) {
+			self->error_message = NULL;
+			SPFRepaint(self);
+		}
+
+		if(self->dirty) {
+			SPFDraw(self);
+		}
+
+		return;
+	}
 
 	SPFPanel* panel = SPFGetCurrentPanel(self);
 	if(!panel) {

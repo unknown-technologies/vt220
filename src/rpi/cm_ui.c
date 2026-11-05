@@ -4,10 +4,15 @@
 #include "vt.h"
 #include "cm.h"
 
-void CMiInitUI(CM* self, VT220* vt)
+bool CMiInitUI(CM* self, VT220* vt)
 {
-	SPFInit(&self->spf, vt);
+	if(!SPFInit(&self->spf, vt)) {
+		return false;
+	}
+
 	SPFSetUserData(&self->spf, self);
+
+	return true;
 }
 
 void CMShow(CM* self)

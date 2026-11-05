@@ -80,7 +80,7 @@ struct CM {
 	void		(*screen_raw)(BOOL raw);
 };
 
-void	CMInit(CM* self, VT220* vt, char** envp);
+bool	CMInit(CM* self, VT220* vt, char** envp);
 void	CMDestroy(CM* self);
 void	CMDisconnect(CM* self);
 void	CMPoll(CM* self);
@@ -135,7 +135,7 @@ BOOL	CMIsUTF8Enabled(CM* self);
 void	CMUTF8Receive(CM* self, unsigned char c);
 void	CMUTF8Transmit(CM* self, unsigned char c);
 
-void	CMiInitUI(CM* self, VT220* vt);
+bool	CMiInitUI(CM* self, VT220* vt);
 
 void	CMiCreateConnectionMenu(CM* self);
 void	CMiCreateSetupMenu(CM* self);

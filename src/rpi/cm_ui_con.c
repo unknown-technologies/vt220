@@ -43,7 +43,12 @@ typedef struct {
 void CMConnectionEditMenuCreate(SPFPanel* self)
 {
 	CMConnectionEditMenu* this = (CMConnectionEditMenu*) malloc(sizeof(CMConnectionEditMenu));
-	ASSERT(this);
+	if(!this) {
+		SPFDestroyPanel(self);
+		SPFShowError(SPFGet(self), "Cannot allocate memory for connection edit menu");
+		return;
+	}
+
 	memset(this, 0, sizeof(CMConnectionEditMenu));
 	SPFSetPanelUserData(self, (void*) this);
 
@@ -357,6 +362,10 @@ static SPFPanelDefinition connection_edit_menu = {
 void CMiCreateConnectionEditMenu(CM* self, int id)
 {
 	SPFPanel* panel = SPFCreatePanel(&self->spf, &connection_edit_menu);
+	if(!panel) {
+		return;
+	}
+
 	CMConnectionEditMenu* menu = (CMConnectionEditMenu*) SPFGetPanelUserData(panel);
 	menu->id = id;
 

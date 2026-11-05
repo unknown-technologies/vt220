@@ -20,7 +20,12 @@ typedef struct {
 void CMMessageBoxCreate(SPFPanel* self)
 {
 	CMMessageBox* this = (CMMessageBox*) malloc(sizeof(CMMessageBox));
-	ASSERT(this);
+	if(!this) {
+		SPFDestroyPanel(self);
+		SPFShowError(SPFGet(self), "Cannot allocate memory for message panel");
+		return;
+	}
+
 	memset(this, 0, sizeof(CMMessageBox));
 	SPFSetPanelUserData(self, (void*) this);
 
@@ -112,6 +117,10 @@ static SPFPanelDefinition message_box = {
 void CMiCreateMessageBox(CM* self, const char* title, const char* message, void (*callback)(void*, BOOL), void* userdata)
 {
 	SPFPanel* panel = SPFCreatePanel(&self->spf, &message_box);
+	if(!panel) {
+		return;
+	}
+
 	CMMessageBox* msgbox = (CMMessageBox*) SPFGetPanelUserData(panel);
 	msgbox->title = title;
 	msgbox->message = message;

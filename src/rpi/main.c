@@ -406,7 +406,11 @@ int main(int argc, char** argv, char** envp)
 
 	VTInitRenderer(&renderer, &vt);
 
-	CMInit(&cm, &vt, envp);
+	if(!CMInit(&cm, &vt, envp)) {
+		printf("Failed to initialize Connection Manager\n");
+		goto error_cm;
+	}
+
 	CMSetVisible(&cm, 1);
 
 	cm.rx = vt_rx;
@@ -503,6 +507,7 @@ int main(int argc, char** argv, char** envp)
 	}
 
 	CMDestroy(&cm);
+error_cm:
 	EGLDestroy(&egl);
 	GBMDestroy(gbm);
 	DRMDestroy(drm);
