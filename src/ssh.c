@@ -538,7 +538,7 @@ void SSHPoll(SSH* self)
 	}
 }
 
-BOOL SSHIsConnected(SSH* self)
+bool SSHIsConnected(SSH* self)
 {
 	return self->state != STATE_DISCONNECTED;
 }

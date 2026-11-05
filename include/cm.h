@@ -64,7 +64,7 @@ struct CM {
 	int		visible;
 	SPF		spf;
 
-	BOOL		input_received;
+	bool		input_received;
 
 	int		current_connection;
 
@@ -74,10 +74,10 @@ struct CM {
 	int		autoconnect;
 
 	void		(*rx)(unsigned char c);
-	int		(*rxe)(void);
+	bool		(*rxe)(void);
 
 	void		(*screen_rotation)(int rotation);
-	void		(*screen_raw)(BOOL raw);
+	void		(*screen_raw)(bool raw);
 };
 
 bool	CMInit(CM* self, VT220* vt, char** envp);
@@ -105,11 +105,11 @@ void	CMSetVisible(CM* self, int visible);
 int	CMIsVisible(CM* self);
 VTScreen* CMGetScreen(CM* self);
 
-void	CMSetFlipScreen(CM* self, BOOL flipped);
+void	CMSetFlipScreen(CM* self, bool flipped);
 void	CMUpdateScreenRotation(CM* self);
 void	CMSetPhosphorColor(CM* self, int color);
 void	CMUpdatePhosphorColor(CM* self);
-void	CMSetRawScreen(CM* self, BOOL raw);
+void	CMSetRawScreen(CM* self, bool raw);
 void	CMUpdateRawScreen(CM* self);
 
 void	CMDeleteConnection(CM* self, int id);
@@ -126,12 +126,12 @@ void	CMiSend(CM* self, unsigned char c);
 
 void	CMInitOSCFilter(CM* self);
 void	CMResetOSCFilter(CM* self);
-void	CMSetOSCEnabled(CM* self, BOOL enabled);
+void	CMSetOSCEnabled(CM* self, bool enabled);
 void	CMOSCReceive(CM* self, unsigned char c);
 
 void	CMResetUTF8(CM* self);
-void	CMSetUTF8Enabled(CM* self, BOOL enabled);
-BOOL	CMIsUTF8Enabled(CM* self);
+void	CMSetUTF8Enabled(CM* self, bool enabled);
+bool	CMIsUTF8Enabled(CM* self);
 void	CMUTF8Receive(CM* self, unsigned char c);
 void	CMUTF8Transmit(CM* self, unsigned char c);
 
@@ -143,6 +143,6 @@ void	CMiCreateConnectionCustomizationMenu(CM* self);
 void	CMiCreateSystemConfigMenu(CM* self);
 void	CMiCreateDiagnosticsMenu(CM* self);
 void	CMiCreateConnectionEditMenu(CM* self, int id);
-void	CMiCreateMessageBox(CM* self, const char* title, const char* message, void (*callback)(void*, BOOL), void* userdata);
+void	CMiCreateMessageBox(CM* self, const char* title, const char* message, void (*callback)(void*, bool), void* userdata);
 
 #endif

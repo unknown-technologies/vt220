@@ -8,7 +8,7 @@ typedef struct {
 	const char*	title;
 	const char*	message;
 	void*		userdata;
-	void		(*callback)(void* userdata, BOOL result);
+	void		(*callback)(void* userdata, bool result);
 
 	SPFLabel	question;
 	SPFLabel	bracket_1;
@@ -57,7 +57,7 @@ void CMMessageBoxInitWidgets(SPFPanel* self)
 	SPFCreateLabel(&this->question, 2, 3, this->message, 0);
 	SPFCreateLabel(&this->bracket_1, 2, msglen + 4, "[", 0);
 	SPFCreateLabel(&this->bracket_2, 2, msglen + 6, "]", 0);
-	SPFCreateInputChar(&this->answer, 0, 2, msglen + 5, "NY", TRUE, NULL);
+	SPFCreateInputChar(&this->answer, 0, 2, msglen + 5, "NY", true, NULL);
 
 	SPFSetInputCharValue(&this->answer, 'N');
 
@@ -89,7 +89,7 @@ void CMMessageBoxProcess(SPFPanel* self, u16 key)
 			if(this->callback) {
 				char c = SPFGetInputCharValue(&this->answer);
 				void* userdata = this->userdata;
-				void (*callback)(void*, BOOL) = this->callback;
+				void (*callback)(void*, bool) = this->callback;
 				SPFDestroyPanel(self);
 				callback(userdata, c == 'Y');
 			} else {
@@ -114,7 +114,7 @@ static SPFPanelDefinition message_box = {
 	.destroy = CMMessageBoxDestroy
 };
 
-void CMiCreateMessageBox(CM* self, const char* title, const char* message, void (*callback)(void*, BOOL), void* userdata)
+void CMiCreateMessageBox(CM* self, const char* title, const char* message, void (*callback)(void*, bool), void* userdata)
 {
 	SPFPanel* panel = SPFCreatePanel(&self->spf, &message_box);
 	if(!panel) {

@@ -92,7 +92,7 @@ typedef struct SPFCheckbox SPFCheckbox;
 struct SPFCheckbox {
 	SPFWidget	widget;
 	void		(*callback)(SPFCheckbox* self);
-	BOOL		state;
+	bool		state;
 };
 
 struct SPFPanel {
@@ -124,7 +124,7 @@ struct SPF {
 
 	const char*	error_message;
 
-	BOOL		dirty;
+	bool		dirty;
 };
 
 /******************************************************************************/
@@ -154,7 +154,7 @@ void	SPFSetPanelOffset(SPFPanel* self);
 void	SPFScreenShowCursor(SPF* self);
 void	SPFScreenHideCursor(SPF* self);
 void	SPFScreenSetCursor(SPF* self, const int line, const int column);
-void	SPFScreenPutc(SPF* self, const u16 c, const int sgr, BOOL display_controls);
+void	SPFScreenPutc(SPF* self, const u16 c, const int sgr, bool display_controls);
 void	SPFScreenPrintNumber(SPF* self, int val, const int width, const int align, const int sgr);
 void	SPFScreenPrintCenter(SPF* self, const int line, const char* s, const int sgr);
 void	SPFScreenSetLineAttribute(SPF* self, int attr);
@@ -292,7 +292,7 @@ static inline void SPFHideCursor(SPFPanel* self)
 	self->flags &= ~SPF_FLAG_CURSOR;
 }
 
-static inline BOOL SPFIsCursorVisible(SPFPanel* self)
+static inline bool SPFIsCursorVisible(SPFPanel* self)
 {
 	ASSERT(self);
 
@@ -313,7 +313,7 @@ static inline void SPFClearOpaque(SPFPanel* self)
 	self->flags &= ~SPF_FLAG_OPAQUE;
 }
 
-static inline BOOL SPFIsOpaque(SPFPanel* self)
+static inline bool SPFIsOpaque(SPFPanel* self)
 {
 	ASSERT(self);
 
@@ -334,7 +334,7 @@ static inline void SPFClearDialog(SPFPanel* self)
 	self->flags &= ~SPF_FLAG_DIALOG;
 }
 
-static inline BOOL SPFIsDialog(SPFPanel* self)
+static inline bool SPFIsDialog(SPFPanel* self)
 {
 	ASSERT(self);
 
@@ -468,9 +468,9 @@ static inline void SPFFieldAt(SPFPanel* self, int line, int column, const char* 
 /******************************************************************************/
 void	SPFCreateWidget(SPFWidget* widget, unsigned int type, unsigned int id);
 void	SPFDrawWidget(SPFWidget* widget);
-BOOL	SPFProcessWidget(SPFWidget* widget, u16 key);
+bool	SPFProcessWidget(SPFWidget* widget, u16 key);
 void	SPFFocusWidget(SPFWidget* widget);
-BOOL	SPFCanFocusWidget(SPFWidget* widget);
+bool	SPFCanFocusWidget(SPFWidget* widget);
 
 static inline unsigned int SPFGetWidgetID(SPFWidget* self)
 {
@@ -508,16 +508,16 @@ void	SPFCreateCheckbox(SPFCheckbox* self, unsigned int id,
 		void (*callback)(SPFCheckbox*));
 void	SPFDrawCheckbox(SPFCheckbox* self);
 void	SPFFocusCheckbox(SPFCheckbox* self);
-BOOL	SPFProcessCheckbox(SPFCheckbox* self, u16 key);
+bool	SPFProcessCheckbox(SPFCheckbox* self, u16 key);
 
-static inline BOOL SPFGetCheckboxState(SPFCheckbox* self)
+static inline bool SPFGetCheckboxState(SPFCheckbox* self)
 {
 	ASSERT(self);
 
 	return self->state;
 }
 
-static inline void SPFSetCheckboxState(SPFCheckbox* self, BOOL state)
+static inline void SPFSetCheckboxState(SPFCheckbox* self, bool state)
 {
 	ASSERT(self);
 
@@ -538,7 +538,7 @@ void	SPFCreateInputStr(SPFInputStr* self, unsigned int id, unsigned int line,
 		void (*callback)(SPFInputStr*));
 void	SPFDrawInputStr(SPFInputStr* self);
 void	SPFFocusInputStr(SPFInputStr* self);
-BOOL	SPFProcessInputStr(SPFInputStr* self, u16 key);
+bool	SPFProcessInputStr(SPFInputStr* self, u16 key);
 
 static inline char* SPFGetInputStrString(SPFInputStr* self)
 {
@@ -564,11 +564,11 @@ static inline void SPFSetInputStrString(SPFInputStr* self, char* string)
 /* Input (single character) routines                                          */
 /******************************************************************************/
 void	SPFCreateInputChar(SPFInputChar* self, unsigned int id, unsigned int line,
-		unsigned int col, const char* allowed_chars, BOOL uppercase,
+		unsigned int col, const char* allowed_chars, bool uppercase,
 		void (*callback)(SPFInputChar*));
 void	SPFDrawInputChar(SPFInputChar* self);
 void	SPFFocusInputChar(SPFInputChar* self);
-BOOL	SPFProcessInputChar(SPFInputChar* self, u16 key);
+bool	SPFProcessInputChar(SPFInputChar* self, u16 key);
 
 static inline char SPFGetInputCharValue(SPFInputChar* self)
 {
@@ -598,7 +598,7 @@ void	SPFCreateInputDec(SPFInputDec* self, unsigned int id, unsigned int line,
 		void (*callback)(SPFInputDec*));
 void	SPFDrawInputDec(SPFInputDec* self);
 void	SPFFocusInputDec(SPFInputDec* self);
-BOOL	SPFProcessInputDec(SPFInputDec* self, u16 key);
+bool	SPFProcessInputDec(SPFInputDec* self, u16 key);
 int	SPFGetInputDecValue(SPFInputDec* self);
 void	SPFSetInputDecValue(SPFInputDec* self, int value);
 #endif

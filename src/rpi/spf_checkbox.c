@@ -8,7 +8,7 @@ void SPFCreateCheckbox(SPFCheckbox* self, unsigned int id, unsigned int line, un
 	self->widget.pos_x = col;
 	self->widget.pos_y = line;
 	self->callback = callback;
-	self->state = FALSE;
+	self->state = false;
 }
 
 void SPFDrawCheckbox(SPFCheckbox* self)
@@ -39,29 +39,29 @@ static void SPFCheckboxStateChanged(SPFCheckbox* self)
 	}
 }
 
-BOOL SPFProcessCheckbox(SPFCheckbox* self, u16 key)
+bool SPFProcessCheckbox(SPFCheckbox* self, u16 key)
 {
 	ASSERT(self);
 	ASSERT(self->widget.type == SPF_WIDGET_CHECKBOX);
 
 	switch(key) {
 		case '/':
-			self->state = TRUE;
+			self->state = true;
 			SPFCheckboxStateChanged(self);
 			SPFDrawCheckbox(self);
-			return TRUE;
+			return true;
 		case BS:
 		case DEL:
-			self->state = FALSE;
+			self->state = false;
 			SPFCheckboxStateChanged(self);
 			SPFDrawCheckbox(self);
-			return TRUE;
+			return true;
 		case SP:
 			self->state = !self->state;
 			SPFCheckboxStateChanged(self);
 			SPFDrawCheckbox(self);
-			return TRUE;
+			return true;
 		default:
-			return FALSE;
+			return false;
 	}
 }

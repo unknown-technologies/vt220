@@ -39,7 +39,7 @@ void SPFDrawWidget(SPFWidget* widget)
 /* TODO: improve this. For example, right now it only selects some widget on
  * the next/previous line, while completely ignoring if this widget is close to
  * the cursor position in case there are multiple widgets on the same line */
-BOOL SPFiWidgetKeyUp(SPFWidget* widget)
+bool SPFiWidgetKeyUp(SPFWidget* widget)
 {
 	SPFPanel* panel = widget->panel;
 	SPFWidget* focus = NULL;
@@ -66,13 +66,13 @@ BOOL SPFiWidgetKeyUp(SPFWidget* widget)
 		SPFSetFocus(panel, focus);
 		SPFFocusWidget(panel->focus);
 		VT220ResetCursorTime(SPFGetVT(SPFGet(panel)));
-		return TRUE;
+		return true;
 	} else {
-		return FALSE;
+		return false;
 	}
 }
 
-BOOL SPFiWidgetKeyDown(SPFWidget* widget)
+bool SPFiWidgetKeyDown(SPFWidget* widget)
 {
 	SPFPanel* panel = widget->panel;
 	SPFWidget* focus = NULL;
@@ -99,13 +99,13 @@ BOOL SPFiWidgetKeyDown(SPFWidget* widget)
 		SPFSetFocus(panel, focus);
 		SPFFocusWidget(panel->focus);
 		VT220ResetCursorTime(SPFGetVT(SPFGet(panel)));
-		return TRUE;
+		return true;
 	} else {
-		return FALSE;
+		return false;
 	}
 }
 
-BOOL SPFProcessWidget(SPFWidget* widget, u16 key)
+bool SPFProcessWidget(SPFWidget* widget, u16 key)
 {
 	ASSERT(widget);
 
@@ -113,7 +113,7 @@ BOOL SPFProcessWidget(SPFWidget* widget, u16 key)
 		case HT: {
 			/* find next widget */
 			SPFPanel* panel = widget->panel;
-			BOOL found = FALSE;
+			bool found = false;
 			SPFWidget* first = NULL;
 			SPFWidget* focus = NULL;
 			for(SPFWidget** w = panel->widgets; *w; w++) {
@@ -122,7 +122,7 @@ BOOL SPFProcessWidget(SPFWidget* widget, u16 key)
 				}
 
 				if(widget == *w) {
-					found = TRUE;
+					found = true;
 				} else if(found && SPFCanFocusWidget(*w)) {
 					focus = *w;
 					break;
@@ -138,16 +138,16 @@ BOOL SPFProcessWidget(SPFWidget* widget, u16 key)
 			/* focus can never be NULL here */
 			SPFFocusWidget(panel->focus);
 
-			return TRUE;
+			return true;
 		}
 		case VT220_KEY_UP:
 			 if(SPFiWidgetKeyUp(widget)) {
-				 return TRUE;
+				 return true;
 			 }
 			 break;
 		case VT220_KEY_DOWN:
 			 if(SPFiWidgetKeyDown(widget)) {
-				 return TRUE;
+				 return true;
 			 }
 			 break;
 	}
@@ -164,7 +164,7 @@ BOOL SPFProcessWidget(SPFWidget* widget, u16 key)
 		case SPF_WIDGET_LABEL:
 		case SPF_WIDGET_DYNAMIC_LBL:
 		default:
-			return FALSE;
+			return false;
 	}
 }
 
@@ -191,7 +191,7 @@ void SPFFocusWidget(SPFWidget* widget)
 	}
 }
 
-BOOL SPFCanFocusWidget(SPFWidget* widget)
+bool SPFCanFocusWidget(SPFWidget* widget)
 {
 	ASSERT(widget);
 
@@ -200,10 +200,10 @@ BOOL SPFCanFocusWidget(SPFWidget* widget)
 		case SPF_WIDGET_INPUT_STR:
 		case SPF_WIDGET_INPUT_DEC:
 		case SPF_WIDGET_INPUT_CHR:
-			return TRUE;
+			return true;
 		case SPF_WIDGET_LABEL:
 		case SPF_WIDGET_DYNAMIC_LBL:
 		default:
-			return FALSE;
+			return false;
 	}
 }

@@ -69,7 +69,7 @@ static void SPFInputDecEnter(SPFInputDec* self)
 	}
 }
 
-BOOL SPFProcessInputDec(SPFInputDec* self, u16 key)
+bool SPFProcessInputDec(SPFInputDec* self, u16 key)
 {
 	ASSERT(self);
 	ASSERT(self->widget.type == SPF_WIDGET_INPUT_DEC);
@@ -83,7 +83,7 @@ BOOL SPFProcessInputDec(SPFInputDec* self, u16 key)
 			if(self->input[0]) {
 				SPFInputDecEnter(self);
 			}
-			return TRUE;
+			return true;
 		case BS:
 		case DEL:
 			if(self->cursor > 0) {
@@ -99,7 +99,7 @@ BOOL SPFProcessInputDec(SPFInputDec* self, u16 key)
 				SPFRepaint(spf);
 				VT220ResetCursorTime(SPFGetVT(spf));
 			}
-			return TRUE;
+			return true;
 		case VT220_KEY_REMOVE:
 			if(self->cursor < self->len) {
 				for(int i = self->cursor; i < self->len; i++) {
@@ -113,43 +113,43 @@ BOOL SPFProcessInputDec(SPFInputDec* self, u16 key)
 				SPFRepaint(spf);
 				VT220ResetCursorTime(SPFGetVT(spf));
 			}
-			return TRUE;
+			return true;
 		case VT220_KEY_LEFT:
 			if(self->cursor > 0) {
 				self->cursor--;
 				SPFFocusInputDec(self);
 				VT220ResetCursorTime(SPFGetVT(spf));
-				return TRUE;
+				return true;
 			} else {
-				return FALSE;
+				return false;
 			}
 		case VT220_KEY_RIGHT:
 			if(self->cursor < self->len) {
 				self->cursor++;
 				SPFFocusInputDec(self);
 				VT220ResetCursorTime(SPFGetVT(spf));
-				return TRUE;
+				return true;
 			} else {
-				return FALSE;
+				return false;
 			}
 		case '^':
 		case VTCTRL('A'):
 			self->cursor = 0;
 			SPFFocusInputDec(self);
 			VT220ResetCursorTime(SPFGetVT(spf));
-			return TRUE;
+			return true;
 		case '$':
 		case VTCTRL('E'):
 			self->cursor = self->len;
 			SPFFocusInputDec(self);
 			VT220ResetCursorTime(SPFGetVT(spf));
-			return TRUE;
+			return true;
 		case VTCTRL('U'):
 			self->cursor = 0;
 			self->len = 0;
 			memset(self->input, 0, self->max_len);
 			SPFRepaint(spf);
-			return TRUE;
+			return true;
 		case VT220_KEY_KP_0:
 		case VT220_KEY_KP_1:
 		case VT220_KEY_KP_2:

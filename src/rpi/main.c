@@ -77,12 +77,12 @@ static void vt_rx(unsigned char c)
 	VT220Receive(&vt, c);
 }
 
-static int vt_rxe(void)
+static bool vt_rxe(void)
 {
 	return VT220CanReceive(&vt);
 }
 
-static void vt_flowcontrol_nop(int start)
+static void vt_flowcontrol_nop(bool start)
 {
 	(void) start;
 }
@@ -112,7 +112,7 @@ static void cm_update_baudrate(unsigned int rx, unsigned int tx)
 	CMSetBaudRate(&cm, rx, tx);
 }
 
-static void cm_update_flowcontrol(int enable)
+static void cm_update_flowcontrol(bool enable)
 {
 	CMSetFlowControl(&cm, enable);
 }
@@ -218,7 +218,7 @@ static void cm_screen_rotation(int rotation)
 	}
 }
 
-static void cm_screen_raw(int raw)
+static void cm_screen_raw(bool raw)
 {
 	VTSetRaw(&renderer, raw);
 }

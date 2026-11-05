@@ -23,7 +23,7 @@ typedef struct {
 	void*		userdata;
 
 	void		(*rx)(void*, unsigned char c);
-	int		(*rxe)(void*);
+	bool		(*rxe)(void*);
 } PTY;
 
 void	PTYInit(PTY* pty);

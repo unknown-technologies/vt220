@@ -43,18 +43,18 @@ typedef struct {
 
 	void*		userdata;
 	void		(*rx)(void* userdata, unsigned char c);
-	int		(*rxe)(void* userdata);
+	bool		(*rxe)(void* userdata);
 } TTY;
 
 void	TTYInit(TTY* tty);
-BOOL	TTYOpen(TTY* tty, const char* path);
+bool	TTYOpen(TTY* tty, const char* path);
 void	TTYSend(TTY* tty, unsigned char c);
 void	TTYBreak(TTY* tty);
 void	TTYPoll(TTY* tty);
 void	TTYResize(TTY* tty, unsigned int width, unsigned int height);
 void	TTYClose(TTY* tty);
 void	TTYSetUserData(TTY* tty, void* userdata);
-BOOL	TTYIsOpen(TTY* tty);
+bool	TTYIsOpen(TTY* tty);
 
 void	TTYSetBaudRate(TTY* tty, unsigned int rx_rate, unsigned int tx_rate);
 void	TTYSetFlowControl(TTY* tty, bool enable_xoff);

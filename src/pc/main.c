@@ -395,7 +395,7 @@ static void vt_rx(void* ptr, unsigned char c)
 	VT220Receive(&vt, c);
 }
 
-static int vt_rxe(void* ptr)
+static bool vt_rxe(void* ptr)
 {
 	(void) ptr;
 	return VT220CanReceive(&vt);
@@ -408,14 +408,14 @@ static void vt_rx_pty(void* ptr, unsigned char c)
 	VT220Receive(&vt, c);
 }
 
-static int vt_rxe_pty(void* ptr)
+static bool vt_rxe_pty(void* ptr)
 {
 	(void) ptr;
 	return VT220CanReceive(&vt);
 }
 #endif
 
-static void vt_flowcontrol_nop(int start)
+static void vt_flowcontrol_nop(bool start)
 {
 	(void) start;
 }
@@ -484,7 +484,7 @@ static void tty_update_baudrate(unsigned int rx, unsigned int tx)
 	TTYSetBaudRate(&tty, rx, tx);
 }
 
-static void tty_update_flowcontrol(int enable)
+static void tty_update_flowcontrol(bool enable)
 {
 	TTYSetFlowControl(&tty, enable);
 }

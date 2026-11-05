@@ -2019,21 +2019,21 @@ void VT220SetupNextScreen(VT220* vt)
 
 void VT220EnterSetup(VT220* vt)
 {
-	vt->in_setup = 1;
+	vt->in_setup = true;
 	vt->setup.in_enq = -1;
 	vt->setup.cursor_x = 0;
 	vt->setup.cursor_y = 0;
 	vt->setup.screen = SETUP_SCREEN_DIRECTORY;
-	VT220FlowControl(vt, 0);
+	VT220FlowControl(vt, false);
 
 	VT220SetupShow(vt);
 }
 
 void VT220LeaveSetup(VT220* vt)
 {
-	vt->in_setup = 0;
+	vt->in_setup = false;
 	if(!vt->hold_screen) {
-		VT220FlowControl(vt, 1);
+		VT220FlowControl(vt, true);
 	}
 }
 
@@ -2202,16 +2202,16 @@ void VT220SetupGeneralEnter(VT220* vt)
 					if(!(vt->mode & DECANM)) {
 						/* was VT52, go to VT100 */
 						vt->mode |= DECANM;
-						vt->vt100_mode = 1;
-						vt->ct_7bit = 1;
+						vt->vt100_mode = true;
+						vt->ct_7bit = true;
 					} else if(vt->vt100_mode) {
 						/* was VT100, go to VT200, 7bit */
 						vt->mode |= DECANM;
-						vt->ct_7bit = 1;
-						vt->vt100_mode = 0;
+						vt->ct_7bit = true;
+						vt->vt100_mode = false;
 					} else if(vt->ct_7bit) {
 						/* was VT200, 7bit, go to VT200, 8bit */
-						vt->ct_7bit = 0;
+						vt->ct_7bit = false;
 					} else {
 						/* was VT200, 8bit, go to VT52 */
 						vt->mode &= ~DECANM;
@@ -2300,12 +2300,12 @@ void VT220SetupCommEnter(VT220* vt)
 							vt->xoff_point = 128;
 							break;
 						case 128:
-							vt->use_xoff = 0;
+							vt->use_xoff = false;
 							vt->xoff_point = 0;
 							VT220iUpdateFlowControl(vt);
 							break;
 						case 0:
-							vt->use_xoff = 1;
+							vt->use_xoff = true;
 							vt->xoff_point = 64;
 							VT220iUpdateFlowControl(vt);
 							break;
@@ -2385,14 +2385,14 @@ void VT220SetupPrinterEnter(VT220* vt)
 			switch(vt->setup.cursor_x) {
 				case 0:
 					if(vt->printer_controller) {
-						vt->printer_controller = 0;
-						vt->auto_print_mode = 0;
+						vt->printer_controller = false;
+						vt->auto_print_mode = false;
 					} else if(vt->auto_print_mode) {
-						vt->printer_controller = 1;
-						vt->auto_print_mode = 0;
+						vt->printer_controller = true;
+						vt->auto_print_mode = false;
 					} else {
-						vt->printer_controller = 0;
-						vt->auto_print_mode = 1;
+						vt->printer_controller = false;
+						vt->auto_print_mode = true;
 					}
 					/* this field affects the status line, repaint it */
 					VT220SetupShowStatus(vt);

@@ -16,10 +16,6 @@
 #define	f32	float
 #define	f64	double
 
-#define	BOOL	int
-#define	TRUE	1
-#define	FALSE	0
-
 #define _BV(x)	(1u << (x))
 
 #endif

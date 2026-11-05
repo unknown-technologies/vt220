@@ -51,7 +51,7 @@ void CMSystemConfigMenuCloseChange(SPFCheckbox* self)
 {
 	SPFPanel* panel = SPFGetWidgetPanel(&self->widget);
 	CM* cm = (CM*) SPFGetUserData(SPFGet(panel));
-	BOOL state = SPFGetCheckboxState(self);
+	bool state = SPFGetCheckboxState(self);
 
 	if(state) {
 		cm->flags |= CM_FLAG_CLOSE;
@@ -64,7 +64,7 @@ void CMSystemConfigMenuFlipChange(SPFCheckbox* self)
 {
 	SPFPanel* panel = SPFGetWidgetPanel(&self->widget);
 	CM* cm = (CM*) SPFGetUserData(SPFGet(panel));
-	BOOL state = SPFGetCheckboxState(self);
+	bool state = SPFGetCheckboxState(self);
 
 	CMSetFlipScreen(cm, state);
 }
@@ -95,7 +95,7 @@ void CMSystemConfigMenuRawChange(SPFCheckbox* self)
 {
 	SPFPanel* panel = SPFGetWidgetPanel(&self->widget);
 	CM* cm = (CM*) SPFGetUserData(SPFGet(panel));
-	BOOL state = SPFGetCheckboxState(self);
+	bool state = SPFGetCheckboxState(self);
 
 	CMSetRawScreen(cm, state);
 }
@@ -111,7 +111,7 @@ static void CMiSystemConfigMenuInitWidgets(SPFPanel* self)
 	SPFCreateCheckbox(&this->sys_flip, FIELD_FLIP, 3, 30, CMSystemConfigMenuFlipChange);
 	SPFCreateLabel(&this->lbl_phosphor, 4, 2, "Phosphor color:", 0);
 	SPFCreateLabel(&this->lbl_phosphor_info, 4, 35, "(A=Amber, G=Green, W=White)", 0);
-	SPFCreateInputChar(&this->sys_phosphor, FIELD_PHOSPHOR, 4, 30, "AWG", TRUE, CMSystemConfigMenuPhosphorChange);
+	SPFCreateInputChar(&this->sys_phosphor, FIELD_PHOSPHOR, 4, 30, "AWG", true, CMSystemConfigMenuPhosphorChange);
 	SPFCreateLabel(&this->lbl_raw, 5, 2, "Raw screen:", 0);
 	SPFCreateCheckbox(&this->sys_raw, FIELD_RAW, 5, 30, CMSystemConfigMenuRawChange);
 

@@ -366,15 +366,15 @@ typedef struct {
 	int		gr_lock;
 	int		g_dst;
 	char*		tabstops;
-	int		ct_7bit;
+	bool		ct_7bit;
 
-	int		vt100_mode;
+	bool		vt100_mode;
 
-	int		use_xoff;
+	bool		use_xoff;
 	int		xoff;
 	int		xoff_point;
 	int		xon_point;
-	int		sent_xoff;
+	bool		sent_xoff;
 	u32		mode;
 
 	char		answerback[31];
@@ -426,12 +426,12 @@ typedef struct {
 	unsigned int	decdld_glyph;
 	unsigned int	decdld_row;
 	unsigned int	decdld_col;
-	int		drcs_dirty;
+	bool		drcs_dirty;
 
 	/* flow control */
-	int		hold_screen;
-	int		enable_buffering;
-	int		pause_input;
+	bool		hold_screen;
+	bool		enable_buffering;
+	bool		pause_input;
 
 	/* smooth scroll */
 	char		scroll_attributes;
@@ -441,8 +441,8 @@ typedef struct {
 	unsigned long	scroll_time;
 
 	/* printer */
-	int		printer_controller;
-	int		auto_print_mode;
+	bool		printer_controller;
+	bool		auto_print_mode;
 	unsigned int	print_wr;
 	unsigned char	print_buf[8];
 
@@ -452,24 +452,24 @@ typedef struct {
 	unsigned int	screen_color;
 
 	/* setup screens  */
-	int		in_setup;
+	bool		in_setup;
 	VT220Setup	setup;
 
 	/* keyboard grab */
-	int		keyboard_grabbed;
+	bool		keyboard_grabbed;
 
 	/* callbacks */
 	void		(*bell)(void);
 	void		(*keyclick)(void);
 	void		(*rx)(unsigned char);
 	void		(*brk)(void);
-	void		(*flowcontrol)(int);
+	void		(*flowcontrol)(bool);
 	void		(*resize)(unsigned int width, unsigned int height);
 	void		(*print_rx)(unsigned char);
 	void		(*clear_comm)(void);
 
 	void		(*update_baudrate)(unsigned int rx, unsigned int tx);
-	void		(*update_flowcontrol)(int enable);
+	void		(*update_flowcontrol)(bool enable);
 	void		(*update_format)(unsigned int format, unsigned int stop);
 
 	void		(*save_config)(const VT220NVR* nvr);
@@ -671,15 +671,15 @@ int  VT220GetCharset(VT220* vt, unsigned char c);
 void VT220ProcessChar(VT220* vt, unsigned char c);
 void VT220ProcessKey(VT220* vt, u16 key);
 void VT220ProcessKeys(VT220* vt, unsigned long dt);
-void VT220FlowControl(VT220* vt, int start);
-void VT220PauseInput(VT220* vt, int pause);
-int  VT220CanReceive(VT220* vt);
-void VT220SetBuffering(VT220* vt, int enable);
+void VT220FlowControl(VT220* vt, bool start);
+void VT220PauseInput(VT220* vt, bool pause);
+bool VT220CanReceive(VT220* vt);
+void VT220SetBuffering(VT220* vt, bool enable);
 void VT220InitComm(VT220* vt);
 void VT220SetBaudRate(VT220* vt, unsigned int rx, unsigned int tx);
 void VT220LoadDefaults(VT220* vt);
 void VT220SaveConfig(VT220* vt);
-int  VT220LoadConfig(VT220* vt, const VT220NVR* nvr);
+bool VT220LoadConfig(VT220* vt, const VT220NVR* nvr);
 void VT220SelfTestFail(VT220* vt, const char* message);
 void VT220ClearInit(VT220* vt);
 void VT220ResetCursorTime(VT220* vt);
@@ -691,7 +691,7 @@ void VT220KeyboardKeyUp(VT220* vt, int key);
 void VT220KeyboardChar(VT220* vt, unsigned int code);
 void VT220KeyboardProcess(VT220* vt, unsigned long dt);
 void VT220KeyboardUpdateLEDs(VT220* vt);
-void VT220SetKeyboardGrabbed(VT220* vt, int grabbed);
+void VT220SetKeyboardGrabbed(VT220* vt, bool grabbed);
 
 /* setup functions */
 void VT220EnterSetup(VT220* vt);

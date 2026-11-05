@@ -9,13 +9,13 @@
 #include "ssh.h"
 #include "telnet.h"
 
-static int CMRXE(void* ptr)
+static bool CMRXE(void* ptr)
 {
 	CM* self = (CM*) ptr;
 	if(self->rxe) {
 		return self->rxe();
 	} else {
-		return 0;
+		return false;
 	}
 }
 
@@ -210,7 +210,7 @@ void CMiSend(CM* self, unsigned char c)
 
 void CMSend(CM* self, unsigned char c)
 {
-	self->input_received = TRUE;
+	self->input_received = true;
 
 	if(CMIsUTF8Enabled(self)) {
 		CMUTF8Transmit(self, c);
@@ -468,7 +468,7 @@ void CMUpdateScreenRotation(CM* self)
 	}
 }
 
-void CMSetFlipScreen(CM* self, BOOL flipped)
+void CMSetFlipScreen(CM* self, bool flipped)
 {
 	if(flipped) {
 		self->flags |= CM_FLAG_FLIP;
@@ -511,7 +511,7 @@ void CMUpdateRawScreen(CM* self)
 	}
 }
 
-void CMSetRawScreen(CM* self, BOOL raw)
+void CMSetRawScreen(CM* self, bool raw)
 {
 	if(raw) {
 		self->flags |= CM_FLAG_RAW;

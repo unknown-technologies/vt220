@@ -32,7 +32,7 @@ typedef struct {
 
 	void*		userdata;
 	void		(*rx)(void* userdata, unsigned char c);
-	int		(*rxe)(void* userdata);
+	bool		(*rxe)(void* userdata);
 } TELNET;
 
 void TELNETInit(TELNET* telnet);
@@ -46,6 +46,6 @@ void TELNETBreak(TELNET* telnet);
 void TELNETResize(TELNET* telnet, unsigned int width, unsigned int height);
 void TELNETSendRaw(TELNET* telnet, unsigned char c, int immediate);
 void TELNETPoll(TELNET* telnet);
-BOOL TELNETIsConnected(TELNET* telnet);
+bool TELNETIsConnected(TELNET* telnet);
 
 #endif

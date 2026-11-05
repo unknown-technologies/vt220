@@ -107,9 +107,9 @@ bool VT220Init(VT220* vt)
 	vt->buf_used = 0;
 	vt->buf_lost = 0;
 
-	vt->hold_screen = 0;
-	vt->enable_buffering = 0;
-	vt->pause_input = 0;
+	vt->hold_screen = false;
+	vt->enable_buffering = false;
+	vt->pause_input = false;
 
 	vt->bell = NULL;
 	vt->keyclick = NULL;
@@ -133,10 +133,10 @@ bool VT220Init(VT220* vt)
 	if(!vt->drcs) {
 		goto error_drcs;
 	}
-	vt->drcs_dirty = 1;
+	vt->drcs_dirty = true;
 
 	/* configure setup screens */
-	vt->in_setup = 0;
+	vt->in_setup = false;
 	vt->setup.text = (VT220CELL*) malloc(8 * TEXT_WIDTH_MAX * sizeof(VT220CELL));
 	if(!vt->setup.text) {
 		goto error_setup_text;
@@ -752,7 +752,7 @@ void VT220ScrollUp(VT220* vt)
 	if(vt->mode & DECSCLM) {
 		/* are we scrolling already? */
 		if(vt->scrolling && vt->scroll_time < SCROLL_TIME * 1000.0f) {
-			VT220PauseInput(vt, 1);
+			VT220PauseInput(vt, true);
 			vt->scroll_latch = 1;
 			return;
 		}
@@ -788,7 +788,7 @@ void VT220ScrollDown(VT220* vt)
 	if(vt->mode & DECSCLM) {
 		/* are we scrolling already? */
 		if(vt->scrolling && vt->scroll_time < SCROLL_TIME * 1000.0f) {
-			VT220PauseInput(vt, 1);
+			VT220PauseInput(vt, true);
 			vt->scroll_latch = 2;
 			return;
 		}
@@ -1269,8 +1269,8 @@ void VT220SetANSIMode(VT220* vt)
 	vt->gl_lock = 0;
 
 	/* go to VT100 mode */
-	vt->ct_7bit = 1;
-	vt->vt100_mode = 1;
+	vt->ct_7bit = true;
+	vt->vt100_mode = true;
 }
 
 void VT220Adjustments(VT220* vt)
@@ -1324,9 +1324,9 @@ void VT220ClearComm(VT220* vt)
 	vt->state = 0;
 
 	vt->xoff = 0;
-	vt->sent_xoff = 0;
-	vt->pause_input = 0;
-	vt->hold_screen = 0;
+	vt->sent_xoff = false;
+	vt->pause_input = false;
+	vt->hold_screen = false;
 	vt->scroll_latch = 0;
 	vt->scrolling = 0;
 
@@ -1337,7 +1337,7 @@ void VT220ClearComm(VT220* vt)
 
 	/* reset flow control but only send XON if XOFF/XON is used */
 	if(vt->flowcontrol) {
-		vt->flowcontrol(1);
+		vt->flowcontrol(true);
 	} else if(vt->use_xoff) {
 		VT220Send(vt, DC1);
 	}
@@ -1423,10 +1423,10 @@ static void VT220iHardReset(VT220* vt, const VT220NVR* nvr)
 		case VT220_MODE_VT200_MODE_7BIT_CONTROLS:
 		case VT220_MODE_VT200_MODE_8BIT_CONTROLS:
 		case VT220_MODE_VT52_MODE:
-			vt->vt100_mode = 0;
+			vt->vt100_mode = false;
 			break;
 		case VT220_MODE_VT100_MODE:
-			vt->vt100_mode = 1;
+			vt->vt100_mode = true;
 			break;
 	}
 
@@ -1505,35 +1505,35 @@ static void VT220iHardReset(VT220* vt, const VT220NVR* nvr)
 	switch(nvr->printer_mode) {
 		default:
 		case VT220_PRINTER_MODE_NORMAL:
-			vt->auto_print_mode = 0;
-			vt->printer_controller = 0;
+			vt->auto_print_mode = false;
+			vt->printer_controller = false;
 			break;
 		case VT220_PRINTER_MODE_AUTO_PRINT:
-			vt->auto_print_mode = 1;
-			vt->printer_controller = 0;
+			vt->auto_print_mode = true;
+			vt->printer_controller = false;
 			break;
 		case VT220_PRINTER_MODE_CONTROLLER:
-			vt->auto_print_mode = 0;
-			vt->printer_controller = 1;
+			vt->auto_print_mode = false;
+			vt->printer_controller = true;
 			break;
 	}
 
 	vt->xoff = 0;
 	vt->xoff_point = 64;
 	vt->xon_point = 32;
-	vt->use_xoff = 1;
+	vt->use_xoff = true;
 
 	switch(nvr->xoff) {
 		case VT220_XOFF_OFF:
-			vt->use_xoff = 0;
+			vt->use_xoff = false;
 			vt->xoff_point = 0;
 			break;
 		case VT220_XOFF_64:
-			vt->use_xoff = 1;
+			vt->use_xoff = true;
 			vt->xoff_point = 64;
 			break;
 		case VT220_XOFF_128:
-			vt->use_xoff = 1;
+			vt->use_xoff = true;
 			vt->xoff_point = 128;
 			break;
 	}
@@ -1667,7 +1667,7 @@ void VT220ClearDRCS(VT220* vt)
 	for(unsigned int i = 0; i < 94; i++) {
 		memcpy(&vt->drcs[i * 10], &vt220font[0x20 * 10], 10);
 	}
-	vt->drcs_dirty = 1;
+	vt->drcs_dirty = true;
 }
 
 void VT220Substitute(VT220* vt)
@@ -2188,10 +2188,10 @@ void VT220ProcessCharVT220(VT220* vt, unsigned char c)
 					} else if(c >= 0x30 && c <= 0x7E) {
 						/* final */
 						vt->parameters[vt->parameter_id] = c;
-						BOOL is_drcs = TRUE;
+						bool is_drcs = true;
 						for(int i = 0; i < 3; i++) {
 							if(vt->parameters[i] != vt->drcs_name[i]) {
-								is_drcs = FALSE;
+								is_drcs = false;
 								break;
 							}
 						}
@@ -2280,7 +2280,7 @@ void VT220ProcessCharVT220(VT220* vt, unsigned char c)
 					break;
 				case 'F': /* S7C1T */
 					vt->state = STATE_TEXT;
-					vt->ct_7bit = 1;
+					vt->ct_7bit = true;
 					break;
 				case 'G': /* S8C1T */
 					vt->state = STATE_TEXT;
@@ -2493,10 +2493,10 @@ void VT220ProcessCharVT220(VT220* vt, unsigned char c)
 							VT220PrintScreen(vt);
 							break;
 						case 4: /* disable printer controller mode */
-							vt->printer_controller = 0;
+							vt->printer_controller = false;
 							break;
 						case 5: /* enable printer controller mode */
-							vt->printer_controller = 1;
+							vt->printer_controller = true;
 							vt->print_wr = 0;
 							break;
 					}
@@ -2742,10 +2742,10 @@ void VT220ProcessCharVT220(VT220* vt, unsigned char c)
 							VT220PrintCursorLine(vt);
 							break;
 						case 4: /* disable auto print mode */
-							vt->auto_print_mode = 0;
+							vt->auto_print_mode = false;
 							break;
 						case 5: /* enable auto print mode */
-							vt->auto_print_mode = 1;
+							vt->auto_print_mode = true;
 							break;
 					}
 					break;
@@ -2877,22 +2877,22 @@ void VT220ProcessCharVT220(VT220* vt, unsigned char c)
 					/* NOTE: DECSCL performs a soft reset */
 					switch(vt->parameters[0]) {
 						case 61: /* terminal level 1 */
-							vt->ct_7bit = 1;
-							vt->vt100_mode = 1;
+							vt->ct_7bit = true;
+							vt->vt100_mode = true;
 							VT220SoftReset(vt);
 							break;
 						case 62: /* terminal level 2 */
-							vt->vt100_mode = 0;
+							vt->vt100_mode = false;
 							switch(vt->parameters[1]) {
 								case 0:
 								case 2:
-									vt->ct_7bit = 0;
+									vt->ct_7bit = false;
 									VT220SoftReset(vt);
 									break;
 								default:
 								case 1:
 									/* VT200, 7bit */
-									vt->ct_7bit = 1;
+									vt->ct_7bit = true;
 									VT220SoftReset(vt);
 									break;
 							}
@@ -3389,7 +3389,7 @@ void VT220ProcessCharVT220(VT220* vt, unsigned char c)
 						u8 bits = c - '?';
 						if(vt->decdld_row < 2 && vt->decdld_col < 8 && vt->decdld_glyph >= 1
 								&& vt->decdld_glyph <= 94) {
-							vt->drcs_dirty = 1;
+							vt->drcs_dirty = true;
 							u8* glyph = &vt->drcs[(vt->decdld_glyph - 1) * 10];
 							if(vt->decdld_row == 0  && vt->decdld_col == 0) {
 								memset(glyph, 0, 10);
@@ -3624,13 +3624,13 @@ void VT220ProcessCharVT52(VT220* vt, unsigned char c)
 					VT220SetANSIMode(vt);
 					break;
 				case '^': /* Enter auto print mode */
-					vt->auto_print_mode = 1;
+					vt->auto_print_mode = true;
 					break;
 				case '_': /* Exit auto print mode */
-					vt->auto_print_mode = 0;
+					vt->auto_print_mode = false;
 					break;
 				case 'W': /* Enter printer controller mode */
-					vt->printer_controller = 1;
+					vt->printer_controller = true;
 					vt->print_wr = 0;
 					break;
 				case 'X': /* Exit printer controller mode */
@@ -3911,7 +3911,7 @@ void VT220ProcessPrinterCharVT220(VT220* vt, unsigned char c)
 				case 'i':
 					switch(vt->parameters[0]) {
 						case 4: /* exit printer controller mode */
-							vt->printer_controller = 0;
+							vt->printer_controller = false;
 							vt->state = STATE_TEXT;
 							break;
 						case 5: /* enter printer controller mode */
@@ -3984,7 +3984,7 @@ void VT220ProcessChar(VT220* vt, unsigned char c)
 							break;
 						case 'X':
 							vt->state = STATE_TEXT;
-							vt->printer_controller = 0;
+							vt->printer_controller = false;
 							break;
 						default:
 							if(vt->print_rx) {
@@ -4049,11 +4049,11 @@ void VT220Receive(VT220* vt, unsigned char c)
 			/* XOFF handling */
 			if(vt->use_xoff) {
 				if(vt->buf_used == vt->xoff_point) {
-					VT220FlowControl(vt, 0);
+					VT220FlowControl(vt, false);
 				} else if(vt->buf_used == 220) {
-					VT220FlowControl(vt, 0);
+					VT220FlowControl(vt, false);
 				} else if(vt->buf_used == 254) {
-					VT220FlowControl(vt, 0);
+					VT220FlowControl(vt, false);
 				}
 			}
 		} else if(vt->buf_lost < (vt->lines * vt->columns)) {
@@ -4086,7 +4086,7 @@ void VT220Process(VT220* vt, unsigned long dt)
 		int latch = vt->scroll_latch;
 		vt->scroll_latch = 0;
 
-		VT220PauseInput(vt, 0);
+		VT220PauseInput(vt, false);
 
 		if(latch == 1) {
 			VT220ScrollUp(vt);
@@ -4106,7 +4106,7 @@ void VT220Process(VT220* vt, unsigned long dt)
 			VT220ProcessChar(vt, c);
 
 			if(vt->use_xoff && vt->sent_xoff && vt->buf_used <= vt->xon_point - 1) {
-				VT220FlowControl(vt, 1);
+				VT220FlowControl(vt, true);
 			}
 		}
 
@@ -5007,13 +5007,13 @@ void VT220ProcessKey(VT220* vt, u16 key)
 				return;
 			case DC1:
 				if(vt->use_xoff) {
-					VT220FlowControl(vt, 1);
+					VT220FlowControl(vt, true);
 					return;
 				}
 				break;
 			case DC3:
 				if(vt->use_xoff) {
-					VT220FlowControl(vt, 0);
+					VT220FlowControl(vt, false);
 					return;
 				}
 				break;
@@ -5038,13 +5038,13 @@ void VT220ProcessKey(VT220* vt, u16 key)
 	}
 }
 
-void VT220FlowControl(VT220* vt, int start)
+void VT220FlowControl(VT220* vt, bool start)
 {
 	if(!vt->use_xoff) {
 		// TODO: why was this added here?
 		// vt->sent_xoff = !start;
 		if(vt->sent_xoff && start) {
-			vt->sent_xoff = 0;
+			vt->sent_xoff = false;
 		}
 		VT220KeyboardUpdateLEDs(vt);
 		return;
@@ -5052,28 +5052,28 @@ void VT220FlowControl(VT220* vt, int start)
 
 	if(start) {
 		if(vt->flowcontrol) {
-			vt->flowcontrol(1);
+			vt->flowcontrol(true);
 		} else {
 			VT220Send(vt, DC1);
 		}
-		vt->sent_xoff = 0;
+		vt->sent_xoff = false;
 	} else {
 		if(vt->flowcontrol) {
-			vt->flowcontrol(0);
+			vt->flowcontrol(false);
 		} else {
 			VT220Send(vt, DC3);
 		}
-		vt->sent_xoff = 1;
+		vt->sent_xoff = true;
 	}
 	VT220KeyboardUpdateLEDs(vt);
 }
 
-void VT220PauseInput(VT220* vt, int pause)
+void VT220PauseInput(VT220* vt, bool pause)
 {
 	vt->pause_input = pause;
 }
 
-int VT220CanReceive(VT220* vt)
+bool VT220CanReceive(VT220* vt)
 {
 	if(vt->enable_buffering) {
 		return !vt->sent_xoff;
@@ -5110,7 +5110,7 @@ void VT220SetScreenColor(VT220* vt, unsigned int color)
 	}
 }
 
-void VT220SetBuffering(VT220* vt, int enable)
+void VT220SetBuffering(VT220* vt, bool enable)
 {
 	vt->enable_buffering = enable;
 }
@@ -5244,7 +5244,7 @@ void VT220SaveConfig(VT220* vt)
 	}
 }
 
-int VT220LoadConfig(VT220* vt, const VT220NVR* nvr)
+bool VT220LoadConfig(VT220* vt, const VT220NVR* nvr)
 {
 	if(memcmp(nvr->magic, default_config.magic, sizeof(default_config.magic))) {
 		return false;
@@ -5256,7 +5256,7 @@ int VT220LoadConfig(VT220* vt, const VT220NVR* nvr)
 	return true;
 }
 
-void VT220SetKeyboardGrabbed(VT220* vt, int grabbed)
+void VT220SetKeyboardGrabbed(VT220* vt, bool grabbed)
 {
 	vt->keyboard_grabbed = grabbed;
 }

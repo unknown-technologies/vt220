@@ -39,7 +39,7 @@ void CMResetOSCFilter(CM* self)
 	}
 }
 
-void CMSetOSCEnabled(CM* self, BOOL enabled)
+void CMSetOSCEnabled(CM* self, bool enabled)
 {
 	if(enabled) {
 		self->osc_state = STATE_NORMAL;

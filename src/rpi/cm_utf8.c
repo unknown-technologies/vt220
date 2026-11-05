@@ -29,7 +29,7 @@ void CMResetUTF8(CM* self)
 	self->utf8_char = 0;
 }
 
-void CMSetUTF8Enabled(CM* self, BOOL enabled)
+void CMSetUTF8Enabled(CM* self, bool enabled)
 {
 	if(enabled) {
 		self->utf8_state = 0;
@@ -38,7 +38,7 @@ void CMSetUTF8Enabled(CM* self, BOOL enabled)
 	}
 }
 
-BOOL CMIsUTF8Enabled(CM* self)
+bool CMIsUTF8Enabled(CM* self)
 {
 	return self->utf8_state != STATE_BYPASS;
 }

@@ -24,12 +24,12 @@ void TTYInit(TTY* tty)
 	tty->fd = -1;
 }
 
-BOOL TTYOpen(TTY* tty, const char* path)
+bool TTYOpen(TTY* tty, const char* path)
 {
 	tty->fd = open(path, O_RDWR | O_NONBLOCK | O_NOCTTY | O_CLOEXEC);
 	if(tty->fd == -1) {
 		TTYOpenError(tty, path, strerror(errno));
-		return FALSE;
+		return false;
 	}
 
 	if(tcgetattr(tty->fd, &tty->ttyattrs)) {
@@ -40,7 +40,7 @@ BOOL TTYOpen(TTY* tty, const char* path)
 		}
 		close(tty->fd);
 		tty->fd = -1;
-		return FALSE;
+		return false;
 	}
 
 	memcpy(&tty->tio, &tty->ttyattrs, sizeof(struct termios));
@@ -68,7 +68,7 @@ BOOL TTYOpen(TTY* tty, const char* path)
 		TTYiSetFormat(tty, tty->fmt_data, tty->fmt_stop, tty->fmt_parity);
 	}
 
-	return TRUE;
+	return true;
 }
 
 static speed_t TTYiGetBaudRate(unsigned int rate)
@@ -486,7 +486,7 @@ void TTYClose(TTY* tty)
 	}
 }
 
-BOOL TTYIsOpen(TTY* tty)
+bool TTYIsOpen(TTY* tty)
 {
 	return tty->fd != -1;
 }

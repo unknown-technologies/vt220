@@ -10,13 +10,13 @@
 
 static void KBiProcess(KB* kb, struct input_event* event);
 
-BOOL KBInit(KB* kb)
+bool KBInit(KB* kb)
 {
 	memset(kb, 0, sizeof(KB));
 	return KBOpen(kb);
 }
 
-BOOL KBOpen(KB* kb)
+bool KBOpen(KB* kb)
 {
 	kb->fd = -1;
 
@@ -24,7 +24,7 @@ BOOL KBOpen(KB* kb)
 	FILE* f = fopen("/proc/bus/input/devices", "rt");
 	if(!f) {
 		printf("[KB] Failed to open device list: %s\n", strerror(errno));
-		return FALSE;
+		return false;
 	}
 
 	char name[256] = { 0 };
@@ -73,7 +73,7 @@ BOOL KBOpen(KB* kb)
 	}
 
 	fclose(f);
-	return FALSE;
+	return false;
 
 found:
 	fclose(f);
@@ -84,24 +84,24 @@ found:
 	return KBiOpen(kb, dev);
 }
 
-BOOL KBiOpen(KB* kb, const char* filename)
+bool KBiOpen(KB* kb, const char* filename)
 {
 	kb->fd = open(filename, O_RDWR | O_NONBLOCK);
 	if(kb->fd < 0) {
 		printf("[KB] Failed to open input device: %s\n", strerror(errno));
-		return FALSE;
+		return false;
 	}
 
 	if(ioctl(kb->fd, EVIOCGRAB, 1) == -1) {
 		printf("[KB] Failed to grab keyboard: %s\n", strerror(errno));
 		close(kb->fd);
 		kb->fd = -1;
-		return FALSE;
+		return false;
 	}
 
 	KBUpdateLEDs(kb);
 
-	return TRUE;
+	return true;
 }
 
 void KBClose(KB* kb)

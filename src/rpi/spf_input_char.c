@@ -4,7 +4,7 @@
 #include "spf.h"
 
 void SPFCreateInputChar(SPFInputChar* self, unsigned int id, unsigned int line, unsigned int col, const char* allowed_chars,
-		BOOL uppercase, void (*callback)(SPFInputChar*))
+		bool uppercase, void (*callback)(SPFInputChar*))
 {
 	SPFCreateWidget(&self->widget, SPF_WIDGET_INPUT_CHR, id);
 	self->widget.pos_x = col;
@@ -43,7 +43,7 @@ static void SPFInputCharStateChanged(SPFInputChar* self)
 	}
 }
 
-BOOL SPFProcessInputChar(SPFInputChar* self, u16 key)
+bool SPFProcessInputChar(SPFInputChar* self, u16 key)
 {
 	ASSERT(self);
 	ASSERT(self->widget.type == SPF_WIDGET_INPUT_CHR);
@@ -69,14 +69,14 @@ BOOL SPFProcessInputChar(SPFInputChar* self, u16 key)
 				if(self->allowed_chars) {
 					char* found = strchr(self->allowed_chars, (char) key);
 					if(!found) {
-						return FALSE;
+						return false;
 					}
 				}
 				self->value = (char) key;
 				SPFInputCharStateChanged(self);
 				SPFDrawInputChar(self);
-				return TRUE;
+				return true;
 			}
-			return FALSE;
+			return false;
 	}
 }

@@ -30,7 +30,7 @@ void SPFScreenSetCursor(SPF* self, const int line, const int column)
 	self->screen.cursor_y = self->offset_y + line - 1;
 }
 
-void SPFScreenPutc(SPF* self, const u16 c, const int sgr, BOOL display_controls)
+void SPFScreenPutc(SPF* self, const u16 c, const int sgr, bool display_controls)
 {
 	ASSERT(self);
 

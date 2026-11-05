@@ -130,7 +130,7 @@ void CMConnectionEditorMenuOSCChange(SPFCheckbox* self)
 	CM* cm = (CM*) SPFGetUserData(SPFGet(panel));
 	CMConnectionEditMenu* this = (CMConnectionEditMenu*) SPFGetPanelUserData(panel);
 	CMCONN* con = &cm->connections[this->id];
-	BOOL state = SPFGetCheckboxState(self);
+	bool state = SPFGetCheckboxState(self);
 
 	if(state) {
 		con->flags |= CM_FLAG_OSC;
@@ -145,7 +145,7 @@ void CMConnectionEditorMenuUTF8Change(SPFCheckbox* self)
 	CM* cm = (CM*) SPFGetUserData(SPFGet(panel));
 	CMConnectionEditMenu* this = (CMConnectionEditMenu*) SPFGetPanelUserData(panel);
 	CMCONN* con = &cm->connections[this->id];
-	BOOL state = SPFGetCheckboxState(self);
+	bool state = SPFGetCheckboxState(self);
 
 	if(state) {
 		con->flags |= CM_FLAG_UTF8;
@@ -168,7 +168,7 @@ void CMConnectionEditMenuInitWidgets(SPFPanel* self)
 	SPFCreateInputStr(&this->con_name, FIELD_NAME, 3, 10, con->name, 24, NULL);
 	SPFCreateLabel(&this->lbl_mode, 4, 2, "Type:", 0);
 	SPFCreateLabel(&this->lbl_mode_info, 4, 17, "(Y=TTY, P=PTY, T=TELNET, S=SSH)", 0);
-	SPFCreateInputChar(&this->con_mode, FIELD_MODE, 4, 10, "YPTS", TRUE, CMConnectionEditorMenuModeChange);
+	SPFCreateInputChar(&this->con_mode, FIELD_MODE, 4, 10, "YPTS", true, CMConnectionEditorMenuModeChange);
 	SPFCreateLabel(&this->lbl_osc, 5, 2, "OSC:", 0);
 	SPFCreateLabel(&this->lbl_osc_info, 5, 17, "(/=filter OSC sequences)", 0);
 	SPFCreateCheckbox(&this->con_osc, FIELD_OSC, 5, 10, CMConnectionEditorMenuOSCChange);
@@ -284,7 +284,7 @@ void CMConnectionEditMenuDraw(SPFPanel* self)
 	SPFPrintAt(self, 21, SPFGetWidth(self) - 8, "F12=Back", 0);
 }
 
-static void CMiConnectionEditMenuDelete(void* ptr, BOOL confirm)
+static void CMiConnectionEditMenuDelete(void* ptr, bool confirm)
 {
 	if(!confirm) {
 		return;
@@ -299,7 +299,7 @@ static void CMiConnectionEditMenuDelete(void* ptr, BOOL confirm)
 	CMDeleteConnection(cm, id);
 }
 
-static void CMiConnectionEditMenuDeleteKey(void* ptr, BOOL confirm)
+static void CMiConnectionEditMenuDeleteKey(void* ptr, bool confirm)
 {
 	if(!confirm) {
 		return;

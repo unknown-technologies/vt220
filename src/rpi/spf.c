@@ -90,18 +90,18 @@ void SPFDraw(SPF* self)
 		SPFScreenSetOffset(self, off_y, off_x);
 
 		SPFScreenGoto(self, 1, 1);
-		SPFScreenPutc(self, 0x0D, 0, FALSE);
+		SPFScreenPutc(self, 0x0D, 0, false);
 		SPFScreenGoto(self, 1, columns);
-		SPFScreenPutc(self, 0x0C, 0, FALSE);
+		SPFScreenPutc(self, 0x0C, 0, false);
 		SPFScreenGoto(self, lines, 1);
-		SPFScreenPutc(self, 0x0E, 0, FALSE);
+		SPFScreenPutc(self, 0x0E, 0, false);
 		SPFScreenGoto(self, lines, columns);
-		SPFScreenPutc(self, 0x0B, 0, FALSE);
+		SPFScreenPutc(self, 0x0B, 0, false);
 
 		SPFScreenGoto(self, 2, 1);
-		SPFScreenPutc(self, 0x19, 0, FALSE);
+		SPFScreenPutc(self, 0x19, 0, false);
 		SPFScreenGoto(self, 2, columns);
-		SPFScreenPutc(self, 0x19, 0, FALSE);
+		SPFScreenPutc(self, 0x19, 0, false);
 
 		SPFScreenGoto(self, 1, 2);
 		SPFScreenFill(self, 0x12, columns - 2, 0);
@@ -114,17 +114,17 @@ void SPFDraw(SPF* self)
 			size_t len = strlen(title);
 			if(len + 4 > (size_t) columns) {
 				SPFScreenGoto(self, 1, 2);
-				SPFScreenPutc(self, 0x20, 0, FALSE);
+				SPFScreenPutc(self, 0x20, 0, false);
 				for(int i = 0; i < columns - 4; i++) {
-					SPFScreenPutc(self, title[i], 0, FALSE);
+					SPFScreenPutc(self, title[i], 0, false);
 				}
-				SPFScreenPutc(self, 0x20, 0, FALSE);
+				SPFScreenPutc(self, 0x20, 0, false);
 			} else {
 				int off = (columns - len) / 2;
 				SPFScreenGoto(self, 1, off);
-				SPFScreenPutc(self, 0x20, 0, FALSE);
+				SPFScreenPutc(self, 0x20, 0, false);
 				SPFScreenPrint(self, title, 0);
-				SPFScreenPutc(self, 0x20, 0, FALSE);
+				SPFScreenPutc(self, 0x20, 0, false);
 			}
 		}
 
@@ -168,7 +168,7 @@ void SPFProcessKey(SPF* self, u16 key)
 
 	SPFSetPanelOffset(panel);
 
-	BOOL done = FALSE;
+	bool done = false;
 	if(!done && panel->widgets && panel->focus) {
 		done = SPFProcessWidget(panel->focus, key);
 	}

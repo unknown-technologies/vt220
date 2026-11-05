@@ -827,7 +827,7 @@ void TELNETPoll(TELNET* telnet)
 	}
 }
 
-BOOL TELNETIsConnected(TELNET* telnet)
+bool TELNETIsConnected(TELNET* telnet)
 {
 	return telnet->socket != -1;
 }
