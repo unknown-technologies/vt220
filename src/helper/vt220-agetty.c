@@ -5,10 +5,13 @@
 
 int main(void)
 {
-	setreuid(0, 0);
+	if(setreuid(0, 0) == -1) {
+		/* this is not fatal but agetty will probably not work correctly either */
+		printf("setreuid failed: %s\n", strerror(errno));
+		fflush(stdout);
+	}
 
-	char* argv[] = { "/bin/agetty", "-8", "-s", "--local-line", "--noreset", "--noclear", "-",
-		"vt220", NULL };
+	char* argv[] = { "/bin/agetty", "-8", "-s", "--local-line", "--noreset", "--noclear", "-", "vt220", NULL };
 	char* envp[] = { NULL };
 
 	if(execve(*argv, argv, envp) == -1) {
