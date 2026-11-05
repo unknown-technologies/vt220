@@ -67,8 +67,10 @@ static const VT220NVR default_config = { .magic = { 'V', 'T' }, .tx_baud_rate = 
 
 static void VT220iSaveConfig(const VT220* vt, VT220NVR* nvr);
 
-void VT220Init(VT220* vt)
+bool VT220Init(VT220* vt)
 {
+	memset(vt, 0, sizeof(VT220));
+
 	vt->cursor_time = 0;
 	vt->screen_color = VT220_SCREEN_COLOR_GREEN;
 
@@ -80,11 +82,26 @@ void VT220Init(VT220* vt)
 	vt->lines = TEXT_HEIGHT;
 
 	vt->text = (VT220CELL*) malloc(TEXT_WIDTH_MAX * TEXT_HEIGHT * sizeof(VT220CELL));
+	if(!vt->text) {
+		goto error_text;
+	}
 	vt->scroll_text = (VT220CELL*) malloc(TEXT_WIDTH_MAX * sizeof(VT220CELL));
+	if(!vt->scroll_text) {
+		goto error_scroll_text;
+	}
 	vt->line_attributes = (char*) malloc(TEXT_HEIGHT);
+	if(!vt->line_attributes) {
+		goto error_line_attributes;
+	}
 	vt->tabstops = (char*) malloc(TEXT_WIDTH_MAX);
+	if(!vt->tabstops) {
+		goto error_tabstops;
+	}
 
 	vt->buf = (unsigned char*) malloc(256); /* input buffer */
+	if(!vt->buf) {
+		goto error_buf;
+	}
 	vt->buf_r = 0;
 	vt->buf_w = 0;
 	vt->buf_used = 0;
@@ -113,12 +130,21 @@ void VT220Init(VT220* vt)
 	vt->keyboard_grabbed = 0;
 
 	vt->drcs = (unsigned char*) malloc(940);
+	if(!vt->drcs) {
+		goto error_drcs;
+	}
 	vt->drcs_dirty = 1;
 
 	/* configure setup screens */
 	vt->in_setup = 0;
 	vt->setup.text = (VT220CELL*) malloc(8 * TEXT_WIDTH_MAX * sizeof(VT220CELL));
+	if(!vt->setup.text) {
+		goto error_setup_text;
+	}
 	vt->setup.line_attributes = (char*) malloc(8);
+	if(!vt->setup.line_attributes) {
+		goto error_setup_line_attributes;
+	}
 	memset(vt->setup.text, 0, 8 * TEXT_WIDTH_MAX * sizeof(VT220CELL));
 	memset(vt->setup.line_attributes, 0, 8);
 
@@ -127,6 +153,25 @@ void VT220Init(VT220* vt)
 	/* reset config */
 	VT220LoadDefaults(vt);
 	VT220iSaveConfig(vt, &vt->config_nvr);
+
+	return true;
+
+error_setup_line_attributes:
+	free(vt->setup.text);
+error_setup_text:
+	free(vt->drcs);
+error_drcs:
+	free(vt->buf);
+error_buf:
+	free(vt->tabstops);
+error_tabstops:
+	free(vt->line_attributes);
+error_line_attributes:
+	free(vt->scroll_text);
+error_scroll_text:
+	free(vt->text);
+error_text:
+	return false;
 }
 
 static inline void VT220iPutText(VT220* vt, const int line, const int column, const char* text, u16 sgr)
@@ -1657,11 +1702,14 @@ void VT220ReverseIndex(VT220* vt)
 
 void VT220Destroy(VT220* vt)
 {
+	free(vt->setup.line_attributes);
+	free(vt->setup.text);
+	free(vt->drcs);
 	free(vt->buf);
 	free(vt->tabstops);
+	free(vt->line_attributes);
 	free(vt->scroll_text);
 	free(vt->text);
-	free(vt->drcs);
 }
 
 void VT220Bell(VT220* vt)

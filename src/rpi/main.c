@@ -293,6 +293,7 @@ int main(int argc, char** argv, char** envp)
 	bool buffering = false;
 	bool enable_glow = true;
 	int baud = -1;
+	int status;
 
 	argc--;
 	argv++;
@@ -366,48 +367,52 @@ int main(int argc, char** argv, char** envp)
 	sigemptyset(&sa.sa_mask);
 	sa.sa_flags = SA_RESTART;
 	if(sigaction(SIGINT, &sa, NULL) == -1) {
-		printf("WARNING: failed to set SIGINT signal handler\n");
+		fprintf(stderr, "WARNING: failed to set SIGINT signal handler\n");
 	}
 	if(sigaction(SIGTERM, &sa, NULL) == -1) {
-		printf("WARNING: failed to set SIGTERM signal handler\n");
+		fprintf(stderr, "WARNING: failed to set SIGTERM signal handler\n");
 	}
 
 	DRM* drm = DRMInit(NULL, NULL, 0);
 	if(!drm) {
-		fprintf(stderr, "failed to initialize DRM\n");
-		KBClose(&kb);
-		return 1;
+		fprintf(stderr, "Failed to initialize DRM\n");
+		status = 1;
+		goto error_drm;
 	}
 
 	GBM* gbm = GBMInit(drm->fd, drm->mode->hdisplay,
 			drm->mode->vdisplay, DRM_FORMAT_ARGB8888,
 			DRM_FORMAT_MOD_LINEAR, false);
 	if(!gbm) {
-		fprintf(stderr, "failed to initialize GBM\n");
-		DRMDestroy(drm);
-		KBClose(&kb);
-		return 1;
+		fprintf(stderr, "Failed to initialize GBM\n");
+		status = 1;
+		goto error_gbm;
 	}
 
 	printf("Screen size: %dx%d\n", drm->mode->hdisplay,
 			drm->mode->vdisplay);
 
 	if(EGLInit(&egl, drm, gbm, 0)) {
-		fprintf(stderr, "failed to initialize EGL\n");
-		GBMDestroy(gbm);
-		DRMDestroy(drm);
-		KBClose(&kb);
-		return 1;
+		fprintf(stderr, "Failed to initialize EGL\n");
+		status = 1;
+		goto error_egl;
 	}
 
-	VT220Init(&vt);
+	if(!VT220Init(&vt)) {
+		fprintf(stderr, "Failed to initialize VT220\n");
+		status = 1;
+		goto error_vt;
+	}
+
 	VT220SetScreenColor(&vt, VT220_SCREEN_COLOR_AMBER);
 	VT220SetBuffering(&vt, buffering);
 
+	/* TODO: add error handling here */
 	VTInitRenderer(&renderer, &vt);
 
 	if(!CMInit(&cm, &vt, envp)) {
 		printf("Failed to initialize Connection Manager\n");
+		status = 1;
 		goto error_cm;
 	}
 
@@ -506,13 +511,18 @@ int main(int argc, char** argv, char** envp)
 		}
 	}
 
-	CMDestroy(&cm);
-error_cm:
-	EGLDestroy(&egl);
-	GBMDestroy(gbm);
-	DRMDestroy(drm);
-
+	status = 0;
 	KBClose(&kb);
+	CMDestroy(&cm);
 
-	return 0;
+error_cm:
+	VT220Destroy(&vt);
+error_vt:
+	EGLDestroy(&egl);
+error_egl:
+	GBMDestroy(gbm);
+error_gbm:
+	DRMDestroy(drm);
+error_drm:
+	return status;
 }

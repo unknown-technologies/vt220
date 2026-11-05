@@ -587,7 +587,7 @@ typedef struct {
 #define	ED_FROM_BEGIN	1
 #define	ED_ALL		2
 
-void VT220Init(VT220* vt);
+bool VT220Init(VT220* vt);
 void VT220Destroy(VT220* vt);
 void VT220Process(VT220* vt, unsigned long dt);
 void VT220Receive(VT220* vt, unsigned char c);
