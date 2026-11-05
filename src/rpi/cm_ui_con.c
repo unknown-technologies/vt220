@@ -106,6 +106,7 @@ void CMConnectionEditorMenuModeChange(SPFInputChar* self)
 	CMCONN* con = &cm->connections[this->id];
 
 	char value = SPFGetInputCharValue(self);
+	int default_port = 1;
 	switch(value) {
 		case 'Y':
 			con->mode = CM_MODE_TTY;
@@ -115,10 +116,16 @@ void CMConnectionEditorMenuModeChange(SPFInputChar* self)
 			break;
 		case 'T':
 			con->mode = CM_MODE_TELNET;
+			default_port = 23;
 			break;
 		case 'S':
 			con->mode = CM_MODE_SSH;
+			default_port = 22;
 			break;
+	}
+
+	if(con->port == 0) {
+		SPFSetInputDecValue(&this->con_port, default_port);
 	}
 
 	CMConnectionEditorMenuUpdateWidgets(panel);
@@ -160,8 +167,9 @@ void CMConnectionEditMenuInitWidgets(SPFPanel* self)
 	CMConnectionEditMenu* this = (CMConnectionEditMenu*) SPFGetPanelUserData(self);
 	CMCONN* con = &cm->connections[this->id];
 
-	if(con->port == 0) {
-		con->port = 1;
+	int port = con->port;
+	if(port == 0) {
+		port = 1;
 	}
 
 	SPFCreateLabel(&this->lbl_name, 3, 2, "Name:", 0);
@@ -179,7 +187,7 @@ void CMConnectionEditMenuInitWidgets(SPFPanel* self)
 	SPFCreateInputStr(&this->con_target, FIELD_TARGET, 7, 10, con->target, 70, NULL);
 	SPFCreateLabel(&this->lbl_port, 8, 2, "Port:", 0);
 	SPFCreateLabel(&this->lbl_port_info, 8, 17, "(1-65535)", 0);
-	SPFCreateInputDec(&this->con_port, FIELD_PORT, 8, 10, 5, 1, 65535, con->port, NULL);
+	SPFCreateInputDec(&this->con_port, FIELD_PORT, 8, 10, 5, 1, 65535, port, NULL);
 	SPFCreateLabel(&this->lbl_user, 9, 2, "User:", 0);
 	SPFCreateInputStr(&this->con_user, FIELD_USER, 9, 10, con->username, 60, NULL);
 
