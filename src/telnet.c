@@ -358,6 +358,12 @@ void TELNETPollConnect(TELNET* telnet)
 	fd_set wfds;
 	struct timeval timeout;
 
+	if(telnet->socket >= FD_SETSIZE) {
+		TELNETRxString(telnet, "Socket handle out of range\r\n");
+		TELNETDisconnect(telnet);
+		return;
+	}
+
 	FD_ZERO(&wfds);
 	FD_SET(telnet->socket, &wfds);
 
